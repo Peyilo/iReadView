@@ -28,10 +28,13 @@ android {
 }
 
 dependencies {
-    implementation(project(":app:libreadview"))
+    implementation(project(":app:ireadview"))
     implementation(libs.androidx.core.ktx)
+    implementation(libs.kotlinx.coroutines.android)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(libs.kotlinx.coroutines.android)
 }
+

@@ -1,8 +1,16 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET" />
     <application
         android:allowBackup="false"
-        android:label="iRead Demo"
+        android:supportsRtl="true"
+        android:label="@string/app_name"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
+        <activity android:name=".DemoCurlActivity" android:exported="false" />
+        <activity android:name=".DemoContainerActivity" android:exported="false" />
+        <activity android:name=".DemoCustomContentActivity" android:exported="false" />
+        <activity android:name=".DemoTextSourceActivity" android:exported="false" />
+        <activity android:name=".DemoNetworkActivity" android:exported="false" />
+        <activity android:name=".DemoJavaActivity" android:exported="false" />
         <activity
             android:name=".MainActivity"
             android:exported="true">

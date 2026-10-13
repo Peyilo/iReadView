@@ -1,0 +1,9 @@
+<resources>
+    <style name="Widget.IRead.ReaderView" parent="">
+        <item name="ireadBodyTextSize">18sp</item>
+        <item name="ireadBodyTextColor">#302C28</item>
+        <item name="ireadPageBackground">#F7F0E5</item>
+        <item name="ireadHeaderVisible">true</item>
+        <item name="ireadFooterVisible">true</item>
+    </style>
+</resources>

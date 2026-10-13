@@ -1,0 +1,119 @@
+package org.peyilo.ireadview.api.effect
+
+import android.graphics.Canvas
+import android.graphics.LinearGradient
+import android.graphics.Paint
+import android.graphics.RectF
+import android.graphics.Shader
+import org.peyilo.ireadview.spi.presentation.ReadViewport
+import org.peyilo.ireadview.internal.effect.CornerCurlEffect
+import org.peyilo.ireadview.internal.effect.EdgeCurlEffect
+import org.peyilo.ireadview.internal.effect.PageTurnSnapshots
+import org.peyilo.ireadview.internal.effect.BoundPageCurlEffect
+
+/** Each factory creates a fresh renderer; the Widget owns progress and resource lifetime. */
+object PageTurnEffects {
+    /** 当前Web卷页及统一阴影。默认参数为用户调好的0.10/0.25/0.43/0.55。
+     * 可通过PageCurlOptions的with函数或copy调节；进度由Widget控制。
+     * 自定义配置由宿主保存并重新提供，稳定ID恢复仅恢复默认配置。 */
+    @JvmStatic @JvmOverloads fun pageCurl(options: PageCurlOptions = PageCurlOptions()): PageTurnEffectFactory =
+        PresetFactory("page_curl", options == PageCurlOptions()) { BoundPageCurlEffect(options) }
+    @JvmStatic fun none(): PageTurnEffectFactory = factory("none", 0)
+    @JvmStatic fun slide(): PageTurnEffectFactory = factory("slide", 1)
+    @JvmStatic fun cover(): PageTurnEffectFactory = factory("cover", 2)
+    @JvmStatic fun iBookSlide(): PageTurnEffectFactory = factory("ibook_slide", 3)
+    /** Compatibility alias for the Apple/iBook cylindrical sheet. */
+    @JvmStatic @JvmOverloads fun curl(options: CurlOptions = CurlOptions()): PageTurnEffectFactory = iBookCurl(options)
+    @JvmStatic @JvmOverloads fun iBookCurl(options: CurlOptions = CurlOptions()): PageTurnEffectFactory =
+        PresetFactory("curl", options == CurlOptions()) { CornerCurlEffect(options) }
+    /** Google/MoonReader wave and perspective deformation, without a reflected back face. */
+    @JvmStatic @JvmOverloads fun googleCurl(options: CurlOptions = CurlOptions()): PageTurnEffectFactory =
+        PresetFactory("google_curl", options == CurlOptions()) { EdgeCurlEffect(options) }
+    /** Resolves only the stable built-in IDs; custom factories must be supplied by their owner. */
+    @JvmStatic fun fromId(id: String): PageTurnEffectFactory? = when (id) {
+        "page_curl" -> pageCurl()
+        "none" -> none()
+        "slide" -> slide()
+        "cover" -> cover()
+        "ibook_slide" -> iBookSlide()
+        "curl" -> curl()
+        "google_curl" -> googleCurl()
+        else -> null
+    }
+    internal fun builtInId(factory: PageTurnEffectFactory): String? = (factory as? PresetFactory)?.takeIf { it.restorable }?.id
+    private fun factory(name: String, kind: Int) = PresetFactory(name) { SlidingEffect(kind) }
+    private class PresetFactory(override val id: String, val restorable: Boolean = true, private val renderer: () -> PageTurnEffect) : PageTurnEffectFactory {
+        override fun create() = renderer()
+    }
+}
+
+private class SlidingEffect(private val kind: Int) : PageTurnEffect {
+    private var context: PageTurnContext? = null
+    private var host: PageTurnEffectHost? = null
+    private val snapshots = PageTurnSnapshots()
+    private val texture = Paint(Paint.FILTER_BITMAP_FLAG)
+    private val pageRect = RectF()
+    private val shadow = Paint(Paint.ANTI_ALIAS_FLAG)
+    override fun attach(host: PageTurnEffectHost) { this.host = host }
+    override fun supports(direction: TurnDirection, viewport: ReadViewport) = viewport.isValid
+    override fun start(context: PageTurnContext) {
+        clear()
+        this.context = context
+        pageRect.set(0f, 0f, context.viewport.widthPx.toFloat(), context.viewport.heightPx.toFloat())
+        // Legacy rendering benefits from replacing the repeated view hierarchy with
+        // two images. Modern view drawing keeps its cheaper display-list path.
+        // Keep live drawing when the budget cannot fit two full-size images.
+        if (kind != 0 && android.os.Build.VERSION.SDK_INT < 29)
+            host?.let { snapshots.capture(it, context, fullResolutionOnly = true) }
+    }
+    override fun update(frame: PageTurnFrame) {}
+    override fun draw(canvas: Canvas, frame: PageTurnFrame) {
+        val turn = context ?: return
+        val width = turn.viewport.widthPx.toFloat()
+        val progress = frame.progress
+        val sign = if (turn.direction == TurnDirection.Forward) {
+            if (turn.viewport.rightToLeft) -1f else 1f
+        } else if (turn.viewport.rightToLeft) 1f else -1f
+        fun draw(surface: PageSurface, x: Float) {
+            val save = canvas.save()
+            try {
+                canvas.translate(x, 0f)
+                val bitmap = if (surface === turn.current) snapshots.current else snapshots.target
+                if (bitmap != null) canvas.drawBitmap(bitmap, null, pageRect, texture) else surface.draw(canvas)
+            } finally { canvas.restoreToCount(save) }
+        }
+        when (kind) {
+            0 -> draw(if (progress < 1f) turn.current else turn.target, 0f)
+            1 -> { draw(turn.current, -sign * width * progress); draw(turn.target, sign * width * (1f - progress)) }
+            2, 3 -> {
+                val parallax = if (kind == 3) 0.22f else 0f
+                if (turn.direction == TurnDirection.Forward) {
+                    draw(turn.target, sign * width * (1f - progress) * parallax)
+                    draw(turn.current, -sign * width * progress)
+                    edgeShadow(canvas, if (sign > 0) width * (1f - progress) else width * progress, sign, progress, turn)
+                } else {
+                    draw(turn.current, -sign * width * progress * parallax)
+                    draw(turn.target, sign * width * (1f - progress))
+                    edgeShadow(canvas, if (sign > 0) width * (1f - progress) else width * progress, -sign, progress, turn)
+                }
+            }
+        }
+    }
+    private fun edgeShadow(canvas: Canvas, edge: Float, direction: Float, progress: Float, turn: PageTurnContext) {
+        if (progress <= 0f || progress >= 1f) return
+        val width = 18f * turn.viewport.density
+        val end = edge + direction * width
+        // The shadow belongs to the moving top sheet. Its disappearance must follow
+        // the sheet's visible width for forward completion and backward appearance.
+        val movingFraction = if (turn.direction == TurnDirection.Forward) 1f - progress else progress
+        val fade = (turn.viewport.widthPx * movingFraction / width).coerceIn(0f, 1f)
+        val alpha = (0x55 * fade).toInt()
+        shadow.shader = LinearGradient(edge, 0f, end, 0f, alpha shl 24, 0x00000000, Shader.TileMode.CLAMP)
+        canvas.drawRect(minOf(edge, end), 0f, maxOf(edge, end), turn.viewport.heightPx.toFloat(), shadow)
+        shadow.shader = null
+    }
+    private fun clear() { snapshots.close(); context = null; shadow.shader = null }
+    override fun finish(outcome: TurnOutcome) { clear() }
+    override fun abort(reason: TurnAbortReason) { clear() }
+    override fun detach() { clear(); host = null }
+}

@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>翻页阴影验收 Demo</title>
+<style>
+body{margin:0;background:#e9e5de;color:#272a2d;font:15px system-ui,sans-serif}main{max-width:1000px;margin:auto;padding:24px;display:grid;grid-template-columns:minmax(240px,420px) minmax(240px,1fr);gap:32px}canvas{display:block;width:100%;aspect-ratio:2/3;background:#faf8f0;touch-action:none;box-shadow:0 6px 30px #0002}h1{font-size:24px;font-weight:600;margin:0 0 18px}p{line-height:1.7}label{display:block;margin:24px 0 8px}input[type=range]{width:100%}button{font:inherit;padding:10px 18px;margin:16px 8px 0 0;border:1px solid #aaa;background:#fff;cursor:pointer}a{color:#315b86}small{display:block;line-height:1.6;margin-top:24px;color:#555}#error{color:#a22;white-space:pre-wrap}@media(max-width:620px){main{display:block;padding:16px}section{margin-top:24px}}
+</style>
+<main>
+<canvas id="page" aria-label="可水平拖动的书页翻动预览"></canvas>
+<section>
+<h1>翻页阴影验收 Demo</h1>
+<p>向左拖动翻到下一页，向右拖动翻到上一页。松手后自动完成或复位；上下偏移控制卷边倾斜。</p>
+<p id="status" aria-live="polite"></p>
+<label for="progress">翻页进度 <output id="value">0%</output></label>
+<input id="progress" type="range" min="0" max="1" step="0.001" value="0">
+<label for="radius">卷曲宽度</label>
+<input id="radius" type="range" min="0.04" max="0.2" step="0.005" value="0.10">
+<label for="shadow">阴影强度</label>
+<input id="shadow" type="range" min="0" max="0.75" step="0.01" value="0.25">
+<label for="softness">光源大小（阴影柔和度）</label>
+<input id="softness" type="range" min="0.02" max="0.65" step="0.01" value="0.42">
+<label for="angle">卷边倾斜（固定帧观察）</label>
+<input id="angle" type="range" min="-0.8" max="0.8" step="0.05" value="0">
+<label for="lighting">阴影方案</label>
+<select id="lighting"><option value="1">新版：空间投影与纸面光照</option><option value="0">原版：卷边渐变</option></select>
+<button id="previous">上一页</button><button id="play">下一页</button><button id="reset">复位</button>
+<p id="error" role="alert"></p>
+<small>可切换原版对照，调节投影强度与柔和度。Android 已提供 PageTurnEffects.pageCurl(PageCurlOptions)，采用相同的统一投影算法。</small>
+</section>
+</main>
+<script id="vertex" type="x-shader/x-vertex">#version 300 es
+in vec2 position;
+out vec2 uv;
+void main(){uv=position*.5+.5;gl_Position=vec4(position,0.,1.);}
+</script>
+<script id="fragment" type="x-shader/x-fragment">#version 300 es
+precision highp float;
+in vec2 uv;
+out vec4 color;
+uniform sampler2D currentPage;
+uniform sampler2D nextPage;
+uniform float progress;
+uniform float aspect;
+uniform float radiusFraction;
+uniform float tilt;
+uniform float shadowStrength;
+uniform float lightSize;
+uniform float lighting;
+const float PI=3.141592653589793;
+bool onPaper(vec2 q){return q.x>=0. && q.x<=aspect && q.y>=0. && q.y<=1.;}
+vec4 front(vec2 q){return texture(currentPage,q/vec2(aspect,1.));}
+// Receiver-to-light ray intersects the same cylindrical material surface as the UV map.
+float blocksLight(vec3 receiver,vec2 slope,vec2 n,float a,float r,float rootX,float rootZ){
+  float d=dot(receiver.xy,n)-a+rootX, h=dot(slope,n);
+  float zc=r-rootZ-receiver.z;
+  float A=1.+h*h, B=2.*(d*h-zc), C=d*d+zc*zc-r*r;
+  float discriminant=B*B-4.*A*C;
+  float closest=-B/(2.*A);
+  float distanceToAxis=length(vec2(d+h*closest,closest-zc));
+  float feather=max(.0012,max(closest,0.)*lightSize*.20);
+  float coverage=0.;
+  // Continuous footprint coverage instead of a binary vote per light sample.
+  // Neighboring samples overlap, removing the contour bands of discrete ray counts.
+  if(closest>0. && distanceToAxis<r+feather){
+    float delta=sqrt(max(discriminant,0.));
+    float silhouette=1.-smoothstep(-feather,feather,distanceToAxis-r);
+    for(int i=0;i<2;i++){
+      float z=(-B+(i==0?-delta:delta))/(2.*A);
+      float x=d+h*z;
+      if(z>.0002 && x>=-feather){
+        float angle=atan(max(x,0.),r-z-rootZ-receiver.z);
+        vec2 hit=receiver.xy+slope*z+n*rootX;
+        vec2 material=hit-n*x+n*r*angle;
+        float edge=min(min(material.x,aspect-material.x),min(material.y,1.-material.y));
+        float finiteSheet=smoothstep(-feather,feather,edge);
+        coverage=max(coverage,silhouette*finiteSheet*smoothstep(-feather,feather,x));
+      }
+    }
+  }
+  float z=2.*r-rootZ-receiver.z;
+  if(z>.0002){
+    vec2 hit=receiver.xy+slope*z+n*rootX;
+    float x=dot(hit,n)-a;
+    vec2 material=hit-n*x+n*(PI*r-x);
+    float edge=min(min(material.x,aspect-material.x),min(material.y,1.-material.y));
+    float width=max(.0012,z*lightSize*.20);
+    coverage=max(coverage,(1.-smoothstep(-width,width,x))*smoothstep(-width,width,edge));
+  }
+  return coverage;
+}
+float castShadow(vec3 receiver,vec2 n,float a,float r,float rootX,float rootZ){
+  float occlusion=0.;
+  // Deterministic area-light quadrature: no temporal noise, softness grows with height.
+  for(int i=0;i<48;i++){
+    float angle=float(i)*2.39996323;
+    float distance=lightSize*sqrt((float(i)+.5)/48.);
+    vec2 slope=vec2(-.60,.72)+distance*vec2(cos(angle),sin(angle));
+    occlusion+=blocksLight(receiver,slope,n,a,r,rootX,rootZ);
+  }
+  return occlusion/48.;
+}
+vec4 receiveShadow(vec4 surface,vec3 receiver,vec2 n,float a,float r,float rootX,float rootZ){
+  if(lighting<.5)return surface;
+  float shadow=shadowStrength*castShadow(receiver,n,a,r,rootX,rootZ);
+  surface.rgb*=mix(vec3(1.),vec3(.78,.81,.87),shadow);
+  surface.rgb*=1.-shadow*.80;
+  // Sub-LSB, stationary spatial dither avoids display quantization bands without flicker.
+  float noise=fract(52.9829189*fract(dot(gl_FragCoord.xy,vec2(.06711056,.00583715))))-.5;
+  surface.rgb+=noise/255.;
+  return surface;
+}
+float paperLight(vec2 n,float normalZ,bool back){
+  if(lighting<.5)return .82+.18*abs(normalZ);
+  float angle=acos(clamp(normalZ,-1.,1.));
+  vec3 normal=vec3(-n*sin(angle),normalZ);
+  if(back)normal=-normal;
+  vec3 light=normalize(vec3(-.60,.72,1.));
+  float diffuse=max(0.,dot(normal,light));
+  // Normalize against the flat sheet, retaining ambient illumination in the roll.
+  return clamp((.65+.35*diffuse)/(.65+.35*light.z),.68,1.05);
+}
+vec4 verso(vec2 q,vec2 n,float normalZ){
+  vec4 ink=front(q);
+  ink.rgb=mix(vec3(.98,.965,.92),ink.rgb,.15);
+  ink.rgb*=paperLight(n,normalZ,true);
+  return ink;
+}
+void main(){
+  if(progress<=0.){color=texture(currentPage,uv);return;}
+  if(progress>=1.){color=texture(nextPage,uv);return;}
+  float p=progress;
+  float r=aspect*radiusFraction*(.75+.25*sin(PI*p));
+  // Fade diagonal tilt before the rolling band can reach the binding.
+  float t=tilt*sin(PI*p)*(1.-smoothstep(.35,.62,p));
+  vec2 n=normalize(vec2(1.,t));
+  float spineMax=max(0.,n.y);
+  float outerMax=aspect*n.x+spineMax;
+  float a=(1.-p)*outerMax-PI*r*p;
+  if(abs(t)>0.)a=max(a,spineMax);
+  // With horizontal cross-sections, subtract the root primitive to pin the spine.
+  float rootAngle=clamp(-a/r,0.,PI);
+  float rootShift=a<0. ? a+r*sin(rootAngle) : 0.;
+  float rootZ=a<0. ? r*(1.-cos(rootAngle)) : 0.;
+  vec2 screen=uv*vec2(aspect,1.);
+  vec2 original=screen+n*rootShift;
+  float d=dot(original,n)-a;
+  vec2 foot=original-n*d;
+  vec4 underneath=texture(nextPage,uv);
+  float visible=rootAngle<PI*.5 ? clamp((a+r-rootShift)/r,0.,1.) : 0.;
+  float shadow=.15*visible*sin(PI*p)*exp(-abs(d-r)/max(.25*r,.00001));
+  if(lighting<.5)underneath.rgb*=1.-shadow;
+  if(d<0.){
+    vec2 backQ=foot+n*(PI*r-d);
+    if(onPaper(backQ)){color=receiveShadow(verso(backQ,n,-1.),vec3(screen,2.*r-rootZ),n,a,r,rootShift,rootZ);return;}
+    if(onPaper(original) && dot(original,n)<=a){color=receiveShadow(front(original),vec3(screen,-rootZ),n,a,r,rootShift,rootZ);return;}
+    color=receiveShadow(underneath,vec3(screen,0.),n,a,r,rootShift,rootZ);return;
+  }
+  if(d>r){color=receiveShadow(underneath,vec3(screen,0.),n,a,r,rootShift,rootZ);return;}
+  float theta=asin(clamp(d/r,0.,1.));
+  vec2 backQ=foot+n*r*(PI-theta);
+  vec2 frontQ=foot+n*r*theta;
+  if(onPaper(backQ)){color=receiveShadow(verso(backQ,n,-cos(theta)),vec3(screen,r*(1.+cos(theta))-rootZ),n,a,r,rootShift,rootZ);return;}
+  if(onPaper(frontQ)){
+    color=front(frontQ);color.rgb*=paperLight(n,cos(theta),false);
+    color=receiveShadow(color,vec3(screen,r*(1.-cos(theta))-rootZ),n,a,r,rootShift,rootZ);return;
+  }
+  color=receiveShadow(underneath,vec3(screen,0.),n,a,r,rootShift,rootZ);
+}
+</script>
+<script>
+(() => {
+  const page=document.getElementById('page'), slider=document.getElementById('progress');
+  const radius=document.getElementById('radius'), value=document.getElementById('value');
+  const error=document.getElementById('error'), play=document.getElementById('play');
+  const gl=page.getContext('webgl2',{alpha:false,antialias:true});
+  if(!gl){error.textContent='此浏览器未提供 WebGL 2，请换用支持 WebGL 的浏览器。';return;}
+  function shader(type,id){
+    const s=gl.createShader(type);gl.shaderSource(s,document.getElementById(id).textContent);gl.compileShader(s);
+    if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(s));return s;
+  }
+  let program;
+  try{
+    program=gl.createProgram();gl.attachShader(program,shader(gl.VERTEX_SHADER,'vertex'));
+    gl.attachShader(program,shader(gl.FRAGMENT_SHADER,'fragment'));gl.linkProgram(program);
+    if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));
+  }catch(e){error.textContent=e.message;return;}
+  gl.useProgram(program);
+  const buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
+  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
+  const attribute=gl.getAttribLocation(program,'position');gl.enableVertexAttribArray(attribute);
+  gl.vertexAttribPointer(attribute,2,gl.FLOAT,false,0,0);
+  const uniforms=Object.fromEntries(['progress','aspect','radiusFraction','tilt','shadowStrength','lightSize','lighting'].map(k=>[k,gl.getUniformLocation(program,k)]));
+  const shadowInput=document.getElementById('shadow'), softness=document.getElementById('softness'), lighting=document.getElementById('lighting'), angleInput=document.getElementById('angle');
+  function pageTexture(number){
+    const c=document.createElement('canvas');c.width=768;c.height=1152;
+    const ctx=c.getContext('2d');ctx.fillStyle=number===1?'#fffaf0':'#edf3f6';ctx.fillRect(0,0,c.width,c.height);
+    ctx.fillStyle=number===1?'#584631':'#324b60';ctx.font='bold 38px system-ui';
+    ctx.fillText('第 '+number+' 页 · 窗边的书',54,105);
+    ctx.font='23px system-ui';ctx.fillText('iReadView / page '+number,54,152);
+    ctx.strokeStyle='#c6bfb2';ctx.beginPath();ctx.moveTo(54,184);ctx.lineTo(714,184);ctx.stroke();
+    const text=number===1?'书页从外缘轻轻卷起，文字沿着纸面弯曲。左侧装订保持在原处，下一页逐渐显露。':'风吹过窗边，翻页结束后，文字再次平整。每一页都属于同一段阅读旅程。';
+    ctx.font='28px system-ui';let y=238;
+    for(let paragraph=0;paragraph<5;paragraph++){
+      let line='';for(const ch of text){if(ctx.measureText(line+ch).width>652){ctx.fillText(line,54,y);y+=43;line=ch;}else line+=ch;}
+      if(line){ctx.fillText(line,54,y);y+=43;}y+=25;
+    }
+    ctx.font='22px system-ui';ctx.fillText(number+' / 5',665,1092);
+    const texture=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,texture);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,c);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+    return texture;
+  }
+  const textures=Array.from({length:5},(_,i)=>pageTexture(i+1));
+  gl.uniform1i(gl.getUniformLocation(program,'currentPage'),0);gl.uniform1i(gl.getUniformLocation(program,'nextPage'),1);
+  const status=document.getElementById('status'), previous=document.getElementById('previous');
+  // A transaction owns its direction until it either commits once or returns to zero.
+  let pageIndex=1, direction=0, progress=0, tilt=0, drag=null, animation=null;
+  function available(dir){return pageIndex+dir>=0 && pageIndex+dir<textures.length;}
+  function bind(unit,index){gl.activeTexture(gl.TEXTURE0+unit);gl.bindTexture(gl.TEXTURE_2D,textures[index]);}
+  function render(){
+    const rect=page.getBoundingClientRect(), scale=Math.min(devicePixelRatio||1,2);
+    const width=Math.round(rect.width*scale), height=Math.round(rect.height*scale);
+    if(page.width!==width || page.height!==height){page.width=width;page.height=height;}
+    gl.viewport(0,0,page.width,page.height);
+    const backwards=direction<0;
+    bind(0,backwards?pageIndex-1:pageIndex);
+    bind(1,backwards?pageIndex:Math.min(pageIndex+1,textures.length-1));
+    gl.uniform1f(uniforms.aspect,page.width/page.height);
+    gl.uniform1f(uniforms.progress,direction===0?0:backwards?1-progress:progress);
+    gl.uniform1f(uniforms.radiusFraction,+radius.value);gl.uniform1f(uniforms.tilt,tilt);
+    gl.uniform1f(uniforms.shadowStrength,+shadowInput.value);gl.uniform1f(uniforms.lightSize,+softness.value);gl.uniform1f(uniforms.lighting,+lighting.value);
+    gl.drawArrays(gl.TRIANGLES,0,6);slider.value=progress;value.textContent=Math.round(progress*100)+'%';
+    angleInput.value=tilt;
+    status.textContent='第 '+(pageIndex+1)+' / '+textures.length+' 页'+(direction===0?'':direction>0?' · 向下一页翻动':' · 向上一页翻动');
+    previous.disabled=!available(-1);play.disabled=!available(1);
+  }
+  function stop(){if(animation!==null)cancelAnimationFrame(animation);animation=null;}
+  function settle(commit,velocity=0,after=null){
+    stop();drag=null;
+    if(direction===0){render();return;}
+    const start=performance.now(), from=progress, to=commit?1:0, delta=to-from;
+    if(Math.abs(delta)<.00001){finish();return;}
+    const duration=Math.max(220,Math.min(700,Math.abs(delta)*650));
+    const tangent=Math.max(0,Math.min(3,velocity*(duration/1000)/delta));
+    function finish(){if(commit)pageIndex+=direction;progress=0;direction=0;tilt=0;animation=null;render();if(after)after();}
+    function tick(now){
+      const t=Math.min(1,(now-start)/duration), t2=t*t, t3=t2*t;
+      // Monotone Hermite curve: retain release velocity and stop at the endpoint.
+      const eased=(-2*t3+3*t2)+(t3-2*t2+t)*tangent;
+      progress=from+delta*eased;render();
+      if(t<1)animation=requestAnimationFrame(tick);else finish();
+    }
+    animation=requestAnimationFrame(tick);
+  }
+  function turn(dir){
+    if(animation!==null || drag)return;
+    if(direction!==0){settle(direction===dir,0,direction===dir?null:()=>turn(dir));return;}
+    if(!available(dir))return;direction=dir;settle(true);
+  }
+  slider.addEventListener('input',()=>{
+    stop();drag=null;progress=+slider.value;
+    if(direction===0)direction=available(1)?1:-1;
+    render();
+  });radius.addEventListener('input',render);
+  shadowInput.addEventListener('input',render);softness.addEventListener('input',render);lighting.addEventListener('change',render);
+  angleInput.addEventListener('input',()=>{tilt=+angleInput.value;render();});
+  page.addEventListener('pointerdown',e=>{
+    if(e.button!==0)return;stop();page.setPointerCapture(e.pointerId);
+    drag={id:e.pointerId,x:e.clientX,y:e.clientY,p:progress,tilt,lastX:e.clientX,lastTime:e.timeStamp,velocity:0};
+  });
+  page.addEventListener('pointermove',e=>{
+    if(!drag || drag.id!==e.pointerId)return;const w=page.getBoundingClientRect().width, dx=drag.x-e.clientX;
+    if(direction===0 && Math.abs(dx)>6){const dir=dx>0?1:-1;if(!available(dir))return;direction=dir;}
+    if(direction===0)return;
+    const dt=(e.timeStamp-drag.lastTime)/1000;
+    if(dt>0)drag.velocity=direction*(drag.lastX-e.clientX)/w/dt;
+    drag.lastX=e.clientX;drag.lastTime=e.timeStamp;
+    progress=Math.max(0,Math.min(1,drag.p+direction*dx/w));
+    tilt=Math.max(-.8,Math.min(.8,drag.tilt+(e.clientY-drag.y)/(Math.abs(dx)+.2*w)));render();
+  });
+  page.addEventListener('pointerup',e=>{
+    if(!drag || drag.id!==e.pointerId)return;
+    const velocity=e.timeStamp-drag.lastTime>100?0:drag.velocity;
+    settle(velocity<-.55?false:progress>=.35 || velocity>.55,velocity);
+  });
+  function cancel(){if(drag)settle(false);}
+  page.addEventListener('pointercancel',cancel);page.addEventListener('lostpointercapture',cancel);
+  window.addEventListener('blur',cancel);
+  play.addEventListener('click',()=>turn(1));previous.addEventListener('click',()=>turn(-1));
+  document.getElementById('reset').addEventListener('click',()=>settle(false));
+  window.addEventListener('resize',render);render();
+})();
+</script>
+</html>

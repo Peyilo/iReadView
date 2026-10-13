@@ -1,0 +1,27 @@
+{
+  "generated": "2026-10-07",
+  "coordinate": "org.peyilo.ireadview:ireadview:0.1.0-SNAPSHOT",
+  "repository": "app/ireadview/build/repository",
+  "bundle": "app/ireadview/build/distributions/ireadview-maven-0.1.0-SNAPSHOT.zip",
+  "bundleSha256": "41f81476c2452f1699a01ab71c0eddd16b2117efd39c6c854bf3bf9de35abd54",
+  "files": [
+    {
+      "path": "ireadview-maven/org/peyilo/ireadview/ireadview/0.1.0-SNAPSHOT/ireadview-0.1.0-20261007.131508-1-sources.jar",
+      "bytes": 171538
+    },
+    {
+      "path": "ireadview-maven/org/peyilo/ireadview/ireadview/0.1.0-SNAPSHOT/ireadview-0.1.0-20261007.131508-1.aar",
+      "bytes": 1101162
+    },
+    {
+      "path": "ireadview-maven/org/peyilo/ireadview/ireadview/0.1.0-SNAPSHOT/ireadview-0.1.0-20261007.131508-1.module",
+      "bytes": 3815
+    },
+    {
+      "path": "ireadview-maven/org/peyilo/ireadview/ireadview/0.1.0-SNAPSHOT/ireadview-0.1.0-20261007.131508-1.pom",
+      "bytes": 1953
+    }
+  ],
+  "scope": "Local publication generation and static metadata inspection only; no independent consumer or runtime tests."
+}
+

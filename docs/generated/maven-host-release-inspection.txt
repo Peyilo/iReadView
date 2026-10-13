@@ -1,0 +1,15 @@
+Generated: 2026-10-09
+Scope: fresh independent Maven host R8 release artifacts; runtime evidence separately recorded in curl-review/maven-release-runtime-observation.json.
+AAPT generated rules:
+-keep class androidx.core.app.CoreComponentFactory { <init>(); }
+-keep class androidx.profileinstaller.ProfileInstallReceiver { <init>(); }
+-keep class androidx.startup.InitializationProvider { <init>(); }
+-keep class org.peyilo.iread.host.JavaReaderActivity { <init>(); }
+-keep class org.peyilo.iread.host.MainActivity { <init>(); }
+-keep class org.peyilo.ireadview.widget.ReaderView { <init>(android.content.Context, android.util.AttributeSet); }
+
+Relevant mapping headers:
+org.peyilo.ireadview.widget.BaseReadView$ConfigurationSavedState -> z0.f:
+org.peyilo.ireadview.widget.BookReadView$SavedState -> z0.B:
+org.peyilo.ireadview.widget.ReaderView -> org.peyilo.ireadview.widget.ReaderView:
+Default Parcelable rule: public static final ** CREATOR; (no blanket library keep added).

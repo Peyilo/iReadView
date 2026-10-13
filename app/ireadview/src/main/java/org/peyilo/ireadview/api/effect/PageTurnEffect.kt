@@ -1,0 +1,76 @@
+package org.peyilo.ireadview.api.effect
+
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import org.peyilo.ireadview.spi.presentation.ReadViewport
+
+interface PageSurface {
+    val widthPx: Int
+    val heightPx: Int
+    fun draw(canvas: Canvas)
+}
+
+interface BitmapLease : AutoCloseable { val bitmap: Bitmap; override fun close() }
+interface PageTurnEffectHost {
+    /** Invalidates the current visual without advancing the manager's turn frame. */
+    fun requestRedraw()
+    /** Transaction-owned lease; null when dimensions/budget cannot be satisfied. */
+    fun borrowBitmap(widthPx: Int, heightPx: Int): BitmapLease?
+}
+/** Stable nonblank ID; each creation supplies a separately owned renderer with idempotent cleanup. */
+interface PageTurnEffectFactory { val id: String; fun create(): PageTurnEffect }
+interface PageTurnEffect {
+    fun attach(host: PageTurnEffectHost)
+    fun supports(direction: TurnDirection, viewport: ReadViewport): Boolean
+    fun start(context: PageTurnContext)
+    /** Initial state, changed drag input coalesced per display frame, and timed settling frames.
+     * A stationary drag does not receive a continuous update clock.
+     */
+    fun update(frame: PageTurnFrame)
+    fun draw(canvas: Canvas, frame: PageTurnFrame)
+    fun finish(outcome: TurnOutcome)
+    fun abort(reason: TurnAbortReason)
+    /** Releases creation/attachment resources, including a failed or superseded attachment. */
+    fun detach()
+}
+enum class TurnDirection { Forward, Backward }
+enum class TurnOutcome { Committed, Cancelled }
+enum class TurnAbortReason { Cancelled, Superseded, EffectChanged, Detached, Failed }
+enum class TurnPhase { Dragging, SettlingCommit, SettlingReset }
+data class TurnPoint(val xPx: Float, val yPx: Float) {
+    init { require(xPx.isFinite() && yPx.isFinite()) }
+}
+data class PageTurnContext(val token: Long, val current: PageSurface, val target: PageSurface,
+    val viewport: ReadViewport, val direction: TurnDirection, val touchOrigin: TurnPoint? = null)
+data class PageTurnFrame(val progress: Float, val phase: TurnPhase, val touch: TurnPoint? = null) {
+    init { require(progress.isFinite() && progress in 0f..1f) }
+}
+/** Gestures use a viewport-extent fraction and density-independent fling speed.
+ * A fast reverse release resets even when the distance threshold was reached.
+ * Reduced motion keeps gesture commit policy while skipping visual interpolation.
+ */
+data class PageTurnOptions(
+    val durationMs: Long = 240,
+    val reduceMotion: Boolean = false,
+    /** Shared cap for both page snapshots and the reusable pool. The 16 MiB default
+     * fits two full-size 1080 x 1900 ARGB pages; larger viewports or explicit smaller
+     * budgets can still downsample curls, changing text sharpness at live endpoints.
+     */
+    val bitmapBudgetBytes: Long = 16L * 1024 * 1024,
+    val commitDistanceFraction: Float = 0.33f,
+    val flingVelocityDpPerSecond: Float = 600f,
+    val minimumTurnIntervalMs: Long = 0
+) {
+    init {
+        require(durationMs >= 0 && bitmapBudgetBytes > 0)
+        require(minimumTurnIntervalMs >= 0)
+        require(commitDistanceFraction.isFinite() && commitDistanceFraction > 0f && commitDistanceFraction <= 1f)
+        require(flingVelocityDpPerSecond.isFinite() && flingVelocityDpPerSecond > 0f)
+    }
+}
+enum class EffectFallbackReason { CreationFailed, AttachFailed, UnsupportedDirection, UnsupportedSurface, ResourcesUnavailable, RuntimeFailed }
+sealed interface EffectSelection {
+    data class Active(val id: String) : EffectSelection
+    data class DeferredUntilPaged(val id: String) : EffectSelection
+    data class Fallback(val requestedId: String, val appliedId: String, val reason: EffectFallbackReason) : EffectSelection
+}

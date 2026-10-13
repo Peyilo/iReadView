@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "title": "网络章节示例",
+  "chapters": [
+    { "id": "chapter-1", "title": "第一章 · 宿主提供内容", "url": "chapter-1.txt" },
+    { "id": "chapter-2", "title": "第二章 · 阅读器展示内容", "url": "chapter-2.txt" }
+  ]
+}

@@ -1,0 +1,9 @@
+<resources>
+    <string name="iread_placeholder_closed">尚未打开书籍</string>
+    <string name="iread_placeholder_book_loading">正在加载目录…</string>
+    <string name="iread_placeholder_chapter_loading">正在准备正文…</string>
+    <string name="iread_placeholder_empty_book">书籍没有章节</string>
+    <string name="iread_placeholder_empty_chapter">本章没有文字</string>
+    <string name="iread_placeholder_failed">无法加载内容</string>
+    <string name="iread_placeholder_retry">重试</string>
+</resources>

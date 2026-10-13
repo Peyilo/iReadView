@@ -1,0 +1,9 @@
+{
+  "generated": "2026-10-13",
+  "zipSha256": "f6b206b493dd343c4306c9bffb1d9e4940e4878b98fc3d7cb1e2fb546e2da030",
+  "selectedAar": "ireadview-maven/org/peyilo/ireadview/ireadview/0.1.0-SNAPSHOT/ireadview-0.1.0-20261013.043007-3.aar",
+  "selectedAarSha256": "3a5a16c0a6f684fd0c56079bfe0778a031a81d3f28d59903ad61a0bdacd05019",
+  "matchesCurrentReleaseAar": true,
+  "historicalAarEntryCount": 3,
+  "limits": "Naming migration: fresh Release AAR and Maven repository bundle built after renaming the module to ireadview. Historical runtime and consumer records describe their own dated artifacts; no automated tests run for this migration."
+}

@@ -1,0 +1,71 @@
+package org.peyilo.ireadview.internal.effect
+
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.RectF
+import org.peyilo.ireadview.api.effect.*
+import org.peyilo.ireadview.spi.presentation.ReadViewport
+import kotlin.math.abs
+
+/** One GPU material map for paper, text and shadows. The Widget owns navigation and time. */
+internal class BoundPageCurlEffect(private val options: PageCurlOptions) : PageTurnEffect {
+    private var host: PageTurnEffectHost? = null
+    private var turn: PageTurnContext? = null
+    private var renderer: BoundPageCurlRenderer? = null
+    private var output: BitmapLease? = null
+    private val snapshots = PageTurnSnapshots()
+    private val rect = RectF()
+    private val paint = Paint(Paint.FILTER_BITMAP_FLAG)
+    override fun attach(host: PageTurnEffectHost) { this.host = host }
+    override fun supports(direction: TurnDirection, viewport: ReadViewport) = viewport.isValid
+    override fun start(context: PageTurnContext) {
+        clear()
+        turn = context
+        val owner = host ?: throw EffectResourceUnavailable()
+        rect.set(0f,0f,context.viewport.widthPx.toFloat(),context.viewport.heightPx.toFloat())
+        try {
+            if (!snapshots.capture(owner,context)) throw EffectResourceUnavailable()
+            renderer = BoundPageCurlRenderer()
+            requireNotNull(renderer).upload(requireNotNull(snapshots.current),requireNotNull(snapshots.target))
+            // GPU snapshots are immutable. Return CPU leases before borrowing the output:
+            // the pool can reuse a full-size page without three simultaneous CPU bitmaps.
+            snapshots.close()
+            var width = context.viewport.widthPx
+            var height = context.viewport.heightPx
+            while (output == null && width > 0 && height > 0) {
+                output = owner.borrowBitmap(width,height)
+                if (output == null) { width /= 2; height /= 2 }
+            }
+            requireNotNull(renderer).bindOutput(output?.bitmap ?: throw EffectResourceUnavailable())
+        } catch (_: OutOfMemoryError) { clear(); throw EffectResourceUnavailable() }
+        catch (error: Throwable) { clear(); throw error }
+    }
+    override fun update(frame: PageTurnFrame) {
+        val context = turn ?: return
+        val origin = context.touchOrigin
+        val touch = frame.touch
+        val tilt = if (origin != null && touch != null)
+            (options.tilt+(touch.yPx-origin.yPx)/(abs(touch.xPx-origin.xPx)+.2f*rect.width())).coerceIn(-.8f,.8f)
+            else options.tilt
+        val forward = context.direction == TurnDirection.Forward
+        renderer?.render(if(forward)frame.progress else 1f-frame.progress,
+            rect.width()/rect.height(),tilt,context.viewport.rightToLeft,forward,options)
+    }
+    override fun draw(canvas: Canvas, frame: PageTurnFrame) {
+        val bitmap = output?.bitmap ?: return
+        val save = canvas.save()
+        try {
+            canvas.translate(0f,rect.height()); canvas.scale(1f,-1f)
+            canvas.drawBitmap(bitmap,null,rect,paint)
+        } finally { canvas.restoreToCount(save) }
+    }
+    private fun clear() {
+        try { renderer?.close() } finally {
+            renderer=null
+            try { output?.close() } finally { output=null; snapshots.close(); turn=null }
+        }
+    }
+    override fun finish(outcome: TurnOutcome) { clear() }
+    override fun abort(reason: TurnAbortReason) { clear() }
+    override fun detach() { try { clear() } finally { host=null } }
+}

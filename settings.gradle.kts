@@ -14,6 +14,8 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "iRead"
+rootProject.name = "iReadView"
 include(":app")
-include(":app:libreadview")
+include(":app:ireadview")
+
+

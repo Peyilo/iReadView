@@ -1,0 +1,7 @@
+<resources>
+    <item name="effect_container" type="id" />
+    <item name="network_reader" type="id" />
+    <item name="custom_content_reader" type="id" />
+    <item name="text_source_reader" type="id" />
+    <item name="java_reader" type="id" />
+</resources>

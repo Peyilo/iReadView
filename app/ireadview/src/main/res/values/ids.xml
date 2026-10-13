@@ -1,0 +1,7 @@
+<resources>
+    <item name="iread_action_highlight_selection" type="id" />
+    <item name="iread_action_clear_selection" type="id" />
+    <item name="iread_action_contents" type="id" />
+    <item name="iread_action_settings" type="id" />
+    <item name="iread_action_exit" type="id" />
+</resources>

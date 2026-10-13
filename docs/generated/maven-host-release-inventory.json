@@ -1,0 +1,16 @@
+{
+  "generated": "2026-10-09",
+  "project": "examples/maven-host",
+  "coordinate": "org.peyilo.ireadview:ireadview:0.1.0-SNAPSHOT",
+  "resolvedAarSha256": "c09c5733fd7a4f347fac43053a3eb75397e2f802239ba35692b53804954353da",
+  "matchesCurrentReleaseAar": true,
+  "apk": "examples/maven-host/app/build/outputs/apk/release/app-release-unsigned.apk",
+  "apkSha256": "cffbdc5b6499cc6500b72f7c6b32242c46f32bc4c9d06bc24a2f4a4cc4aa9a72",
+  "apkBytes": 413691,
+  "reviewApk": "examples/maven-host/app/build/outputs/apk/release/app-release-review.apk",
+  "reviewApkSha256": "7188f935358a22fe8c5fe6ed177d9b6f07c486627e508f4638dd90ea7e386f85",
+  "codeShrinking": true,
+  "resourceShrinking": true,
+  "build": "Debug and Release succeeded together in 2m57s after setting session ANDROID_HOME; Java compilation, R8 and packaging executed",
+  "scope": "Independent Maven consumption; temporary debug-key signed minified Release installed only on API36 emulator-5556. XML/Java creation, footer action and navigation observed. Rotation 2->2->1 requires anchor investigation; no process-death acceptance, no automated repository tests."
+}

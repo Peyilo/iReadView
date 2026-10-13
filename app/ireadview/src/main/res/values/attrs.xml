@@ -1,0 +1,102 @@
+<resources>
+    <attr name="ireadReaderViewStyle" format="reference" />
+    <declare-styleable name="ReaderView">
+        <attr name="ireadReadingMode">
+            <enum name="paged" value="0" />
+            <enum name="continuous_scroll" value="1" />
+        </attr>
+        <attr name="ireadBodyTextSize" format="dimension" />
+        <attr name="ireadBodyTextColor" format="color" />
+        <attr name="ireadPageBackground" format="color|reference" />
+        <attr name="ireadHeaderVisible" format="boolean" />
+        <attr name="ireadFooterVisible" format="boolean" />
+        <attr name="ireadPagePaddingStart" format="dimension" />
+        <attr name="ireadPagePaddingTop" format="dimension" />
+        <attr name="ireadPagePaddingEnd" format="dimension" />
+        <attr name="ireadPagePaddingBottom" format="dimension" />
+        <attr name="ireadBodyPaddingStart" format="dimension" />
+        <attr name="ireadBodyPaddingTop" format="dimension" />
+        <attr name="ireadBodyPaddingEnd" format="dimension" />
+        <attr name="ireadBodyPaddingBottom" format="dimension" />
+        <attr name="ireadBodyFontFamily" format="string|reference" />
+        <attr name="ireadBodyLetterSpacing" format="float" />
+        <attr name="ireadFirstLineIndent" format="float" />
+        <attr name="ireadLineSpacingMultiplier" format="float" />
+        <attr name="ireadLineSpacingExtra" format="dimension" />
+        <attr name="ireadParagraphSpacing" format="dimension" />
+        <attr name="ireadTitleTextSize" format="dimension" />
+        <attr name="ireadTitleTextColor" format="color" />
+        <attr name="ireadTitleFontFamily" format="string|reference" />
+        <attr name="ireadTitleSpacingAfter" format="dimension" />
+        <attr name="ireadHeaderTextSize" format="dimension" />
+        <attr name="ireadHeaderTextColor" format="color" />
+        <attr name="ireadFooterTextSize" format="dimension" />
+        <attr name="ireadFooterTextColor" format="color" />
+        <attr name="ireadHeaderFontFamily" format="string|reference" />
+        <attr name="ireadFooterFontFamily" format="string|reference" />
+        <attr name="ireadHeaderPaddingStart" format="dimension" />
+        <attr name="ireadHeaderPaddingTop" format="dimension" />
+        <attr name="ireadHeaderPaddingEnd" format="dimension" />
+        <attr name="ireadHeaderPaddingBottom" format="dimension" />
+        <attr name="ireadHeaderHeight" format="dimension" />
+        <attr name="ireadHeaderBackground" format="color|reference" />
+        <attr name="ireadHeaderAlignment"><enum name="start" value="0" /><enum name="center" value="1" /><enum name="end" value="2" /></attr>
+        <attr name="ireadHeaderContent"><enum name="default_content" value="0" /><enum name="book_title" value="1" /><enum name="chapter_title" value="2" /><enum name="page_number" value="3" /><enum name="page_count" value="4" /><enum name="page_progress" value="5" /><enum name="no_content" value="6" /><enum name="time" value="7" /><enum name="page_progress_and_time" value="8" /></attr>
+        <attr name="ireadFooterPaddingStart" format="dimension" />
+        <attr name="ireadFooterPaddingTop" format="dimension" />
+        <attr name="ireadFooterPaddingEnd" format="dimension" />
+        <attr name="ireadFooterPaddingBottom" format="dimension" />
+        <attr name="ireadFooterHeight" format="dimension" />
+        <attr name="ireadFooterBackground" format="color|reference" />
+        <attr name="ireadFooterAlignment"><enum name="start" value="0" /><enum name="center" value="1" /><enum name="end" value="2" /></attr>
+        <attr name="ireadFooterContent"><enum name="default_content" value="0" /><enum name="book_title" value="1" /><enum name="chapter_title" value="2" /><enum name="page_number" value="3" /><enum name="page_count" value="4" /><enum name="page_progress" value="5" /><enum name="no_content" value="6" /><enum name="time" value="7" /><enum name="page_progress_and_time" value="8" /></attr>
+        <attr name="ireadDefaultHighlightColor" format="color" />
+        <attr name="ireadSelectionColor" format="color" />
+        <attr name="ireadSelectionHandleColor" format="color" />
+        <attr name="ireadSelectionHandleRadius" format="dimension" />
+        <attr name="ireadTitleAlignment">
+            <enum name="start" value="0" />
+            <enum name="center" value="1" />
+            <enum name="end" value="2" />
+        </attr>
+        <attr name="ireadGesturePagingEnabled" format="boolean" />
+        <attr name="ireadTapPagingEnabled" format="boolean" />
+        <attr name="ireadKeyboardPagingEnabled" format="boolean" />
+        <attr name="ireadVolumeKeyPagingEnabled" format="boolean" />
+        <attr name="ireadPagingAxis">
+            <enum name="horizontal" value="0" />
+            <enum name="vertical" value="1" />
+        </attr>
+        <attr name="ireadTapEdgeFraction" format="float" />
+        <attr name="ireadTurnDurationMs" format="integer" />
+        <attr name="ireadReduceMotion" format="boolean" />
+        <attr name="ireadCommitDistanceFraction" format="float" />
+        <attr name="ireadFlingVelocityDpPerSecond" format="float" />
+        <attr name="ireadMinimumTurnIntervalMs" format="integer" />
+        <attr name="ireadPageTurnEffect">
+            <enum name="none" value="0" />
+            <enum name="slide" value="1" />
+            <enum name="cover" value="2" />
+            <enum name="ibook_slide" value="3" />
+            <enum name="curl" value="4" />
+            <enum name="google_curl" value="5" />
+        </attr>
+        <attr name="ireadViewportPaddingStart" format="dimension" />
+        <attr name="ireadViewportPaddingTop" format="dimension" />
+        <attr name="ireadViewportPaddingEnd" format="dimension" />
+        <attr name="ireadViewportPaddingBottom" format="dimension" />
+        <attr name="ireadBodyContainerPaddingStart" format="dimension" />
+        <attr name="ireadBodyContainerPaddingTop" format="dimension" />
+        <attr name="ireadBodyContainerPaddingEnd" format="dimension" />
+        <attr name="ireadBodyContainerPaddingBottom" format="dimension" />
+        <attr name="ireadBodyBlockPaddingStart" format="dimension" />
+        <attr name="ireadBodyBlockPaddingTop" format="dimension" />
+        <attr name="ireadBodyBlockPaddingEnd" format="dimension" />
+        <attr name="ireadBodyBlockPaddingBottom" format="dimension" />
+        <attr name="ireadTitlePaddingStart" format="dimension" />
+        <attr name="ireadTitlePaddingTop" format="dimension" />
+        <attr name="ireadTitlePaddingEnd" format="dimension" />
+        <attr name="ireadTitlePaddingBottom" format="dimension" />
+        <attr name="ireadTitleLetterSpacing" format="float" />
+    </declare-styleable>
+</resources>

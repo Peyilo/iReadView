@@ -1,0 +1,9 @@
+<resources>
+    <string name="iread_placeholder_closed">No book is open</string>
+    <string name="iread_placeholder_book_loading">Loading contents…</string>
+    <string name="iread_placeholder_chapter_loading">Preparing text…</string>
+    <string name="iread_placeholder_empty_book">This book has no chapters</string>
+    <string name="iread_placeholder_empty_chapter">This chapter has no text</string>
+    <string name="iread_placeholder_failed">Unable to load content</string>
+    <string name="iread_placeholder_retry">Retry</string>
+</resources>

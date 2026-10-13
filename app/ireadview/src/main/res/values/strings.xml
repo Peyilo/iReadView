@@ -1,0 +1,11 @@
+<resources>
+    <string name="iread_accessibility_select_visible_text">Select visible text</string>
+    <string name="iread_accessibility_copy">Copy selection</string>
+    <string name="iread_accessibility_highlight_selection">Highlight selection</string>
+    <string name="iread_accessibility_clear_selection">Clear selection</string>
+    <string name="iread_accessibility_contents">Table of contents</string>
+    <string name="iread_accessibility_settings">Reading settings</string>
+    <string name="iread_accessibility_exit">Exit reader</string>
+    <string name="iread_accessibility_next_page">Next page</string>
+    <string name="iread_accessibility_previous_page">Previous page</string>
+</resources>

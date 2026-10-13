@@ -1,0 +1,11 @@
+<resources>
+    <string name="iread_accessibility_select_visible_text">选择可见文本</string>
+    <string name="iread_accessibility_copy">复制选区</string>
+    <string name="iread_accessibility_highlight_selection">高亮选区</string>
+    <string name="iread_accessibility_clear_selection">清除选区</string>
+    <string name="iread_accessibility_contents">目录</string>
+    <string name="iread_accessibility_settings">阅读设置</string>
+    <string name="iread_accessibility_exit">退出阅读</string>
+    <string name="iread_accessibility_next_page">下一页</string>
+    <string name="iread_accessibility_previous_page">上一页</string>
+</resources>

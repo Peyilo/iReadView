@@ -1,0 +1,73 @@
+{
+  "web": {
+    "resetProgress": 0,
+    "backward": [
+      3,
+      2
+    ],
+    "forward": [
+      2,
+      3
+    ],
+    "resetPage": 2
+  },
+  "buildTasks": [
+    ":app:assembleDebug",
+    ":app:ireadview:assembleDebug"
+  ],
+  "artifacts": [
+    {
+      "path": "app/build/outputs/apk/debug/app-debug.apk",
+      "sha256": "c7e377334d3b1df03d490304b086dd86559872c6e31937d2c7cc13ca10197614"
+    },
+    {
+      "path": "app/ireadview/build/outputs/aar/ireadview-debug.aar",
+      "sha256": "7aa946bbf7a9e2e6bbad4d51a8b4960f2295b4c5919e635c045c6888bd080c47"
+    },
+    {
+      "path": "docs/examples/shader-preview/index.html",
+      "sha256": "686df28c37aa27f9bc4601447bd49f08ed512333fd89c3af806c2721cb1ef812"
+    },
+    {
+      "path": "app/ireadview/src/main/java/org/peyilo/ireadview/internal/effect/BoundPageCurlGeometry.kt",
+      "sha256": "2e0ef98b2c2646fadf0a3a1fd743e80ace43a1653389119421b82cf86eb0429d"
+    },
+    {
+      "path": "app/ireadview/src/main/java/org/peyilo/ireadview/internal/effect/BoundPageCurlEffect.kt",
+      "sha256": "a688ec42ca5b37610e9b3dabf256961de5078ecf519919604d31f20f295086b6"
+    }
+  ],
+  "android36": {
+    "finalDemoDurationMs": 650,
+    "finalBuildLtr": [
+      1,
+      2,
+      1,
+      1
+    ],
+    "renderer": "BoundPageCurlEffect",
+    "ltr": [
+      1,
+      2,
+      1,
+      1
+    ],
+    "rtl": [
+      1,
+      2,
+      1
+    ]
+  },
+  "android28": {
+    "note": "Transient UI tree failures excluded; terminal page confirmed with fresh successful dump",
+    "shortDragPage": 1,
+    "ltr": [
+      1,
+      2,
+      1
+    ]
+  },
+  "date": "2026-10-12",
+  "type": "Manual observation, not an automated test suite"
+}
+

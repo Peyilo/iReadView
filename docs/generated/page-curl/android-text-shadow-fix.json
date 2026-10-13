@@ -1,0 +1,11 @@
+{
+  "date": "2026-10-13",
+  "automatedTestsRun": false,
+  "runtime": "API36 representative frame inspected",
+  "renderer": "BoundPageCurlRenderer",
+  "screenshot": "android-text-shadow-fixed.png",
+  "releaseAarSha256": "f5fa8cf008412391b93efc1a90e9ebc96a17b11ad0b5fcd276919bf5deb57dec",
+  "pipeline": "Single GPU pass: inverse UV, paper lighting, continuous shadows",
+  "cpuSnapshots": "Returned after GPU upload before output lease",
+  "textureFiltering": "Trilinear mipmaps when supported"
+}
