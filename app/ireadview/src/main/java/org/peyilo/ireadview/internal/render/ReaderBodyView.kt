@@ -20,6 +20,7 @@ import org.peyilo.ireadview.api.model.ContentAnchor
 import org.peyilo.ireadview.api.style.SelectionStyle
 
 internal data class ColoredTextRange(val id: String, val range: BlockTextRange, val color: Int)
+internal data class LineTextRange(val id: String, val range: BlockTextRange, val style: org.peyilo.ireadview.api.style.TextLineStyle)
 internal data class AccessibilityTraversalAnchor(val anchor: ContentAnchor, val isValid: () -> Boolean)
 
 internal class ReaderBodyView(context: Context) : View(context) {
@@ -62,6 +63,7 @@ internal class ReaderBodyView(context: Context) : View(context) {
     }
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
+        rebuildHighlights()
         if (isShown) accessibility.invalidateRoot()
     }
     override fun onAttachedToWindow() {
@@ -77,11 +79,18 @@ internal class ReaderBodyView(context: Context) : View(context) {
         super.onDetachedFromWindow()
     }
     private var highlights: List<ColoredTextRange> = emptyList()
+    private var underlines: List<LineTextRange> = emptyList()
+    private var underlinePaths: List<UnderlinePath> = emptyList()
+    private val underlinePainter = UnderlinePainter()
     private var paths: List<HighlightPath> = emptyList()
     private val highlightPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private var selectionRanges: List<ColoredTextRange> = emptyList()
     private var selectionPaths: List<HighlightPath> = emptyList()
     private var selectionStyle = SelectionStyle()
+    /** Paged bodies expose off-page endpoints at the local selected slice boundary.
+     * Scrolling rows keep real endpoints only, avoiding a proxy on every row. */
+    var showOffPageSelectionHandles = false
+        set(value) { if (field != value) { field = value; rebuildHighlights() } }
     private var startHandle: Handle? = null
     private var endHandle: Handle? = null
 
@@ -98,6 +107,8 @@ internal class ReaderBodyView(context: Context) : View(context) {
         removeCallbacks(accessibilityRefresh)
         accessibilityRefreshQueued = false
         highlights = emptyList()
+        underlines = emptyList()
+        underlinePaths = emptyList()
         selectionRanges = emptyList()
         paths = emptyList()
         selectionPaths = emptyList()
@@ -114,6 +125,7 @@ internal class ReaderBodyView(context: Context) : View(context) {
     }
 
     fun setHighlights(value: List<ColoredTextRange>) { highlights = value.toList(); rebuildHighlights() }
+    fun setUnderlines(value: List<LineTextRange>) { underlines = value.toList(); rebuildHighlights() }
     fun setSelection(ranges: List<BlockTextRange>, style: SelectionStyle) {
         val selectionChanged = selectionRanges.map { it.range } != ranges
         selectionStyle = style
@@ -136,7 +148,7 @@ internal class ReaderBodyView(context: Context) : View(context) {
     }
     fun selectionDragOffset(start: Boolean, xPx: Float, yPx: Float): PointF? {
         val handle = (if (start) startHandle else endHandle) ?: return null
-        return PointF(handle.x - xPx, (handle.caretTop + handle.caretBottom) / 2f - yPx)
+        return PointF(handle.caretX - xPx, (handle.caretTop + handle.caretBottom) / 2f - yPx)
     }
     fun selectionBounds(): RectF? {
         var bounds: RectF? = null
@@ -187,15 +199,45 @@ internal class ReaderBodyView(context: Context) : View(context) {
             }
         }
         paths = build(highlights)
+        underlinePaths = underlines.flatMap { underline ->
+            fragments.filter { it.blockId == underline.range.blockId }.mapNotNull { fragment ->
+                val segments = fragment.underlineSegments(underline.range.startOffset, underline.range.endExclusive)
+                if (segments.isEmpty()) null else UnderlinePath(segments, fragment, underline.style)
+            }
+        }
         selectionPaths = build(selectionRanges)
         val radius = selectionStyle.handleRadiusDp * resources.displayMetrics.density
+        fun createHandle(fragment: BlockLayoutFragment, caret: org.peyilo.ireadview.spi.content.TextCaret, end: Boolean): Handle {
+            val x = paddingLeft + fragment.leftPx + caret.xPx
+            val top = paddingTop + fragment.topPx + caret.topPx
+            val bottom = paddingTop + fragment.topPx + caret.bottomPx
+            val y = if (end) bottom + radius else top - radius
+            // Keep the dot hittable even if the selected line touches a page edge.
+            fun fit(value: Float, extent: Int) = if (showOffPageSelectionHandles && extent > 2 * radius)
+                value.coerceIn(radius, extent - radius) else value
+            // Only the dot needs to fit inside the view. Moving the caret stem
+            // with it would put the start stem over the first selected glyph.
+            return Handle(fit(x, width), fit(y, height), x, top, bottom, end)
+        }
         fun handle(range: BlockTextRange?, end: Boolean): Handle? {
             if (range == null) return null
             val offset = if (end) range.endExclusive else range.startOffset
-            return fragments.filter { it.blockId == range.blockId }.firstNotNullOfOrNull { fragment ->
-                fragment.caretForOffset(offset, end)?.let { caret ->
-                    Handle(paddingLeft + fragment.leftPx + caret.xPx, paddingTop + fragment.topPx + caret.bottomPx + radius, paddingTop + fragment.topPx + caret.topPx, paddingTop + fragment.topPx + caret.bottomPx)
-                }
+            val real = fragments.filter { it.blockId == range.blockId }.firstNotNullOfOrNull { fragment ->
+                fragment.caretForOffset(offset, end)?.let { createHandle(fragment, it, end) }
+            }
+            if (real != null || !showOffPageSelectionHandles) return real
+            // Only the drawn, selected slice contributes a proxy. Do not move
+            // the source endpoint or shrink a paragraph merely to show a handle.
+            val visible = if (end) selectionPaths.asReversed() else selectionPaths
+            return visible.firstNotNullOfOrNull { selected ->
+                if (selected.path.isEmpty) return@firstNotNullOfOrNull null
+                val fragment = selected.fragment
+                val localRange = selectionRanges.firstOrNull { it.range.blockId == fragment.blockId }?.range
+                    ?: return@firstNotNullOfOrNull null
+                val from = maxOf(localRange.startOffset, fragment.startOffset ?: localRange.startOffset)
+                val to = minOf(localRange.endExclusive, fragment.endOffset ?: localRange.endExclusive)
+                if (from >= to) return@firstNotNullOfOrNull null
+                fragment.caretForOffset(if (end) to else from, end)?.let { createHandle(fragment, it, end) }
             }
         }
         startHandle = handle(selectionRanges.firstOrNull()?.range, false)
@@ -216,21 +258,39 @@ internal class ReaderBodyView(context: Context) : View(context) {
             canvas.restoreToCount(save)
         }
         drawPaths(paths)
+        drawPaths(selectionPaths)
         fragments.forEach { fragment ->
             val save = canvas.save()
             canvas.translate(paddingLeft + fragment.leftPx, paddingTop + fragment.topPx)
             fragment.draw(canvas)
             canvas.restoreToCount(save)
         }
-        drawPaths(selectionPaths)
+        underlinePaths.forEach { underline ->
+            val save = canvas.save()
+            canvas.translate(paddingLeft + underline.fragment.leftPx, paddingTop + underline.fragment.topPx)
+            canvas.clipRect(0f, 0f, (width - paddingLeft - paddingRight).toFloat(), underline.fragment.heightPx)
+            underlinePainter.draw(canvas, underline.segments, underline.style, resources.displayMetrics.density)
+            canvas.restoreToCount(save)
+        }
         canvas.restoreToCount(bodySave)
         highlightPaint.color = selectionStyle.handleColor
         val radius = selectionStyle.handleRadiusDp * resources.displayMetrics.density
         listOfNotNull(startHandle, endHandle).forEach { handle ->
-            canvas.drawRect(handle.x - 1f, handle.caretBottom, handle.x + 1f, handle.y, highlightPaint)
+            val stroke = resources.displayMetrics.density * 1.2f
+            // Keep the stem on the outside of the selected text boundary;
+            // the independently clamped dot must never shift this boundary.
+            val left = if (handle.end) handle.caretX else handle.caretX - stroke
+            canvas.drawRect(left, minOf(handle.caretTop, handle.y),
+                left + stroke, maxOf(handle.caretBottom, handle.y), highlightPaint)
+            if (handle.x != handle.caretX) {
+                canvas.drawRect(minOf(handle.x, handle.caretX), handle.y - stroke / 2f,
+                    maxOf(handle.x, handle.caretX), handle.y + stroke / 2f, highlightPaint)
+            }
             canvas.drawCircle(handle.x, handle.y, radius, highlightPaint)
         }
     }
-    private data class Handle(val x: Float, val y: Float, val caretTop: Float, val caretBottom: Float)
+    private data class Handle(val x: Float, val y: Float, val caretX: Float,
+        val caretTop: Float, val caretBottom: Float, val end: Boolean)
     private data class HighlightPath(val id: String, val path: Path, val color: Int, val fragment: BlockLayoutFragment)
+    private data class UnderlinePath(val segments: List<org.peyilo.ireadview.spi.content.TextLineSegment>, val fragment: BlockLayoutFragment, val style: org.peyilo.ireadview.api.style.TextLineStyle)
 }

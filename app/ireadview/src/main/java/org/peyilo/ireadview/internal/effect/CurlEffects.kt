@@ -71,19 +71,42 @@ internal class CornerCurlEffect(private val options: CurlOptions) : SnapshotCurl
     private val back = FloatArray(front.size)
     private val colors = IntArray(front.size / 2)
     private var meshRows = rows
-    private val frontMesh = if (indexed) IBookCurlMesh(columns) else null
-    private val backMesh = if (indexed) IBookCurlMesh(columns) else null
+    private val frontMesh = IBookCurlMesh(columns)
+    private val backMesh = IBookCurlMesh(columns)
     private val meshPaint = Paint(Paint.FILTER_BITMAP_FLAG)
     private val silhouetteShadow = IBookCurlShadow()
-    private val backFilter = ColorMatrixColorFilter(ColorMatrix(floatArrayOf(
-        options.backContentAlpha, 0f, 0f, 0f, Color.red(options.backTintColor) * (1f - options.backContentAlpha),
-        0f, options.backContentAlpha, 0f, 0f, Color.green(options.backTintColor) * (1f - options.backContentAlpha),
-        0f, 0f, options.backContentAlpha, 0f, Color.blue(options.backTintColor) * (1f - options.backContentAlpha),
+    private val frontShadow = IBookFrontShadow()
+    private val surfacePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        alpha = (255 * options.shadowAlpha * .2f).roundToInt().coerceIn(0, 255)
+    }
+    private val surfaceColors = IntArray(front.size)
+    private val surfaceIndices = if (indexed) ShortArray(0) else ShortArray(columns * rows * 6).also { out ->
+        var i = 0
+        for (row in 0 until rows) for (column in 0 until columns) {
+            val a = row * (columns + 1) + column; val b = a + columns + 1
+            out[i++] = a.toShort(); out[i++] = (a + 1).toShort(); out[i++] = b.toShort()
+            out[i++] = (a + 1).toShort(); out[i++] = (b + 1).toShort(); out[i++] = b.toShort()
+        }
+    }
+    private val frontReceiver = Path()
+    private val backReceiver = Path()
+    private val shadowFootprint = IBookShadowFootprint()
+    private val nextShadowSupport = Path()
+    private var backFilter: ColorMatrixColorFilter? = null
+    private fun backFilter(color: Int) = ColorMatrixColorFilter(ColorMatrix(floatArrayOf(
+        options.backContentAlpha, 0f, 0f, 0f, Color.red(color) * (1f - options.backContentAlpha),
+        0f, options.backContentAlpha, 0f, 0f, Color.green(color) * (1f - options.backContentAlpha),
+        0f, 0f, options.backContentAlpha, 0f, Color.blue(color) * (1f - options.backContentAlpha),
         0f, 0f, 0f, 1f, 0f
     )))
     override fun start(context: PageTurnContext) {
         super.start(context)
+        val sheet = if (context.direction == TurnDirection.Forward) context.current else context.target
+        sheetBitmap?.let { backFilter = backFilter(options.backTintColor ?: PageBackTint.resolve(sheet, it)) }
         if (indexed) sheetBitmap?.let {
+            // Grazing-angle text is strongly minified. Let the GPU use reduced
+            // texture levels rather than stretch high-frequency glyph strokes.
+            it.setHasMipMap(true)
             meshPaint.shader = BitmapShader(it, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
         }
     }
@@ -94,10 +117,18 @@ internal class CornerCurlEffect(private val options: CurlOptions) : SnapshotCurl
         val point = control(context, progress, touch, options)
         val originY = (origin?.yPx ?: height * .65f).coerceIn(0f, height)
         val geometry = IBookCurlGeometry(width, height, point.xPx, point.yPx, originY, options.radiusFraction)
+        shadowFootprint.reset()
+        val bitmap = sheetBitmap ?: return
+        frontMesh.update(geometry, width, height, bitmap.width, bitmap.height, false)
+        backMesh.update(geometry, width, height, bitmap.width, bitmap.height, true)
+        // Use actual material faces even on the bitmap-mesh path: its hidden
+        // vertices are collapsed for display and cannot define an occluder.
+        // Consume material coordinates before RTL texture reflection.
+        shadowFootprint.addMesh(geometry, frontMesh, width, height, bitmap.width, bitmap.height)
+        shadowFootprint.addMesh(geometry, backMesh, width, height, bitmap.width, bitmap.height)
         if (indexed) {
-            val bitmap = sheetBitmap ?: return
-            requireNotNull(frontMesh).update(geometry, width, height, bitmap.width, bitmap.height, false)
-            requireNotNull(backMesh).update(geometry, width, height, bitmap.width, bitmap.height, true)
+            frontMesh.outline(frontReceiver)
+            backMesh.outline(backReceiver)
             if (context.viewport.rightToLeft) {
                 fun reflect(mesh: IBookCurlMesh) {
                     for (i in 0 until mesh.valueCount step 2) mesh.texture[i] = bitmap.width - mesh.texture[i]
@@ -121,13 +152,41 @@ internal class CornerCurlEffect(private val options: CurlOptions) : SnapshotCurl
                     height * row / meshRows, front, back, index * 2)
                 val light = 255 - ((255 - brightness) * lightCoverage).roundToInt()
                 colors[index] = Color.rgb(light, light, light)
+                surfaceColors[index] = (255 * geometry.surfaceOcclusion(
+                    (width * materialColumn / columns).toDouble(), (height * row / meshRows).toDouble()) *
+                    lightCoverage).roundToInt().coerceIn(0, 255) shl 24
             }
+            traceBoundary(front, frontReceiver)
+            traceBoundary(back, backReceiver)
         }
+        shadowFootprint.outline(nextShadowSupport)
         silhouetteShadow.update(geometry,width,height,options.shadowWidthDp*context.viewport.density,
             options.shadowAlpha,context.viewport.density)
+        frontShadow.update(geometry,width,height,options.shadowWidthDp*context.viewport.density,
+            options.shadowAlpha,context.viewport.density)
     }
+    private fun traceBoundary(vertices: FloatArray, path: Path) {
+        path.reset()
+        path.moveTo(vertices[0], vertices[1])
+        fun edge(row: Int, column: Int) {
+            val i = (row * (columns + 1) + column) * 2
+            path.lineTo(vertices[i], vertices[i + 1])
+        }
+        for (column in 1..columns) edge(0, column)
+        for (row in 1..meshRows) edge(row, columns)
+        for (column in columns - 1 downTo 0) edge(meshRows, column)
+        for (row in meshRows - 1 downTo 1) edge(row, 0)
+        path.close()
+    }
+
     override fun drawSheet(canvas: Canvas, bitmap: Bitmap) {
-        silhouetteShadow.draw(canvas,pageRect.width(),pageRect.height())
+        // The exposed next page receives the roll silhouette; the visible
+        // current front receives the separate back-boundary projection.
+        val nextSave = canvas.save()
+        try {
+            clipIBookNextShadow(canvas, nextShadowSupport, frontReceiver, backReceiver, pageRect)
+            silhouetteShadow.draw(canvas, pageRect.width(), pageRect.height())
+        } finally { canvas.restoreToCount(nextSave) }
         if (indexed) {
             fun face(mesh: IBookCurlMesh) {
                 if (mesh.indexCount == 0) return
@@ -135,21 +194,57 @@ internal class CornerCurlEffect(private val options: CurlOptions) : SnapshotCurl
                     mesh.vertices, 0, mesh.texture, 0, mesh.colors, 0,
                     mesh.indices, 0, mesh.indexCount, meshPaint)
             }
-            face(requireNotNull(frontMesh))
+            fun surface(mesh: IBookCurlMesh) {
+                if (mesh.indexCount == 0 || surfacePaint.alpha == 0) return
+                canvas.drawVertices(Canvas.VertexMode.TRIANGLES, mesh.valueCount, mesh.vertices, 0,
+                    null, 0, mesh.occlusion, 0, mesh.indices, 0, mesh.indexCount, surfacePaint)
+            }
+            val frontSave = canvas.save()
+            try { canvas.clipPath(frontReceiver); face(requireNotNull(frontMesh)); surface(frontMesh) }
+            finally { canvas.restoreToCount(frontSave) }
+            val save = canvas.save()
+            canvas.clipPath(frontReceiver); frontShadow.draw(canvas); canvas.restoreToCount(save)
             meshPaint.colorFilter = backFilter
-            try { face(requireNotNull(backMesh)) }
-            finally { meshPaint.colorFilter = null }
+            val backSave = canvas.save()
+            try {
+                canvas.clipPath(backReceiver); face(requireNotNull(backMesh))
+                meshPaint.colorFilter = null
+                surface(backMesh)
+            }
+            finally { canvas.restoreToCount(backSave); meshPaint.colorFilter = null }
         } else {
-            canvas.drawBitmapMesh(bitmap, columns, meshRows, front, 0, colors, 0, texture)
+            fun surface(vertices: FloatArray) {
+                if (surfacePaint.alpha == 0) return
+                canvas.drawVertices(Canvas.VertexMode.TRIANGLES, (columns + 1) * (meshRows + 1) * 2,
+                    vertices, 0, null, 0, surfaceColors, 0, surfaceIndices, 0,
+                    columns * meshRows * 6, surfacePaint)
+            }
+            val frontSave = canvas.save()
+            try { canvas.clipPath(frontReceiver); canvas.drawBitmapMesh(bitmap, columns, meshRows, front, 0, colors, 0, texture); surface(front) }
+            finally { canvas.restoreToCount(frontSave) }
+            val save = canvas.save()
+            canvas.clipPath(frontReceiver); frontShadow.draw(canvas); canvas.restoreToCount(save)
             texture.colorFilter = backFilter
-            try { canvas.drawBitmapMesh(bitmap, columns, meshRows, back, 0, colors, 0, texture) }
-            finally { texture.colorFilter = null }
+            val backSave = canvas.save()
+            try {
+                canvas.clipPath(backReceiver); canvas.drawBitmapMesh(bitmap, columns, meshRows, back, 0, colors, 0, texture)
+                texture.colorFilter = null
+                surface(back)
+            }
+            finally { canvas.restoreToCount(backSave); texture.colorFilter = null }
         }
+    }
+    override fun detach() {
+        super.detach()
+        silhouetteShadow.release()
     }
     override fun clear() {
         super.clear()
         meshPaint.shader = null; meshPaint.colorFilter = null
+        backFilter = null
         silhouetteShadow.clear()
+        frontShadow.clear(); frontReceiver.reset(); backReceiver.reset()
+        shadowFootprint.reset(); nextShadowSupport.reset()
     }
 }
 /** Google/MoonReader: PlayLikeCurl PageFront travelling wave with perspective compression; no reverse-face fold. */

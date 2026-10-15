@@ -31,6 +31,8 @@ internal class TextBlockLayoutProvider : BlockLayoutProvider {
             color = if (heading) style.title.textColor else style.body.textColor
             typeface = if (heading) style.title.font ?: Typeface.DEFAULT_BOLD else style.body.font ?: Typeface.DEFAULT
             letterSpacing = if (heading) style.title.letterSpacingEm else style.body.letterSpacingEm
+            val fixedSpacing = if (heading) style.title.letterSpacingDp else style.body.letterSpacingDp
+            if (fixedSpacing != null) letterSpacing = fixedSpacing * context.viewport.density / textSize
         }
         val source = if (!heading && text.isNotEmpty() && style.body.firstLineIndentEm > 0) {
             SpannableString(text).apply {
@@ -42,8 +44,8 @@ internal class TextBlockLayoutProvider : BlockLayoutProvider {
             TitleAlignment.CENTER -> Layout.Alignment.ALIGN_CENTER
             TitleAlignment.END -> Layout.Alignment.ALIGN_OPPOSITE
         }
-        val spacing = if (heading) 1.2f else style.body.lineSpacingMultiplier
-        val extra = if (heading) 0f else style.body.lineSpacingExtraDp * context.viewport.density
+        val spacing = if (heading) style.title.lineSpacingMultiplier else style.body.lineSpacingMultiplier
+        val extra = (if (heading) style.title.lineSpacingExtraDp else style.body.lineSpacingExtraDp) * context.viewport.density
         val width = context.viewport.widthPx.coerceAtLeast(1)
         context.checkCancellation()
         val layout = if (Build.VERSION.SDK_INT >= 23) {
@@ -111,7 +113,9 @@ private class TextBlockLayout(
                     x = if (layout.getParagraphDirection(line) > 0) layout.getLineRight(line) else layout.getLineLeft(line)
                 }
                 if (line !in firstUnitIndex until endUnitExclusive) return null
-                return TextCaret(x, (layout.getLineTop(line) - top).toFloat(), (layout.getLineBottom(line) - top).toFloat())
+                val metrics = layout.paint.fontMetrics
+                val baseline = layout.getLineBaseline(line)
+                return TextCaret(x, baseline + metrics.ascent - top, baseline + metrics.descent - top)
             }
             override fun anchorAt(xPx: Float, yPx: Float): ContentAnchor? {
                 if (yPx < 0 || yPx >= heightPx) return null
@@ -133,10 +137,48 @@ private class TextBlockLayout(
                 val from = maxOf(startOffset, this.startOffset ?: 0)
                 val to = minOf(endExclusive, this.endOffset ?: 0)
                 if (from >= to) return null
-                return Path().apply {
-                    layout.getSelectionPath(from, to, this)
-                    offset(0f, -top.toFloat())
+                val result = Path()
+                val metrics = layout.paint.fontMetrics
+                for (line in firstUnitIndex until endUnitExclusive) {
+                    val lineFrom = maxOf(from, layout.getLineStart(line))
+                    var lineTo = minOf(to, layout.getLineEnd(line))
+                    while (lineTo > lineFrom && (layout.text[lineTo - 1] == '\n' || layout.text[lineTo - 1] == '\r')) lineTo--
+                    if (lineFrom >= lineTo) continue
+                    val segment = Path()
+                    layout.getSelectionPath(lineFrom, lineTo, segment)
+                    val baseline = layout.getLineBaseline(line)
+                    val clip = Path().apply {
+                        addRect(minOf(layout.getLineLeft(line), layout.getLineRight(line)), baseline + metrics.ascent,
+                            maxOf(layout.getLineLeft(line), layout.getLineRight(line)), baseline + metrics.descent, Path.Direction.CW)
+                    }
+                    segment.op(clip, Path.Op.INTERSECT)
+                    result.addPath(segment)
                 }
+                result.offset(0f, -top.toFloat())
+                return result
+            }
+            override fun underlineSegments(startOffset: Int, endExclusive: Int): List<TextLineSegment> {
+                val result = ArrayList<TextLineSegment>()
+                for (line in firstUnitIndex until endUnitExclusive) {
+                    val from = maxOf(startOffset, layout.getLineStart(line))
+                    var to = minOf(endExclusive, layout.getLineVisibleEnd(line))
+                    while (to > from && (layout.text[to - 1] == '\r' || layout.text[to - 1] == '\n')) to--
+                    if (from >= to) continue
+                    val path = Path(); layout.getSelectionPath(from, to, path)
+                    val left = minOf(layout.getLineLeft(line), layout.getLineRight(line))
+                    val right = maxOf(layout.getLineLeft(line), layout.getLineRight(line))
+                    val clip = android.graphics.Region(kotlin.math.floor(left).toInt(), layout.getLineTop(line), kotlin.math.ceil(right).toInt(), layout.getLineBottom(line))
+                    val region = android.graphics.Region().apply { setPath(path, clip) }
+                    val iterator = android.graphics.RegionIterator(region)
+                    val rect = android.graphics.Rect()
+                    val y = layout.getLineBaseline(line) + layout.paint.fontMetrics.descent - top
+                    while (iterator.next(rect)) {
+                        val start = maxOf(left, rect.left.toFloat())
+                        val end = minOf(right, rect.right.toFloat())
+                        if (end > start) result.add(TextLineSegment(start, end, y))
+                    }
+                }
+                return result
             }
             override fun draw(canvas: Canvas) {
                 val save = canvas.save()

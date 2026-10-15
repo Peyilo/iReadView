@@ -1,0 +1,4 @@
+<resources>
+    <item name="reader_window_insets" type="id" />
+    <item name="reader_window_color" type="id" />
+</resources>

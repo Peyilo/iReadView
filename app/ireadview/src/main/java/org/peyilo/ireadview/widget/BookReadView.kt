@@ -49,6 +49,12 @@ abstract class BookReadView @JvmOverloads constructor(
     private var relayoutSequence = 0L
     private var restoredPosition: ReadingPosition? = null
     private var pageFactory: ReaderPageFactory = DefaultReaderPageFactory()
+    private var pageChromeProvider: ReaderPageChromeProvider? = null
+    private val pageChromeBridge = ReaderPageChromeProvider { page ->
+        pageChromeProvider?.provide(page) ?: ReaderPageChrome()
+    }
+    private var chromeRefreshPending = false
+    private var refreshingChrome = false
     private var presentation: BookPresentation? = null
     private var pageClock: org.peyilo.ireadview.internal.render.ReaderPageClock? = null
     init {
@@ -264,6 +270,7 @@ abstract class BookReadView @JvmOverloads constructor(
             override val book get() = currentBook
             override val style get() = this@BookReadView.style
             override val pageFactory get() = this@BookReadView.pageFactory
+            override val pageChromeProvider get() = pageChromeBridge
             override val placeholderFactory get() = this@BookReadView.placeholderFactory
             override suspend fun retryChapter(chapterId: String) = this@BookReadView.retryChapter(chapterId)
             override fun requestReaderAction(action: ReaderAction, position: ReadingPosition, generation: Long): Boolean {
@@ -309,6 +316,9 @@ abstract class BookReadView @JvmOverloads constructor(
                 return selectText(selection)
             }
             override fun validHighlights(chapterId: String): List<Highlight> = annotations?.highlights?.filter {
+                it.range.chapterId == chapterId && annotationStore.status(it.id) == AnnotationStatus.Valid
+            } ?: emptyList()
+            override fun validUnderlines(chapterId: String): List<Underline> = annotations?.underlines?.filter {
                 it.range.chapterId == chapterId && annotationStore.status(it.id) == AnnotationStatus.Valid
             } ?: emptyList()
             override fun reportHighlightStyleFallback(id: String, styleId: String) {
@@ -718,6 +728,29 @@ abstract class BookReadView @JvmOverloads constructor(
         readingMode = mode
     }
 
+    /** Set state-driven content/actions for default chrome; null restores built-in content.
+     * Main thread. Refreshes only the header/footer, never repaginates or changes location.
+     * Custom templates can read ReaderPageContext.chrome and implement refreshChrome().
+     */
+    fun setPageChromeProvider(provider: ReaderPageChromeProvider?) {
+        checkMainThread(); if (isReleased) return
+        pageChromeProvider = provider
+        refreshPageChrome()
+    }
+    /** Re-read captured host state without replacing the page factory or text layout.
+     * During a page transition this is deferred until Idle so snapshots stay consistent.
+     * Single-line text and actions may change; use style/factory APIs to change slot geometry.
+     */
+    fun refreshPageChrome() {
+        checkMainThread(); if (isReleased || refreshingChrome) return
+        chromeRefreshPending = true
+        if (navigationState != ReadNavigationState.Idle) return
+        chromeRefreshPending = false
+        refreshingChrome = true
+        try { presentation?.onPageChromeChanged() } finally { refreshingChrome = false }
+        pageClock?.update()
+    }
+
     fun setPageFactory(factory: ReaderPageFactory) {
         checkMainThread(); if (isReleased) return
         pageFactory = factory
@@ -868,12 +901,19 @@ abstract class BookReadView @JvmOverloads constructor(
         dispatch { if (revision == selectionRevision) it.onSelectionChanged(this, null) }
     }
     fun setAnnotationIdFactory(factory: AnnotationIdFactory) { checkMainThread(); if (!isReleased) annotationIds = factory }
-    /** Null restores the native selection toolbar. Factories are runtime objects, not saved state. */
+    /** Null restores the built-in icon/text selection menu. Factories are runtime objects, not saved state. */
     fun setSelectionToolbarFactory(factory: SelectionToolbarFactory?) {
         checkMainThread(); if (isReleased) return
         selectionToolbar.factory = factory
         selection?.let { showSelectionToolbar(it, selectionRevision) }
     }
+    /** Installs icon/text items in a paged floating menu. Runtime callbacks are not saved state.
+     * Use SelectionToolbars.defaultItems() plus custom items to retain copy/highlight.
+     */
+    @JvmOverloads fun setSelectionMenuItems(
+        items: List<org.peyilo.ireadview.spi.selection.SelectionMenuItem>,
+        options: org.peyilo.ireadview.spi.selection.SelectionMenuOptions = org.peyilo.ireadview.spi.selection.SelectionMenuOptions()
+    ) = setSelectionToolbarFactory(org.peyilo.ireadview.spi.selection.SelectionToolbars.menu(items, options))
     fun highlightSelection(id: String, styleId: String): ReaderResult<Highlight> {
         checkMainThread()
         if (isReleased) return ReaderResult.Rejected(ReaderRejection.Released)
@@ -882,6 +922,18 @@ abstract class BookReadView @JvmOverloads constructor(
         if (!TextSelectionResolver.matches(content, selected.range, selected.text)) return ReaderResult.Rejected(ReaderRejection.InvalidSelection)
         val revision = selectionRevision
         val result = addHighlight(Highlight(id, selected.range, selected.text, styleId))
+        if (result is ReaderResult.Success && revision == selectionRevision) clearSelection()
+        return result
+    }
+    /** Converts the current source selection to an independent line annotation. Dimensions are dp. */
+    @JvmOverloads fun underlineSelection(id: String, style: org.peyilo.ireadview.api.style.TextLineStyle = org.peyilo.ireadview.api.style.TextLineStyle()): ReaderResult<Underline> {
+        checkMainThread()
+        if (isReleased) return ReaderResult.Rejected(ReaderRejection.Released)
+        val selected = selection ?: return ReaderResult.Rejected(ReaderRejection.InvalidSelection)
+        val content = presentation?.contentForChapter(selected.range.chapterId) ?: return ReaderResult.Rejected(ReaderRejection.NotReady)
+        if (!TextSelectionResolver.matches(content, selected.range, selected.text)) return ReaderResult.Rejected(ReaderRejection.InvalidSelection)
+        val revision = selectionRevision
+        val result = addUnderline(Underline(id, selected.range, selected.text, style))
         if (result is ReaderResult.Success && revision == selectionRevision) clearSelection()
         return result
     }
@@ -899,10 +951,58 @@ abstract class BookReadView @JvmOverloads constructor(
         return ReaderResult.Success(Unit)
     }
 
+    private fun ReaderResult<*>.mapToUnit(): ReaderResult<Unit> = when (this) {
+        is ReaderResult.Success -> ReaderResult.Success(Unit)
+        is ReaderResult.Rejected -> this
+        is ReaderResult.Failure -> this
+        ReaderResult.Superseded -> ReaderResult.Superseded
+    }
     private fun createSelectionActions(selected: TextSelection, revision: Long): SelectionActions {
         val generation = contentGeneration
         fun valid() = revision == selectionRevision && selection == selected && !isReleased && generation == contentGeneration
+        fun covers(range: TextRange): Boolean {
+            if (range.bookId != selected.range.bookId || range.chapterId != selected.range.chapterId ||
+                range.contentRevision != null && range.contentRevision != selected.range.contentRevision) return false
+            val content = presentation?.contentForChapter(range.chapterId) ?: return false
+            val start = TextSelectionResolver.compareAnchors(content, range.start, selected.range.start) ?: return false
+            val end = TextSelectionResolver.compareAnchors(content, range.endExclusive, selected.range.endExclusive) ?: return false
+            return start <= 0 && end >= 0
+        }
+        fun highlighted() = annotations?.highlights?.filter { annotationStore.status(it.id) == AnnotationStatus.Valid && covers(it.range) } ?: emptyList()
+        fun underlined() = annotations?.underlines?.filter { annotationStore.status(it.id) == AnnotationStatus.Valid && covers(it.range) } ?: emptyList()
         return object : SelectionActions {
+            override fun isValid(): Boolean { checkMainThread(); return valid() }
+            override fun hasHighlight(): Boolean { checkMainThread(); return valid() && highlighted().isNotEmpty() }
+            override fun hasUnderline(): Boolean { checkMainThread(); return valid() && underlined().isNotEmpty() }
+            override fun toggleHighlight(styleId: String): ReaderResult<Unit> {
+                checkMainThread()
+                if (!valid()) return ReaderResult.Rejected(ReaderRejection.InvalidSelection)
+                val existing = highlighted()
+                if (existing.isEmpty()) return highlight(styleId).mapToUnit()
+                val result = mutateAnnotations { existing.forEach { annotationStore.remove(it.id, highlight = true) }; ReaderResult.Success(Unit) }
+                if (valid()) clearSelection()
+                return result
+            }
+            override fun toggleUnderline(style: org.peyilo.ireadview.api.style.TextLineStyle): ReaderResult<Unit> {
+                checkMainThread()
+                if (!valid()) return ReaderResult.Rejected(ReaderRejection.InvalidSelection)
+                val existing = underlined()
+                if (existing.isEmpty()) return underline(style).mapToUnit()
+                val result = mutateAnnotations { existing.forEach { annotationStore.removeUnderline(it.id) }; ReaderResult.Success(Unit) }
+                if (valid()) clearSelection()
+                return result
+            }
+            override fun underline(style: org.peyilo.ireadview.api.style.TextLineStyle): ReaderResult<Underline> {
+                checkMainThread()
+                if (!valid()) return ReaderResult.Rejected(ReaderRejection.InvalidSelection)
+                return try {
+                    val id = annotationIds.newHighlightId()
+                    if (!valid()) ReaderResult.Rejected(ReaderRejection.InvalidSelection)
+                    else underlineSelection(id, style)
+                } catch (error: Exception) {
+                    ReaderResult.Failure(ReaderError(ReaderStage.SELECTION, "UnderlineActionFailed", error.message ?: "Cannot create underline", cause = error))
+                }
+            }
             override fun copyText(): ReaderResult<Unit> {
                 checkMainThread()
                 if (!valid()) return ReaderResult.Rejected(ReaderRejection.InvalidSelection)
@@ -957,8 +1057,15 @@ abstract class BookReadView @JvmOverloads constructor(
 
     fun replaceAnnotations(snapshot: AnnotationSnapshot): ReaderResult<Unit> = mutateAnnotations { annotationStore.replace(snapshot) }
     fun addBookmark(bookmark: Bookmark): ReaderResult<Bookmark> = mutateAnnotations { annotationStore.add(bookmark) }
+    /** Unified mutation entry points; all kinds share id uniqueness, book binding and validation. */
+    fun addAnnotation(annotation: ReaderAnnotation): ReaderResult<ReaderAnnotation> = mutateAnnotations { annotationStore.putAnnotation(annotation, false) }
+    fun updateAnnotation(annotation: ReaderAnnotation): ReaderResult<ReaderAnnotation> = mutateAnnotations { annotationStore.putAnnotation(annotation, true) }
+    fun removeAnnotation(id: String): ReaderResult<Unit> = mutateAnnotations(changed = annotations?.items?.any { it.id == id } == true) { annotationStore.removeAnnotation(id) }
     fun addHighlight(highlight: Highlight): ReaderResult<Highlight> = mutateAnnotations { annotationStore.put(highlight, update = false) }
     fun updateHighlight(highlight: Highlight): ReaderResult<Highlight> = mutateAnnotations { annotationStore.put(highlight, update = true) }
+    fun addUnderline(underline: Underline): ReaderResult<Underline> = mutateAnnotations { annotationStore.putUnderline(underline, update = false) }
+    fun updateUnderline(underline: Underline): ReaderResult<Underline> = mutateAnnotations { annotationStore.putUnderline(underline, update = true) }
+    fun removeUnderline(id: String): ReaderResult<Unit> = mutateAnnotations(changed = annotations?.underlines?.any { it.id == id } == true) { annotationStore.removeUnderline(id) }
     fun removeBookmark(id: String): ReaderResult<Unit> = mutateAnnotations(changed = annotationStore.bookmark(id) != null) { annotationStore.remove(id, highlight = false) }
     fun removeHighlight(id: String): ReaderResult<Unit> = mutateAnnotations(changed = annotations?.highlights?.any { it.id == id } == true) { annotationStore.remove(id, highlight = true) }
 
@@ -973,7 +1080,7 @@ abstract class BookReadView @JvmOverloads constructor(
     private fun publishAnnotations() {
         val snapshot = annotationStore.snapshot() ?: return
         presentation?.currentContent()?.let { annotationStore.validate(it) }
-        val chapterIds = (snapshot.bookmarks.map { it.position.chapterId } + snapshot.highlights.map { it.range.chapterId }).toSet()
+        val chapterIds = (snapshot.bookmarks.map { it.position.chapterId } + snapshot.highlights.map { it.range.chapterId } + snapshot.underlines.map { it.range.chapterId }).toSet()
         chapterIds.forEach { id -> (presentation?.contentForChapter(id) ?: coordinator.peekChapter(id))?.let { annotationStore.validate(it) } }
         val generation = contentGeneration
         val revision = annotationStore.revision
@@ -1083,6 +1190,8 @@ abstract class BookReadView @JvmOverloads constructor(
             navigationState == state && currentPosition == position && !isReleased
         content?.onNavigationStateChanged(state)
         if (!current()) return
+        if (state == ReadNavigationState.Idle && chromeRefreshPending) refreshPageChrome()
+        if (!current()) return
         if (state == ReadNavigationState.Idle && currentPosition != null && !isReleased) { phase = ReaderPhase.Ready; publishState() }
         if (!current()) return
         if (state == ReadNavigationState.Idle && !draggingSelection && isAttachedToWindow && presentation?.currentContent() != null) selection?.let { showSelectionToolbar(it, selectionRevision) }
@@ -1137,6 +1246,8 @@ abstract class BookReadView @JvmOverloads constructor(
     override fun onRelease() {
         openSequence++
         phase = ReaderPhase.Released
+        pageChromeProvider = null
+        chromeRefreshPending = false
         listeners.clear()
         org.peyilo.ireadview.internal.releaseReaderResources(
             { pageClock?.clear() },

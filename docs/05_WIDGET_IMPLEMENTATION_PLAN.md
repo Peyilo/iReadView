@@ -331,7 +331,7 @@ detach 时取消旧 lifetime 的加载、排版、导航和事件投递，保留
 
 正文已接入节点内字符/词/段落粒度：平台边界解析器与虚拟节点游标独立于导航位置，标准扩展参数调用同一选区入口；折叠范围和缩回端点清除选区。读取游标随切片/选区版本变化或解绑失效，事件带相对范围并在宿主回调后再校验切片。未声明行/页粒度，未自动跨节点或翻页。Debug 构建通过，服务事件与 Unicode 行为仍需设备验收。
 
-Demo 已补齐独立 DemoReadingStorage：版本 JSON、逐书 ReaderSnapshot/最近 URI+编码的原子偏好设置编辑、身份/损坏检查、状态保存合并与生命周期补存。切书先保存旧进度；成功打开后才关联新来源，准备期状态不写入。冷启动及手动重开使用显式快照，Activity 重建保留 View 状态优先；恢复失败提供从头打开。持久化保持宿主责任，不扩展库 Parcelable 或 BookSource。异步 apply 不保证任意强杀时最近 600ms 的进度，书架/记录清理和持久授权淘汰后续补齐。
+Demo 已补齐独立 ReadingStorage：版本 JSON、逐书 ReaderSnapshot/最近 URI+编码的原子偏好设置编辑、身份/损坏检查、状态保存合并与生命周期补存。切书先保存旧进度；成功打开后才关联新来源，准备期状态不写入。冷启动及手动重开使用显式快照，Activity 重建保留 View 状态优先；恢复失败提供从头打开。持久化保持宿主责任，不扩展库 Parcelable 或 BookSource。异步 apply 不保证任意强杀时最近 600ms 的进度，书架/记录清理和持久授权淘汰后续补齐。
 
 1. 评审 04 中类名、方法和结果语义，确定未决产品范围；不在本阶段宣称 API 已发布。
 2. 实现纯数据模型、结果/监听契约、BookSource 和 MemoryBookSource；补齐 Java 重载设计及公开符号清单。
@@ -387,7 +387,7 @@ Demo 最近阅读列表已实现有界history/旧recent迁移、身份去重、�
 
 #### URI授权管理实现补记
 
-已接入宿主 DemoUriGrantStore：application IO串行队列、持久新读授权账本、引用保护、记录维护后的无引用授权清理与停止时重试；授权取得完成的旧选择不会覆盖新请求。保留其他功能/旧版本既有授权及所有写授权，文件与标注不随授权清理删除。清理前同步确认阅读存储落盘，不在初次启动根据未知/损坏历史清扫。Widget接口和快照不包含权限数据。构建通过；提供器授权、快速选择/重建、同URI多编码及淘汰/记录移除待设备验证。
+已接入宿主 UriGrantStore：application IO串行队列、持久新读授权账本、引用保护、记录维护后的无引用授权清理与停止时重试；授权取得完成的旧选择不会覆盖新请求。保留其他功能/旧版本既有授权及所有写授权，文件与标注不随授权清理删除。清理前同步确认阅读存储落盘，不在初次启动根据未知/损坏历史清扫。Widget接口和快照不包含权限数据。构建通过；提供器授权、快速选择/重建、同URI多编码及淘汰/记录移除待设备验证。
 
 #### 分层样式实现补记
 
@@ -395,37 +395,37 @@ Page.viewportPadding、Body.containerPadding/blockPadding、Title.padding/letter
 
 #### 宿主偏好和主题实现补记
 
-已新增DemoReaderPreferences独立version 1 JSON：可恢复样式字段、输入/翻页参数、内置模式/效果与自定义模板标志；分组验证、有界文本/调色表、资源名恢复、运行时对象留给宿主。冷启动按公开suspend接口顺序初始化后打开书籍；Activity View状态重建不覆盖，逐书snapshot后恢复模式/效果。只保存成功提交样式，生命周期补存。Demo四种明暗主题协调背景/正文/标题/chrome/手柄，通过公开事务切换，Widget不内建主题列表。Debug构建通过；设置恢复、损坏存储、资源更名、事务取消和设备显示待验证。完整排版面板的字体/更多数值编辑、进度控制与剩余扩展/验收继续实施。
+已新增ReaderPreferences独立version 1 JSON：可恢复样式字段、输入/翻页参数、内置模式/效果与自定义模板标志；分组验证、有界文本/调色表、资源名恢复、运行时对象留给宿主。冷启动按公开suspend接口顺序初始化后打开书籍；Activity View状态重建不覆盖，逐书snapshot后恢复模式/效果。只保存成功提交样式，生命周期补存。Demo四种明暗主题协调背景/正文/标题/chrome/手柄，通过公开事务切换，Widget不内建主题列表。Debug构建通过；设置恢复、损坏存储、资源更名、事务取消和设备显示待验证。完整排版面板的字体/更多数值编辑、进度控制与剩余扩展/验收继续实施。
 
 #### 完整排版编辑实现补记
 
-DemoReaderStylePanel从MainActivity抽出，页面/正文区域、正文、标题、页眉、页脚五组覆盖FR-DEMO-04，并支持系统字体、首行缩进及chrome可见/字体/内容/高度。统一数值/四边/选择编辑、模型约束、最新样式copy和宿主apply回调；生命周期关闭和窗口身份拒绝旧操作。成功偏好保存复用既有链路，Widget接口未增加UI依赖。Debug构建通过；实际小屏/键盘/辅助技术、生命周期、回滚和模板字段作用仍待设备验证。章节进度/控制面板、网络来源示例、独立效果与自定义效果演示等完整剩余范围继续推进。
+TypographySheet从MainActivity抽出，页面/正文区域、正文、标题、页眉、页脚五组覆盖FR-DEMO-04，并支持系统字体、首行缩进及chrome可见/字体/内容/高度。统一数值/四边/选择编辑、模型约束、最新样式copy和宿主apply回调；生命周期关闭和窗口身份拒绝旧操作。成功偏好保存复用既有链路，Widget接口未增加UI依赖。Debug构建通过；实际小屏/键盘/辅助技术、生命周期、回滚和模板字段作用仍待设备验证。章节进度/控制面板、网络来源示例、独立效果与自定义效果演示等完整剩余范围继续推进。
 
 #### 阅读控制面板实现补记
 
-已新增DemoReaderControlPanel非模态覆盖层、中间点击toggle/按钮/返回关闭、目录/排版/设置、邻章按钮与章节SeekBar/精确页输入。全部通过公开状态/分页结果与goToPosition，目标实例/章节/revision/layoutKey/页数校验、拖动预览后一次提交、键盘/辅助技术进度分支、单Job及生命周期取消；显示隐藏不改变正文viewport。Debug构建通过；实际窗口/IME/辅助技术、模式与虚拟页、重排/取消/恢复待验证。网络/独立效果/自定义效果演示与其他完整剩余要求继续实施。
+已新增ReaderMenuController非模态覆盖层、中间点击toggle/按钮/返回关闭、目录/排版/设置、邻章按钮与章节SeekBar/精确页输入。全部通过公开状态/分页结果与goToPosition，目标实例/章节/revision/layoutKey/页数校验、拖动预览后一次提交、键盘/辅助技术进度分支、单Job及生命周期取消；显示隐藏不改变正文viewport。Debug构建通过；实际窗口/IME/辅助技术、模式与虚拟页、重排/取消/恢复待验证。网络/独立效果/自定义效果演示与其他完整剩余要求继续实施。
 
 #### 自定义效果接入实现补记
 
-DemoReaderEffects增加demo.wipe宿主工厂/新实例，公开PageTurnEffect生命周期、双PageSurface裁剪/阴影、方向/RTL、Canvas finally还原与finish/abort/detach清引用；无需自有时钟/导航/位图。菜单接入，宿主偏好/Activity仅保存已知标识并重建，自定义实例不进入Widget SavedState或ReaderSnapshot。Debug构建通过；实际手势/结算/取消、RTL、模式/重建、端点与视觉待验证。独立容器、网络章节来源演示与完整剩余范围继续推进。
+ReaderEffects增加demo.wipe宿主工厂/新实例，公开PageTurnEffect生命周期、双PageSurface裁剪/阴影、方向/RTL、Canvas finally还原与finish/abort/detach清引用；无需自有时钟/导航/位图。菜单接入，宿主偏好/Activity仅保存已知标识并重建，自定义实例不进入Widget SavedState或ReaderSnapshot。Debug构建通过；实际手势/结算/取消、RTL、模式/重建、端点与视觉待验证。独立容器、网络章节来源演示与完整剩余范围继续推进。
 
 #### 独立通用容器Demo实现补记
 
-新增DemoContainerActivity/DemoCardReadView与CardAdapter，五卡片Int位置、公开ReadContentAdapter/PreparedRead/PageSurface、尺寸准备/代次检查/显示所有权/释放；BaseReadView统一导航/手势/提交/效果。独立入口、前后/效果/减少动画/退出、能力监听、已提交序号与已知factory ID重建。Debug构建通过；挂载/旋转/取消/位图效果/服务与真实边界待验证。网络章节演示、可访问性跨节点及完整剩余验收继续实施。
+新增ContainerActivity/CardReadView与CardAdapter，五卡片Int位置、公开ReadContentAdapter/PreparedRead/PageSurface、尺寸准备/代次检查/显示所有权/释放；BaseReadView统一导航/手势/提交/效果。独立入口、前后/效果/减少动画/退出、能力监听、已提交序号与已知factory ID重建。Debug构建通过；挂载/旋转/取消/位图效果/服务与真实边界待验证。网络章节演示、可访问性跨节点及完整剩余验收继续实施。
 
 #### 网络来源Demo实现补记
 
-DemoNetworkBookSource宿主BookSource已接入有界HTTPS目录JSON/同源UTF-8章节、响应状态/字节/长度验证、严格编码、SHA修订与固定身份、元数据原子快照、并发章请求、协程期限/取消disconnect及AutoCloseable。DemoNetworkActivity独立入口、显式地址/取消/重试/前后页、停止关闭与快照恢复，示例目录/正文文件提供协议样本。Widget/库Manifest未增加网络逻辑/权限。Debug构建通过，未发实际网络请求或运行测试；服务、取消/后台/重建及错误边界仍待设备验证。可访问性跨节点、缓存/性能、其他完整验收继续推进。
+NetworkBookSource宿主BookSource已接入有界HTTPS目录JSON/同源UTF-8章节、响应状态/字节/长度验证、严格编码、SHA修订与固定身份、元数据原子快照、并发章请求、协程期限/取消disconnect及AutoCloseable。NetworkActivity独立入口、显式地址/取消/重试/前后页、停止关闭与快照恢复，示例目录/正文文件提供协议样本。Widget/库Manifest未增加网络逻辑/权限。Debug构建通过，未发实际网络请求或运行测试；服务、取消/后台/重建及错误边界仍待设备验证。可访问性跨节点、缓存/性能、其他完整验收继续推进。
 
 网络来源边界继续完善：目录JSON进入JSONObject前进行32层结构预检与取消检查，明确拒绝非字符串关键字段/非整数版本；输入和解析后地址有界，Content-Length格式非法明确失败。未增加新网络协议或Widget接口，失败继续保留旧目录。构建通过，运行边界仍待验证。
 
 #### Demo全书页数实现补记
 
-DemoPageIndexPanel已替代Activity内嵌计算/输入弹窗，统一窗口、监听器与单Job所有权、序号及生命周期取消。完成窗口切换先解除旧dismiss动作，避免自取消；书籍/索引实例在通知、提交和执行前复核，Long范围校验后调用公开goToGlobalPage保留Widget内部失效保护。Debug构建通过，未新增或运行测试，计算/取消/快速重排/换书/重建及实际页号跳转待设备验证；完整剩余范围继续推进。
+PageIndexPanel已替代Activity内嵌计算/输入弹窗，统一窗口、监听器与单Job所有权、序号及生命周期取消。完成窗口切换先解除旧dismiss动作，避免自取消；书籍/索引实例在通知、提交和执行前复核，Long范围校验后调用公开goToGlobalPage保留Widget内部失效保护。Debug构建通过，未新增或运行测试，计算/取消/快速重排/换书/重建及实际页号跳转待设备验证；完整剩余范围继续推进。
 
 #### Demo标注管理实现补记
 
-DemoAnnotationPanel补齐高亮列表/摘录详情/严格定位/改色/删除与明确校验状态，并复用书签查看/恢复/删除/添加。未校验项先显式打开章节触发验证，失效项不伪提供精确定位；截取仅UI、记录不改。窗口/书籍/记录相等检查、单导航Job/序号和生命周期清理，公开API+既有持久监听链路。构建通过，真实标注验证/内容变化/窗口/服务与恢复待验证，完整剩余范围继续推进。
+AnnotationPanel补齐高亮列表/摘录详情/严格定位/改色/删除与明确校验状态，并复用书签查看/恢复/删除/添加。未校验项先显式打开章节触发验证，失效项不伪提供精确定位；截取仅UI、记录不改。窗口/书籍/记录相等检查、单导航Job/序号和生命周期清理，公开API+既有持久监听链路。构建通过，真实标注验证/内容变化/窗口/服务与恢复待验证，完整剩余范围继续推进。
 
 
 #### 正文相邻虚拟节点移动补记
@@ -529,7 +529,7 @@ SelectionToolbarFactory 增加默认 unbind；合法返回 View 的取消准备�
 
 #### 选区工具栏 Demo 接入补记
 
-公开 setter 的 null 恢复原生工具栏。新增只使用公开 SPI 的 DemoSelectionToolbarFactory，展示复制/高亮/取消及解绑监听；输入设置提供切换，宿主偏好和 Activity 标志重建工厂，旧记录缺字段回到默认。Debug 构建通过，未新增或运行测试；选区切换、操作、重建/冷启动、窗口与辅助交互待设备验证。
+公开 setter 的 null 恢复原生工具栏。新增只使用公开 SPI 的 CustomSelectionToolbarFactory，展示复制/高亮/取消及解绑监听；输入设置提供切换，宿主偏好和 Activity 标志重建工厂，旧记录缺字段回到默认。Debug 构建通过，未新增或运行测试；选区切换、操作、重建/冷启动、窗口与辅助交互待设备验证。
 
 #### 自定义正文块 Demo 接入补记
 
@@ -589,7 +589,7 @@ Debug 构建通过，未新增或运行测试。待来源/设备验证：默认�
 
 ### TXT 配置宿主接入示例
 
-已新增独立 DemoTextSourceActivity 及菜单/Manifest/View ID，展示 TXT 内存/磁盘、规范化和身份策略公开契约；样例对重复空白行显式消歧，内容摘要不当作通用唯一性保证。状态请求序号隔离旧完成，后台关闭来源，前台重建并按轻量快照恢复。DemoSnapshotState 合并网络/文本示例的 Bundle 快照读写，保留旧网络字段格式。
+已新增独立 TextSourceActivity 及菜单/Manifest/View ID，展示 TXT 内存/磁盘、规范化和身份策略公开契约；样例对重复空白行显式消歧，内容摘要不当作通用唯一性保证。状态请求序号隔离旧完成，后台关闭来源，前台重建并按轻量快照恢复。SnapshotState 合并网络/文本示例的 Bundle 快照读写，保留旧网络字段格式。
 
 Debug 构建通过，未新增或运行测试。仍需设备检查：配置切换后正文/ID/revision 和回退、模式与位置恢复、Activity 重建、后台取消、临时文件释放；此示例是宿主接入和手动观察入口，不是上述行为已通过的证据。
 
@@ -669,7 +669,7 @@ submit 主线程回调隔离普通宿主 Exception，诊断后不重试/改写�
 Debug/Java 编译通过，未新增或运行测试。完成/取消竞争、通知重入/异常/释放、致命错误传播与各领域替代结果仍需行为证据。
 ### Release 打包边界
 
-生成 Release AAR 后检查 Manifest/classes.jar，库 Manifest 不含 Demo 权限/Activity，公开入口存在，类清单未发现 Demo/测试类。签名核对发现 protected readerScope 暴露内部任务控制，改为 internal，并把 DemoCardReadView 初始化迁到公共 callback 导航；保留既有容器扩展/生命周期钩子，不增加新的任务 API。consumer-rules 注释说明直接引用和宿主反射责任，不添加全库保留规则。
+生成 Release AAR 后检查 Manifest/classes.jar，库 Manifest 不含 Demo 权限/Activity，公开入口存在，类清单未发现 Demo/测试类。签名核对发现 protected readerScope 暴露内部任务控制，改为 internal，并把 CardReadView 初始化迁到公共 callback 导航；保留既有容器扩展/生命周期钩子，不增加新的任务 API。consumer-rules 注释说明直接引用和宿主反射责任，不添加全库保留规则。
 
 Debug/Java 与 Release AAR 构建通过，未新增或运行测试。AAR 独立外部消费、依赖元数据发布、Java 合成入口边界、压缩/资源/XML、API21/设备行为仍待证据；原始目标保持，未宣告发布就绪。
 ### 位置通知派生动作归属
@@ -817,7 +817,7 @@ Debug/Java/Release构建通过，未新增或运行测试；描述/range/heading
 
 TextContentIdProviderAdapter是无状态抽象类，继承策略接口并生成Kotlin默认成员的JVM桥接，Java可只覆盖需要的blockId/chapterId/persistentIndexKey。不引入策略状态、配置builder或全局JVM默认模式，默认键仍null。直接实现接口仍须满足Java视角抽象成员。
 
-DemoJavaActivity实际构造TextBookOptions，复用默认规则/预算getter，设置私有磁盘目录、复用开关与版本化策略；匿名适配器只覆盖块ID和缓存键，章ID沿默认实现。块ID改为java-line-N，旧保存TXT修订按原规则失配/回退，不静默迁移。已有取消/来源关闭/模式来源选择规则保留，界面不宣称缓存命中。
+JavaReaderActivity实际构造TextBookOptions，复用默认规则/预算getter，设置私有磁盘目录、复用开关与版本化策略；匿名适配器只覆盖块ID和缓存键，章ID沿默认实现。块ID改为java-line-N，旧保存TXT修订按原规则失配/回退，不静默迁移。已有取消/来源关闭/模式来源选择规则保留，界面不宣称缓存命中。
 
 Debug/Java/Release构建通过，当前产物清单刷新到490类条目/208个所选包Java声明，Demo/测试类名匹配0，摘要同步。Java编译支持这个具体策略/config调用；未新增或运行测试，策略默认桥接运行、复用/关闭/恢复及全部Java扩展仍待验收。
 
@@ -832,7 +832,7 @@ BodyAccessibilityHelper.refresh同时检查辅助服务与键盘虚拟焦点：�
 
 TextContentBlock只声明稳定原文，不拥有导航或布局状态。TextBlockLayoutProvider支持该接口（version=2，宿主提供者优先）；TextSelectionResolver、AnnotationStore、PaginationEngine与AccessibilitySourceTraversal按同一text处理原文。章节blockId映射、字符边界、布局几何、导航事务和取消路径保持共用。图形仍沿ContentBlock与整块描述契约。
 
-DemoAttributedTextBlock示范宿主来源标签和持有大小，DemoCustomContentActivity混合普通文本/自定义文本/图形。自定义附加数据不能由text推断缓存等价，ChapterContent未放宽内置指纹范围；宿主更新内容revision/提供者version。构建通过，未新增或运行测试，行为验收仍按07。
+AttributedTextBlock示范宿主来源标签和持有大小，CustomContentActivity混合普通文本/自定义文本/图形。自定义附加数据不能由text推断缓存等价，ChapterContent未放宽内置指纹范围；宿主更新内容revision/提供者version。构建通过，未新增或运行测试，行为验收仍按07。
 
 
 ### 布局单位与片段共用偏移检查（2026-10-07）

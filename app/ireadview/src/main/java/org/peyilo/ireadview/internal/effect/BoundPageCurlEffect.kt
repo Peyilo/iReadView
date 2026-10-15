@@ -16,6 +16,7 @@ internal class BoundPageCurlEffect(private val options: PageCurlOptions) : PageT
     private val snapshots = PageTurnSnapshots()
     private val rect = RectF()
     private val paint = Paint(Paint.FILTER_BITMAP_FLAG)
+    private var backTint = android.graphics.Color.WHITE
     override fun attach(host: PageTurnEffectHost) { this.host = host }
     override fun supports(direction: TurnDirection, viewport: ReadViewport) = viewport.isValid
     override fun start(context: PageTurnContext) {
@@ -25,6 +26,9 @@ internal class BoundPageCurlEffect(private val options: PageCurlOptions) : PageT
         rect.set(0f,0f,context.viewport.widthPx.toFloat(),context.viewport.heightPx.toFloat())
         try {
             if (!snapshots.capture(owner,context)) throw EffectResourceUnavailable()
+            val sheet = if (context.direction == TurnDirection.Forward) context.current else context.target
+            val sheetBitmap = if (context.direction == TurnDirection.Forward) snapshots.current else snapshots.target
+            backTint = options.backTintColor ?: PageBackTint.resolve(sheet, requireNotNull(sheetBitmap))
             renderer = BoundPageCurlRenderer()
             requireNotNull(renderer).upload(requireNotNull(snapshots.current),requireNotNull(snapshots.target))
             // GPU snapshots are immutable. Return CPU leases before borrowing the output:
@@ -49,7 +53,7 @@ internal class BoundPageCurlEffect(private val options: PageCurlOptions) : PageT
             else options.tilt
         val forward = context.direction == TurnDirection.Forward
         renderer?.render(if(forward)frame.progress else 1f-frame.progress,
-            rect.width()/rect.height(),tilt,context.viewport.rightToLeft,forward,options)
+            rect.width()/rect.height(),tilt,context.viewport.rightToLeft,forward,options,backTint)
     }
     override fun draw(canvas: Canvas, frame: PageTurnFrame) {
         val bitmap = output?.bitmap ?: return

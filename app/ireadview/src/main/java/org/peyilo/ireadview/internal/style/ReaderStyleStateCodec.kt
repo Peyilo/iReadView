@@ -21,9 +21,13 @@ internal object ReaderStyleStateCodec {
         putFloatArray("containerPadding", style.body.containerPadding.values())
         putFloatArray("blockPadding", style.body.blockPadding.values())
         putInt("bodyColor", style.body.textColor)
+        style.body.letterSpacingDp?.let { putFloat("bodyLetterSpacingDp", it) }
+        style.title.letterSpacingDp?.let { putFloat("titleLetterSpacingDp", it) }
         putFloatArray("title", floatArrayOf(style.title.textSizeSp, style.title.spacingAfterDp))
         putFloatArray("titlePadding", style.title.padding.values())
         putFloat("titleLetterSpacing", style.title.letterSpacingEm)
+        putFloat("titleLineMultiplier", style.title.lineSpacingMultiplier)
+        putFloat("titleLineExtra", style.title.lineSpacingExtraDp)
         putIntArray("titleValues", intArrayOf(style.title.textColor, style.title.alignment.ordinal))
         putFloatArray("chromeSizes", floatArrayOf(style.header.textSizeSp, style.footer.textSizeSp))
         putIntArray("chromeColors", intArrayOf(style.header.textColor, style.footer.textColor))
@@ -66,12 +70,16 @@ internal object ReaderStyleStateCodec {
             page = PageStyle(data.getInt("pageColor"), floats("pagePadding", 4).insets(), decodeBackground(data.getBundle("background"), current.page.readerBackground),
                 viewportPadding = optionalInsets("viewportPadding", current.page.viewportPadding)),
             body = current.body.copy(textSizeSp = body[0], textColor = data.getInt("bodyColor"), letterSpacingEm = body[1],
+                letterSpacingDp = if (data.containsKey("bodyLetterSpacingDp")) data.getFloat("bodyLetterSpacingDp") else null,
                 firstLineIndentEm = body[2], lineSpacingMultiplier = body[3], lineSpacingExtraDp = body[4], paragraphSpacingDp = body[5],
                 contentPadding = floats("bodyPadding", 4).insets(), readerFont = decodeFont(data.getBundle("bodyFont"), current.body.readerFont),
                 containerPadding = optionalInsets("containerPadding", current.body.containerPadding), blockPadding = optionalInsets("blockPadding", current.body.blockPadding)),
             title = current.title.copy(textSizeSp = title[0], spacingAfterDp = title[1], textColor = titleValues[0], alignment = TitleAlignment.entries[titleValues[1]],
+                letterSpacingDp = if (data.containsKey("titleLetterSpacingDp")) data.getFloat("titleLetterSpacingDp") else null,
                 readerFont = decodeFont(data.getBundle("titleFont"), current.title.readerFont), padding = optionalInsets("titlePadding", current.title.padding),
-                letterSpacingEm = if (data.containsKey("titleLetterSpacing")) data.getFloat("titleLetterSpacing") else current.title.letterSpacingEm),
+                letterSpacingEm = if (data.containsKey("titleLetterSpacing")) data.getFloat("titleLetterSpacing") else current.title.letterSpacingEm,
+                lineSpacingMultiplier = if (data.containsKey("titleLineMultiplier")) data.getFloat("titleLineMultiplier") else current.title.lineSpacingMultiplier,
+                lineSpacingExtraDp = if (data.containsKey("titleLineExtra")) data.getFloat("titleLineExtra") else current.title.lineSpacingExtraDp),
             header = decodeChrome(data.getBundle("headerOptions"), current.header.copy(visible = visibility[0], textSizeSp = sizes[0], textColor = colors[0])),
             footer = decodeChrome(data.getBundle("footerOptions"), current.footer.copy(visible = visibility[1], textSizeSp = sizes[1], textColor = colors[1])),
             highlightStyles = palette,

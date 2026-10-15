@@ -9,7 +9,7 @@
 - [当前宿主接入契约](08_HOST_INTEGRATION_GUIDE.md)
 - [实际职责归属](05_WIDGET_IMPLEMENTATION_PLAN.md#2-当前职责归属)
 
-2026-10-13 清单对应的 AAR 的 classes.jar 含527个class条目，所选公开包下输出218个Java可见类型声明；这不是218个支持接口。Demo包与测试类名匹配数为0，库Manifest只有org.peyilo.ireadview包/minSdk21，没有权限或Activity。SHA-256绑定具体AAR和classes.jar，源码/构建变化后应重新生成。
+2026-10-14 清单对应的 AAR 的 classes.jar 含560个class条目，所选公开包下输出240个Java可见类型声明；这不是240个支持接口。Demo包与测试类名匹配数为0，库Manifest只有org.peyilo.ireadview包/minSdk21，没有权限或Activity。SHA-256绑定具体AAR和classes.jar，源码/构建变化后应重新生成。
 
 ## 2. 当前包结构
 
@@ -83,3 +83,21 @@ TextContentBlock在本清单中声明getText，TextBlock/HeadingBlock实现该�
 
 
 
+
+当前清单已包含 ReaderStyles、PaddingRegion、TextRole、BodyStyle/TitleStyle.getLetterSpacingDp，以及 TitleStyle 行距参数和 ReaderStyles.withTitleLineSpacing。数据类完整构造与 copy 签名新增参数，旧二进制宿主需重新编译；不可把源码默认值兼容误认为二进制兼容。
+
+## 图文选区菜单（2026-10-14）
+
+清单新增 SelectionMenuItem、SelectionMenuAction、SelectionMenuOptions、SelectionToolbars 与 BookReadView.setSelectionMenuItems，SelectionActions 新增抽象 isValid。外部自行实现 SelectionActions 需要补实现并重编译；既有 SelectionToolbarFactory SPI 保留。完整行为见27号设计文档。
+
+## 独立划线 API（2026-10-14）
+
+新增 Underline、TextLineStyle/TextLinePattern/TextLineStyles、TextLineSegment，以及 AnnotationSnapshot.underlines、SelectionActions.underline、BookReadView 划线增删改和 underlineSelection、BlockLayoutFragment.underlineSegments、BookPresentationHost.validUnderlines。新增接口方法涉及 Java 实现补齐，详见28号文档；构建仅证明编译签名，未做设备验收。
+
+## 统一注解和切换 API（2026-10-14）
+
+当前清单包含 ReaderAnnotation/RangedAnnotation、AnnotationSnapshot.items/fromItems、BookReadView.addAnnotation/updateAnnotation/removeAnnotation、SelectionActions.hasHighlight/hasUnderline/toggleHighlight/toggleUnderline，以及 SelectionMenuState 和 item 活跃标题。旧类型构造和四参数菜单构造保留，data class copy 和 SelectionActions 实现仍需重编译，详见29号文档。
+
+## 自动背面颜色（2026-10-14）
+
+新增可选 PageBackgroundSurface；CurlOptions.backTintColor 为可空 Integer，null 自动取翻起页面底色。PageCurlOptions 追加同类 tint/content 配置及重载。旧完整构造/copy 和 getter 签名变化，旧宿主需重新编译，详见30号文档。清单和构建不证明 GLES shader 已运行验收。

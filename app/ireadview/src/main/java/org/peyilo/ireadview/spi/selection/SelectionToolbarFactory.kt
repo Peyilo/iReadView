@@ -7,8 +7,17 @@ import org.peyilo.ireadview.api.model.TextSelection
 import org.peyilo.ireadview.api.state.ReaderResult
 
 interface SelectionActions {
+    /** False after selection, content generation or book changes. Call on the main thread. */
+    fun isValid(): Boolean
+    fun hasHighlight(): Boolean
+    fun hasUnderline(): Boolean
+    /** Removes marks covering the selection, otherwise adds one. Existing add-only APIs remain. */
+    fun toggleHighlight(styleId: String = "default"): ReaderResult<Unit>
+    fun toggleUnderline(style: org.peyilo.ireadview.api.style.TextLineStyle = org.peyilo.ireadview.api.style.TextLineStyle()): ReaderResult<Unit>
     fun copyText(): ReaderResult<Unit>
     fun highlight(styleId: String = "default"): ReaderResult<Highlight>
+    /** Adds an independent line annotation, using source range/revision validation. */
+    fun underline(style: org.peyilo.ireadview.api.style.TextLineStyle = org.peyilo.ireadview.api.style.TextLineStyle()): ReaderResult<org.peyilo.ireadview.api.model.Underline>
     fun clearSelection()
 }
 

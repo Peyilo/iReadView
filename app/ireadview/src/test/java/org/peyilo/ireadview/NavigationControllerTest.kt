@@ -14,7 +14,7 @@ import org.peyilo.ireadview.spi.presentation.*
 class NavigationControllerTest {
     @Test fun prepareAndShowDoNotPublishUntilBothHaveFinished() = runTest {
         val commits = mutableListOf<ReadLocationChange<Int>>()
-        val controller = NavigationController<Int>({ 1L }, { commits.add(it) }, {})
+        val controller = NavigationController<Int>({ 1L }, { commits.add(it) }, {}, { _, _ -> })
         val gate = CompletableDeferred<Unit>()
         val adapter = FakeAdapter(1, 1L, gate)
         val operation = async { controller.navigate(adapter, ReadNavigation.Next, NavigationOptions(), PositionChangeReason.ProgrammaticNavigation) }
@@ -30,7 +30,7 @@ class NavigationControllerTest {
 
     @Test fun cancellingDuringShowDisposesTheCandidateAndNeverCommits() = runTest {
         val commits = mutableListOf<ReadLocationChange<Int>>()
-        val controller = NavigationController<Int>({ 1L }, { commits.add(it) }, {})
+        val controller = NavigationController<Int>({ 1L }, { commits.add(it) }, {}, { _, _ -> })
         val adapter = FakeAdapter(1, 1L, CompletableDeferred())
         val operation = launch { controller.navigate(adapter, ReadNavigation.Next, NavigationOptions(), PositionChangeReason.UserNavigation) }
         runCurrent(); operation.cancelAndJoin()
@@ -42,7 +42,7 @@ class NavigationControllerTest {
 
     @Test fun ordinaryReentryIsBusyAndForcedNavigationSupersedesTheOldOwner() = runTest {
         val commits = mutableListOf<ReadLocationChange<Int>>()
-        val controller = NavigationController<Int>({ 1L }, { commits.add(it) }, {})
+        val controller = NavigationController<Int>({ 1L }, { commits.add(it) }, {}, { _, _ -> })
         val first = FakeAdapter(1, 1L, CompletableDeferred())
         val pending = async { controller.navigate(first, ReadNavigation.Next, NavigationOptions(), PositionChangeReason.UserNavigation) }
         runCurrent()
@@ -57,7 +57,7 @@ class NavigationControllerTest {
     @Test fun aLateCandidateCannotCommitAfterGenerationChanges() = runTest {
         var generation = 1L
         val commits = mutableListOf<ReadLocationChange<Int>>()
-        val controller = NavigationController<Int>({ generation }, { commits.add(it) }, {})
+        val controller = NavigationController<Int>({ generation }, { commits.add(it) }, {}, { _, _ -> })
         val gate = CompletableDeferred<Unit>()
         val adapter = FakeAdapter(1, 1L, gate)
         val operation = async { controller.navigate(adapter, ReadNavigation.Next, NavigationOptions(), PositionChangeReason.UserNavigation) }

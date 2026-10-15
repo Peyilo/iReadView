@@ -10,15 +10,29 @@ data class TextRange(
     init { require(bookId.isNotBlank() && chapterId.isNotBlank()) }
 }
 
-data class Bookmark(val id: String, val position: ReadingPosition, val label: String? = null) {
+/** Common identity for all built-in annotations. New kinds share storage and lifecycle. */
+sealed interface ReaderAnnotation { val id: String; val bookId: String }
+sealed interface RangedAnnotation : ReaderAnnotation {
+    val range: TextRange
+    val quote: String
+    override val bookId: String get() = range.bookId
+}
+data class Bookmark(override val id: String, val position: ReadingPosition, val label: String? = null) : ReaderAnnotation {
+    override val bookId get() = position.bookId
     init { require(id.isNotBlank()) }
 }
 
-data class Highlight(val id: String, val range: TextRange, val quote: String, val styleId: String = "default") {
+data class Highlight(override val id: String, override val range: TextRange, override val quote: String, val styleId: String = "default") : RangedAnnotation {
     init { require(id.isNotBlank() && styleId.isNotBlank()) }
 }
 
 data class TextSelection(val range: TextRange, val text: String)
+
+/** A line annotation independent from a background Highlight, with per-annotation appearance. */
+data class Underline(override val id: String, override val range: TextRange, override val quote: String,
+    val style: org.peyilo.ireadview.api.style.TextLineStyle = org.peyilo.ireadview.api.style.TextLineStyle()) : RangedAnnotation {
+    init { require(id.isNotBlank()) }
+}
 
 interface AnnotationIdFactory {
     fun newBookmarkId(): String
@@ -26,9 +40,18 @@ interface AnnotationIdFactory {
 }
 
 /** A persistence-neutral snapshot; collections cannot be mutated by either side. */
-class AnnotationSnapshot(val bookId: String, bookmarks: List<Bookmark> = emptyList(), highlights: List<Highlight> = emptyList()) {
-    val bookmarks: List<Bookmark> = immutableList(bookmarks)
-    val highlights: List<Highlight> = immutableList(highlights)
+class AnnotationSnapshot private constructor(val bookId: String, annotations: List<ReaderAnnotation>, @Suppress("UNUSED_PARAMETER") canonical: Unit) {
+    val items: List<ReaderAnnotation> = immutableList(annotations)
+    /** Typed views retain the earlier host API; items is the canonical collection. */
+    val bookmarks: List<Bookmark> = immutableList(items.filterIsInstance<Bookmark>())
+    val highlights: List<Highlight> = immutableList(items.filterIsInstance<Highlight>())
+    val underlines: List<Underline> = immutableList(items.filterIsInstance<Underline>())
+    @JvmOverloads constructor(bookId: String, bookmarks: List<Bookmark> = emptyList(), highlights: List<Highlight> = emptyList(), underlines: List<Underline> = emptyList()) :
+        this(bookId, bookmarks + highlights + underlines, Unit)
+    companion object {
+        @JvmStatic fun fromItems(bookId: String, items: List<ReaderAnnotation>): AnnotationSnapshot =
+            AnnotationSnapshot(bookId, items, Unit)
+    }
     init { require(bookId.isNotBlank()) }
 }
 

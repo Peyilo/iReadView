@@ -33,6 +33,7 @@ internal class PagedBookPresentation(context: Context, private val bookHost: Boo
     override fun onPlaceholdersChanged() { active?.bindPlaceholder() }
     override val needsTimeUpdates get() = !detached && active?.takeIf { it.generation == bookHost.generation }?.template?.needsTimeUpdates == true
     override fun onTimeChanged(timeMillis: Long) { active?.takeIf { !detached && it.generation == bookHost.generation }?.template?.onTimeChanged(timeMillis) }
+    override fun onPageChromeChanged() { active?.takeIf { !detached && it.generation == bookHost.generation }?.template?.refreshChrome() }
     override fun navigationAvailability(target: ReadNavigation<ReadingPosition>): NavigationAvailability {
         val page = active?.takeIf { it.generation == bookHost.generation } ?: return NavigationAvailability.NotReady
         val book = bookHost.book ?: return NavigationAvailability.NotReady
@@ -50,6 +51,9 @@ internal class PagedBookPresentation(context: Context, private val bookHost: Boo
     private var detached = false
     private val reportedFallbacks = HashSet<Pair<String, String>>()
     private var draggingHandle: Boolean? = null
+    private var dragDown = PointF()
+    private var dragHasMoved = false
+    private val handleTouchSlop = android.view.ViewConfiguration.get(context).scaledTouchSlop
     private var dragOffset = PointF()
     private var selectionScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var edgeJob: Job? = null
@@ -95,7 +99,7 @@ internal class PagedBookPresentation(context: Context, private val bookHost: Boo
         val offset = Rect()
         container.offsetDescendantRectToMyCoords(page.body, offset)
         val anchor = page.body.anchorAt(xPx - offset.left, yPx - offset.top) ?: return false
-        val selection = TextSelectionResolver.wordAt(content, anchor) ?: return false
+        val selection = TextSelectionResolver.paragraphAt(content, anchor) ?: return false
         return bookHost.reportSelection(selection, page.generation) is ReaderResult.Success
     }
     override fun onSelectionTouch(action: Int, xPx: Float, yPx: Float): Boolean {
@@ -114,6 +118,8 @@ internal class PagedBookPresentation(context: Context, private val bookHost: Boo
             draggingHandle = page.body.selectionHandleAt(x, y) ?: return false
             dragSerial++
             dragPointer = PointF(xPx, yPx)
+            dragDown = PointF(xPx, yPx)
+            dragHasMoved = false
             dragOffset = page.body.selectionDragOffset(draggingHandle!!, x, y) ?: PointF()
             bookHost.reportSelectionDrag(true)
             return true
@@ -121,19 +127,25 @@ internal class PagedBookPresentation(context: Context, private val bookHost: Boo
         val start = draggingHandle ?: return false
         if (action == MotionEvent.ACTION_MOVE || action == MotionEvent.ACTION_UP) {
             dragPointer = PointF(xPx, yPx)
-            val content = page.layout.contentSnapshot
-            val selected = bookHost.selection
-            // Preserve where the finger grabbed the handle instead of jumping to the circle center.
-            val anchor = page.body.nearestAnchorAt(x + dragOffset.x, y + dragOffset.y)
-            if (content != null && selected != null && anchor != null) {
-                TextSelectionResolver.extend(content, selected, anchor, start)?.let { bookHost.reportSelection(it, page.generation) }
+            if (!dragHasMoved && kotlin.math.hypot(xPx - dragDown.x, yPx - dragDown.y) > handleTouchSlop)
+                dragHasMoved = true
+            if (dragHasMoved) {
+                val content = page.layout.contentSnapshot
+                val selected = bookHost.selection
+                // Preserve where the finger grabbed the handle; a proxy starts
+                // editing only after an actual drag, never on a stationary tap.
+                val anchor = page.body.nearestAnchorAt(x + dragOffset.x, y + dragOffset.y)
+                if (content != null && selected != null && anchor != null) {
+                    TextSelectionResolver.extend(content, selected, anchor, start)?.let { bookHost.reportSelection(it, page.generation) }
+                }
+                if (action == MotionEvent.ACTION_MOVE) updateEdgeNavigation(page, y + dragOffset.y)
             }
-            if (action == MotionEvent.ACTION_MOVE) updateEdgeNavigation(page, y + dragOffset.y)
         }
         if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL || action == MotionEvent.ACTION_POINTER_DOWN) stopSelectionDrag()
         return true
     }
     private fun stopSelectionDrag() {
+        dragHasMoved = false
         dragSerial++
         edgeDirection = 0
         edgeJob?.cancel(); edgeJob = null
@@ -202,7 +214,7 @@ internal class PagedBookPresentation(context: Context, private val bookHost: Boo
     }
 
     private fun updateDecorations(page: PageCandidate, reportFallbacks: Boolean = true) {
-        if (page.generation != bookHost.generation) { page.body.setHighlights(emptyList()); page.body.setSelection(emptyList(), bookHost.style.selectionStyle); return }
+        if (page.generation != bookHost.generation) { page.body.setHighlights(emptyList()); page.body.setUnderlines(emptyList()); page.body.setSelection(emptyList(), bookHost.style.selectionStyle); return }
         val styles = bookHost.style.highlightStyles
         val highlights = bookHost.validHighlights(page.target.chapterId)
         val missing = highlights.filter { it.styleId !in styles.styles }.map { it.id to it.styleId }.toSet()
@@ -212,6 +224,11 @@ internal class PagedBookPresentation(context: Context, private val bookHost: Boo
             ranges.map { ColoredTextRange(highlight.id, it, styles[highlight.styleId].fillColor) }
         })
         val selection = bookHost.selection
+        page.body.setUnderlines(bookHost.validUnderlines(page.target.chapterId).flatMap { underline ->
+            ((page.layout.rangesForText(underline.range) as? ReaderResult.Success)?.value ?: emptyList()).map {
+                org.peyilo.ireadview.internal.render.LineTextRange(underline.id, it, underline.style)
+            }
+        })
         val ranges = selection?.takeIf { it.range.chapterId == page.target.chapterId }?.let { (page.layout.rangesForText(it.range) as? ReaderResult.Success)?.value } ?: emptyList()
         page.body.setSelection(ranges, bookHost.style.selectionStyle)
         if (!reportFallbacks) return
@@ -271,13 +288,13 @@ internal class PagedBookPresentation(context: Context, private val bookHost: Boo
         try {
             ownsTemplate = org.peyilo.ireadview.internal.presentation.ReaderPageOwnership.acquire(template, template.root)
             require(ownsTemplate && (template.bodyHost === template.root || isDescendant(template.bodyHost, template.root))) { "Page factory must return a fresh root containing bodyHost" }
-            val body = ReaderBodyView(container.context)
+            val body = ReaderBodyView(container.context).apply { showOffPageSelectionHandles = true }
             mountedBody = body
             val emptyRoot = FrameLayout(container.context)
             val placeholders = ReaderPlaceholderController(emptyRoot) { bookHost.placeholderFactory }
             cleanupPlaceholders = placeholders
             template.bodyHost.addView(body, FrameLayout.LayoutParams(-1, -1))
-            template.bind(ReaderPageContext(book.title, chapter, null, null, style))
+            template.bind(ReaderPageContext(book.title, chapter, null, null, style, chromeProvider = bookHost.pageChromeProvider))
             currentCoroutineContext().ensureActive()
             if (detached || generation != bookHost.generation) return ReadPreparation.Rejected(ReaderRejection.NotReady)
             require(template.root.parent == null) { "Page bind attached its root outside the presentation" }
@@ -309,7 +326,7 @@ internal class PagedBookPresentation(context: Context, private val bookHost: Boo
                 requestReaderAction = { action ->
                     active?.let { it.template === template && it.generation == generation } == true &&
                         bookHost.requestReaderAction(action, position, generation)
-                }))
+                }, chromeProvider = bookHost.pageChromeProvider))
             template.root.awaitMeasured()
             if (detached || generation != bookHost.generation) return ReadPreparation.Rejected(ReaderRejection.NotReady)
             val candidate = PageCandidate(position, generation, template, layout, body)
@@ -361,6 +378,7 @@ internal class PagedBookPresentation(context: Context, private val bookHost: Boo
         check(!detached && page.generation == bookHost.generation)
         val old = active
         updateDecorations(page)
+        page.template.refreshChrome()
         currentCoroutineContext().ensureActive()
         if (detached || page.generation != bookHost.generation || active !== old) return page.target
         page.template.root.visibility = View.VISIBLE

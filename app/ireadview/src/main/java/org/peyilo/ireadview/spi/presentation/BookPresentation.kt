@@ -47,6 +47,7 @@ data class ContinuousFragment(val fragment: BlockLayoutFragment, val spacingAfte
 interface BookPresentationHost : ReadContentHost<ReadingPosition> {
     val book: BookDescriptor?
     val style: ReaderStyle
+    val pageChromeProvider: org.peyilo.ireadview.spi.page.ReaderPageChromeProvider? get() = null
     val pageFactory: ReaderPageFactory
     val placeholderFactory: ReaderPlaceholderFactory get() = org.peyilo.ireadview.internal.render.DefaultReaderPlaceholderFactory()
     suspend fun retryChapter(chapterId: String): ReaderResult<Unit> = ReaderResult.Rejected(ReaderRejection.Unsupported)
@@ -69,6 +70,7 @@ interface BookPresentationHost : ReadContentHost<ReadingPosition> {
         isCurrent: () -> Boolean): NavigationResult<ReadingPosition> =
         if (isCurrent()) requestAccessibilityNavigation(target, generation) else NavigationResult.Superseded
     fun validHighlights(chapterId: String): List<Highlight> = emptyList()
+    fun validUnderlines(chapterId: String): List<Underline> = emptyList()
     fun reportHighlightStyleFallback(id: String, styleId: String) {}
     fun reportHighlightTapped(id: String): Boolean = false
     /** Coordinates relative to the presentation root, for a child-owned touch surface. */
@@ -81,6 +83,7 @@ interface BookPresentationHost : ReadContentHost<ReadingPosition> {
 abstract class BookPresentation : ReadContentAdapter<ReadingPosition> {
     open val needsTimeUpdates: Boolean get() = false
     open fun onTimeChanged(timeMillis: Long) {}
+    open fun onPageChromeChanged() {}
     open fun onNavigationStateChanged(state: org.peyilo.ireadview.api.state.ReadNavigationState) {}
     /** Data/style decorations changed; retain text layout and the committed location. */
     open fun onDecorationsChanged() {}

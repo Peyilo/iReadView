@@ -1,5 +1,7 @@
 # 宿主接入指南
 
+区域边距、四种文字角色、固定 dp 字距及 Java/Kotlin 样式编辑方法见 [阅读面板与排版 API](26_READER_PANELS_AND_TYPOGRAPHY_API.md)。ReaderStyles 返回新样式，使用 applyStyle 提交并在成功后保存。
+
 本指南以当前实现为准，面向 Android View 宿主。目标设计与未确认范围见 04，完整验收缺口见 07；下列调用已有源码/编译证据，不代表设备交互通过。
 
 ## 1. 依赖与入口
@@ -46,7 +48,7 @@ val request = reader.openBook(source, callback = ReaderCallback { completion ->
 request.cancel()
 ```
 
-代码片段使用 api.state 下的回调/结果类型。已有协程宿主也可调用 suspend 重载，但必须从主线程进入。Java 不需要操作 Continuation，实际模型构造和回调消费见 [DemoJavaActivity.java](../app/src/main/java/org/peyilo/iread/demo/DemoJavaActivity.java)。Java 可直接调用 ReaderInput.fromFile/fromAsset/fromResource/fromUri/fromStream 静态入口；openStream 声明 IOException，直接实现 SAM 时可自然使用抛出受检 IO 异常的打开函数。fromStream 的 Kotlin Function0 参数不声明受检异常，受检 IO opener 宜直接实现 ReaderInput SAM 或使用文件/URI工厂。TextBookSource(bookId, input) 与 EpubTextBookSource(bookId, input, cacheDirectory) 提供默认配置的 Java 构造重载。
+代码片段使用 api.state 下的回调/结果类型。已有协程宿主也可调用 suspend 重载，但必须从主线程进入。Java 不需要操作 Continuation，实际模型构造和回调消费见 [JavaReaderActivity.java](../app/src/main/java/org/peyilo/iread/demo/ui/examples/JavaReaderActivity.java)。Java 可直接调用 ReaderInput.fromFile/fromAsset/fromResource/fromUri/fromStream 静态入口；openStream 声明 IOException，直接实现 SAM 时可自然使用抛出受检 IO 异常的打开函数。fromStream 的 Kotlin Function0 参数不声明受检异常，受检 IO opener 宜直接实现 ReaderInput SAM 或使用文件/URI工厂。TextBookSource(bookId, input) 与 EpubTextBookSource(bookId, input, cacheDirectory) 提供默认配置的 Java 构造重载。
 
 取消句柄可跨线程且幂等。isCompleted 表示操作已结束，可能早于主线程队列中的回调送达；终态已产生后取消不改写它。回调用于本请求结果，ReaderListener 用于会话状态；宿主用自己的序号/书籍实例检查拒绝旧结果更新新界面。普通通知异常被诊断，不重送达；致命 Error 传播。
 
@@ -59,7 +61,7 @@ request.cancel()
 3. `closeBook()` 结束书籍会话；在 finally 中关闭宿主拥有且不再共享的可关闭来源。
 4. 页面永久销毁时 `release()`；release 后该 Widget 不可重新打开。
 
-恢复前重新创建来源，并调用 `restoreSnapshot(source, snapshot, callback)`。来源身份需与快照一致；位置/版本变化可能产生明确回退或失败，检查 Opened.restoration。快照包含轻量位置/模式/内置效果，不保存正文、运行时字体、工厂、网络授权或 URI。宿主 Bundle 格式示例为 DemoSnapshotState，最近书籍和标注存储属于示例宿主。
+恢复前重新创建来源，并调用 `restoreSnapshot(source, snapshot, callback)`。来源身份需与快照一致；位置/版本变化可能产生明确回退或失败，检查 Opened.restoration。快照包含轻量位置/模式/内置效果，不保存正文、运行时字体、工厂、网络授权或 URI。宿主 Bundle 格式示例为 SnapshotState，最近书籍和标注存储属于示例宿主。
 
 暂时离开窗口会取消库内工作；重新挂载仍可使用未 release 的 Widget。关闭网络来源后需要重建才能再次读取。避免把已关闭来源传回 restoreSnapshot。
 
@@ -75,13 +77,13 @@ LoadingOptions 控制邻章数量、并发和内容/布局缓存字节；效果�
 
 | 需要 | 公开入口 | 实际示例 |
 |---|---|---|
-| 页眉/页脚与页面组合 | ReaderPageFactory/ReaderPageTemplate | DemoReaderPageFactory |
-| 加载/错误/空状态 | ReaderPlaceholderFactory | DemoReaderPlaceholderFactory |
-| 自定义正文块 | TextContentBlock或ContentBlock/BlockLayoutProvider | DemoAttributedTextBlock / DemoDividerLayoutProvider |
-| 自定义效果 | PageTurnEffectFactory/Effect/Host | DemoReaderEffects |
-| 自定义选区工具栏 | SelectionToolbarFactory/SelectionActions | DemoSelectionToolbarFactory |
-| 非书籍容器 | BaseReadView<L>/ReadContentAdapter<L> | DemoCardReadView |
-| 标注输入输出 | AnnotationSnapshot/replaceAnnotations/exportAnnotations | DemoAnnotationPanel/Storage |
+| 页眉/页脚与页面组合 | ReaderPageFactory/ReaderPageTemplate | CustomPageFactory |
+| 加载/错误/空状态 | ReaderPlaceholderFactory | CustomPlaceholderFactory |
+| 自定义正文块 | TextContentBlock或ContentBlock/BlockLayoutProvider | AttributedTextBlock / DividerLayoutProvider |
+| 自定义效果 | PageTurnEffectFactory/Effect/Host | ReaderEffects |
+| 自定义选区工具栏 | SelectionToolbarFactory/SelectionActions | CustomSelectionToolbarFactory |
+| 非书籍容器 | BaseReadView<L>/ReadContentAdapter<L> | CardReadView |
+| 标注输入输出 | AnnotationSnapshot/replaceAnnotations/exportAnnotations | AnnotationPanel / AnnotationStorage |
 
 提供者/工厂返回新绑定对象，遵守创建/绑定/解绑和 View 所有权；不可复用已挂载到其他页面的 View/Drawable。自定义效果仅绘制，容器驱动时间、导航和提交；自定义块测量不访问 UI、不绕开取消检查。
 
@@ -99,12 +101,12 @@ TXT 磁盘快照的 maxIndexBytes 约束整个私有索引文件，包括格式�
 
 自定义TextContentIdProvider须覆盖persistentIndexKey，提供包含算法/设置的稳定版本标识；默认null不复用，命中时不会调用ID生成函数。非系统注册Charset实现也重建。保留预算不包含原始输入spool/活动副本/构建文件；实际性能和跨进程行为未验证。TXT配置Demo可开启复用，界面不报告未经证实的缓存命中。
 
-Java自定义TXT身份可继承TextContentIdProviderAdapter；只覆盖blockId或chapterId时沿用其余默认值，复用另需覆盖getPersistentIndexKey提供稳定算法版本。DemoJavaActivity展示完整TextBookOptions构造，默认规则/预算可从new TextBookOptions()的getter读取。该示例已通过Java编译，运行复用/恢复未验收。
+Java自定义TXT身份可继承TextContentIdProviderAdapter；只覆盖blockId或chapterId时沿用其余默认值，复用另需覆盖getPersistentIndexKey提供稳定算法版本。JavaReaderActivity展示完整TextBookOptions构造，默认规则/预算可从new TextBookOptions()的getter读取。该示例已通过Java编译，运行复用/恢复未验收。
 
 
 ## 10. 带元数据的自定义文本
 
-实现TextContentBlock并提供不可变blockId/text，可附加宿主来源标签等元数据。默认排版使用正文样式，不需注册提供者；内置HeadingBlock使用标题样式。DemoAttributedTextBlock展示持有大小估算，DemoCustomContentActivity展示混合图形/长文本。Java直接实现时须提供getText/getBlockId/getEstimatedRetainedBytes，未知大小返回null（不进入缓存）。
+实现TextContentBlock并提供不可变blockId/text，可附加宿主来源标签等元数据。默认排版使用正文样式，不需注册提供者；内置HeadingBlock使用标题样式。AttributedTextBlock展示持有大小估算，CustomContentActivity展示混合图形/长文本。Java直接实现时须提供getText/getBlockId/getEstimatedRetainedBytes，未知大小返回null（不进入缓存）。
 
 原文不追加描述/标签，所有ContentAnchor、片段范围、命中/插入点、选区和辅助来源范围以同一text的UTF-16字符边界为准。宿主提供者先于默认提供者匹配；定制绘制时须提供对应几何。图形只有描述时继续ContentBlock，整块描述可声明accessibilityDescribesWholeBlock；不能仅为朗读说明而实现TextContentBlock。
 
@@ -169,7 +171,7 @@ ChapterLayout.continuousFragments返回的列表与片段尺寸须不可变、�
 
 ### 装饰交互和控制点策略示例
 
-DemoCurlActivity 只用公开接口组合带 Button 的页眉和带 SeekBar 的页脚；页眉动作使用绑定 context.requestReaderAction，unbind 撤销监听，页脚滑块展示宿主交互响应而不改变位置。布局与绑定的稳定性/线程契约见 ReaderPageDecoration 注释。宿主需要提供自己的 ReaderActionHandler。
+CurlActivity 只用公开接口组合带 Button 的页眉和带 SeekBar 的页脚；页眉动作使用绑定 context.requestReaderAction，unbind 撤销监听，页脚滑块展示宿主交互响应而不改变位置。布局与绑定的稳定性/线程契约见 ReaderPageDecoration 注释。宿主需要提供自己的 ReaderActionHandler。
 
 ### iBook装订斜圆柱与独立检查（2026-10-09）
 

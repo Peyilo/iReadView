@@ -9,6 +9,10 @@ interface PageSurface {
     val heightPx: Int
     fun draw(canvas: Canvas)
 }
+/** Optional background-only metadata, excluding text. Null requests snapshot-based estimation.
+ * Read once on the UI thread when a turn starts; existing PageSurface implementations need no changes.
+ */
+interface PageBackgroundSurface : PageSurface { val backgroundColor: Int? }
 
 interface BitmapLease : AutoCloseable { val bitmap: Bitmap; override fun close() }
 interface PageTurnEffectHost {

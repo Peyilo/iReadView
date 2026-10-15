@@ -54,7 +54,7 @@ internal class BoundPageCurlRenderer : AutoCloseable {
                 vertices.put(floatArrayOf(-1f,-1f,1f,-1f,-1f,1f,-1f,1f,1f,-1f,1f,1f)).position(0)
                 GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, buffer)
                 GLES20.glBufferData(GLES20.GL_ARRAY_BUFFER, 48, vertices, GLES20.GL_STATIC_DRAW)
-                for (name in arrayOf("progress","aspect","radiusFraction","tilt","shadowStrength","lightSize","lighting","currentPage","nextPage","rightToLeft"))
+                for (name in arrayOf("progress","aspect","radiusFraction","tilt","shadowStrength","lightSize","lighting","currentPage","nextPage","rightToLeft","backTint","backContentAlpha"))
                     locations[name] = GLES20.glGetUniformLocation(program, name)
             }
         } catch (error: Throwable) { close(); throw error }
@@ -89,7 +89,7 @@ internal class BoundPageCurlRenderer : AutoCloseable {
         val bytes=bitmap.width*bitmap.height*4
         pixels=borrowReadback(bytes).apply { clear(); limit(bytes) }
     }
-    fun render(progress: Float, aspect: Float, tilt: Float, rightToLeft: Boolean, forward: Boolean, options: PageCurlOptions) = withCurrent {
+    fun render(progress: Float, aspect: Float, tilt: Float, rightToLeft: Boolean, forward: Boolean, options: PageCurlOptions, backTint: Int) = withCurrent {
         val bitmap = requireNotNull(output)
         val readBuffer = requireNotNull(pixels)
         GLES20.glUseProgram(program); GLES20.glViewport(0,0,bitmap.width,bitmap.height)
@@ -102,6 +102,9 @@ internal class BoundPageCurlRenderer : AutoCloseable {
         uniform("radiusFraction",options.radiusFraction); uniform("shadowStrength",options.shadowStrength)
         uniform("lightSize",options.lightSize); uniform("lighting",1f)
         uniform("rightToLeft",if(rightToLeft)1f else 0f)
+        uniform("backContentAlpha",options.backContentAlpha)
+        GLES20.glUniform3f(requireNotNull(locations["backTint"]), android.graphics.Color.red(backTint)/255f,
+            android.graphics.Color.green(backTint)/255f, android.graphics.Color.blue(backTint)/255f)
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0); GLES20.glBindTexture(GLES20.GL_TEXTURE_2D,textures[if(forward)0 else 1])
         GLES20.glActiveTexture(GLES20.GL_TEXTURE1); GLES20.glBindTexture(GLES20.GL_TEXTURE_2D,textures[if(forward)1 else 0])
         GLES20.glUniform1i(requireNotNull(locations["currentPage"]),0)

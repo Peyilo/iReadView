@@ -39,6 +39,7 @@ private class DecoratedPage(context: Context, private val page: ReaderPageTempla
     private val background = ReaderBackgroundBinding(layout)
     private var bindingGeneration = 0L
     private var bound = false
+    private var boundContext: ReaderPageContext? = null
     private fun current(generation: Long) = bound && bindingGeneration == generation
     override val root: View get() = layout
     override val bodyHost: ViewGroup get() = page.bodyHost
@@ -64,6 +65,7 @@ private class DecoratedPage(context: Context, private val page: ReaderPageTempla
     override fun bind(context: ReaderPageContext) {
         val generation = ++bindingGeneration
         bound = true
+        boundContext = context
         val style = context.style
         background.bind(style.page)
         if (!current(generation)) return
@@ -98,6 +100,16 @@ private class DecoratedPage(context: Context, private val page: ReaderPageTempla
         if (!current(generation)) return
         footer?.bind(context)
     }
+    override fun refreshChrome() {
+        val context = boundContext?.copy(timeMillis = System.currentTimeMillis()) ?: return
+        boundContext = context
+        val generation = bindingGeneration
+        page.refreshChrome()
+        if (!current(generation)) return
+        header?.bind(context)
+        if (!current(generation)) return
+        footer?.bind(context)
+    }
     override fun onTimeChanged(timeMillis: Long) {
         val generation = bindingGeneration
         if (!current(generation)) return
@@ -115,6 +127,7 @@ private class DecoratedPage(context: Context, private val page: ReaderPageTempla
     }
     override fun unbind() {
         bound = false
+        boundContext = null
         bindingGeneration++
         releaseReaderResources(
             { header?.unbind() }, { footer?.unbind() }, { page.unbind() }, { background.clear() }

@@ -1,5 +1,7 @@
 # iReadView Widget 类结构与 API 设计
 
+当前阅读面板和新增 ReaderStyles / 固定 dp 字距契约见 [排版 API](26_READER_PANELS_AND_TYPOGRAPHY_API.md)。
+
 > 更新：2026-10-07；保留 2026-09-30 目标 API 设计及后续调整。当前接入契约见 [08_HOST_INTEGRATION_GUIDE.md](08_HOST_INTEGRATION_GUIDE.md)，已落地范围见 [06_IMPLEMENTATION_PROGRESS.md](06_IMPLEMENTATION_PROGRESS.md)，实际职责归属见 [05_WIDGET_IMPLEMENTATION_PLAN.md](05_WIDGET_IMPLEMENTATION_PLAN.md) 第 2 节。本文含尚未实现的目标接口，不能将完整签名清单当作当前 AAR 已支持能力，也不表示未决产品范围已经确认。
 >
 > 本文将 [产品需求](01_PRODUCT_REQUIREMENTS.md) 和 [架构方向](02_ARCHITECTURE_AND_PROJECT_STRUCTURE.md) 细化为类、接口、方法和行为契约。实现方式见 [05_WIDGET_IMPLEMENTATION_PLAN.md](05_WIDGET_IMPLEMENTATION_PLAN.md)。代码片段为 Kotlin 签名设计，省略 import、注解、方法体及部分配套类型，不是可直接编译的源码。
@@ -354,9 +356,9 @@ TextBookSource 实现 AutoCloseable：创建者在不再使用时 close，关闭
 
 完成移动后报告 TYPE_VIEW_TEXT_TRAVERSED_AT_MOVEMENT_GRANULARITY 的 action/粒度/fromIndex/toIndex 和选区变化事件，偏移始终相对于该虚拟节点可见文本。回调后再次校验节点切片与实际选区，重入改变页面/范围时不发送旧事件。阅读游标不改变已提交 ReadingPosition，也不发起来源读取。到达节点边界返回 false，由服务或用户另行切换节点/翻页；跨节点自动移动与扩展仍待实现，平台 Unicode 边界表现和事件/焦点顺序仍待设备验证。[Android 节点动作契约](https://developer.android.com/reference/android/view/accessibility/AccessibilityNodeInfo)
 
-DemoReadingStorage 是宿主持久化示例：版本 1 JSON 保存逐书 ReaderSnapshot（锚点、revision、页码提示、模式、可选内置效果）以及最近成功输入的 URI/编码；同一次 SharedPreferences edit 安装快照与最近记录。坏格式、版本/身份不匹配记录忽略，不将输入身份写入 Widget 快照。状态变化经 600ms 合并后导出当前位置，切书/onStop/onSaveInstanceState 再补存；只保存与已成功打开来源匹配的快照，准备中新来源的状态不覆盖旧记录。SharedPreferences.apply 异步写盘，不承诺任意强杀瞬间的数据完整性。
+ReadingStorage 是宿主持久化示例：版本 1 JSON 保存逐书 ReaderSnapshot（锚点、revision、页码提示、模式、可选内置效果）以及最近成功输入的 URI/编码；同一次 SharedPreferences edit 安装快照与最近记录。坏格式、版本/身份不匹配记录忽略，不将输入身份写入 Widget 快照。状态变化经 600ms 合并后导出当前位置，切书/onStop/onSaveInstanceState 再补存；只保存与已成功打开来源匹配的快照，准备中新来源的状态不覆盖旧记录。SharedPreferences.apply 异步写盘，不承诺任意强杀瞬间的数据完整性。
 
-冷启动与手动再次打开按书籍身份使用 restoreSnapshot；Activity 状态重建则直接 openBook，优先已有 View 位置/模式/配置。失败提供重试/从头打开，旧失败对话框受打开序号限制；无效锚点的回退由原恢复规则处理并提示。最近 URI 已失去授权时不会扩大权限，可重新选择或切回示例。当前已提供最多 32 本最近阅读列表、逐书进度、记录移除与URI授权淘汰；DemoReadingStorage不持久化全文、样式或自定义效果实例。样式与输入偏好由独立DemoReaderPreferences保存，见后文。
+冷启动与手动再次打开按书籍身份使用 restoreSnapshot；Activity 状态重建则直接 openBook，优先已有 View 位置/模式/配置。失败提供重试/从头打开，旧失败对话框受打开序号限制；无效锚点的回退由原恢复规则处理并提示。最近 URI 已失去授权时不会扩大权限，可重新选择或切回示例。当前已提供最多 32 本最近阅读列表、逐书进度、记录移除与URI授权淘汰；ReadingStorage不持久化全文、样式或自定义效果实例。样式与输入偏好由独立ReaderPreferences保存，见后文。
 
 ```kotlin
 data class ContentAnchor(val blockId: String, val offset: Int)
@@ -904,13 +906,13 @@ BookPresentationHost 新增默认 placeholderFactory/retryChapter，BookReadView
 
 ### 宿主模板与占位示例
 
-公开 ReaderPageFactories.default()/ReaderPlaceholderFactories.default() 返回默认工厂的新实例，宿主可在自定义模式后恢复默认，无需访问 internal 实现。DemoReaderPageFactory 展示独立工具栏 root/bodyHost、受控目录/设置按钮及章节页进度+时间页脚；只用公开 ReaderPageContext/ReaderAction/时间钩子，按钮在未绑定位置时禁用，unbind 清除动作引用。它选择自己的工具栏颜色/结构和固定文字内容，并遵循字号、字体、可见性及页边距；不会冒充默认模板的全部样式行为。
+公开 ReaderPageFactories.default()/ReaderPlaceholderFactories.default() 返回默认工厂的新实例，宿主可在自定义模式后恢复默认，无需访问 internal 实现。CustomPageFactory 展示独立工具栏 root/bodyHost、受控目录/设置按钮及章节页进度+时间页脚；只用公开 ReaderPageContext/ReaderAction/时间钩子，按钮在未绑定位置时禁用，unbind 清除动作引用。它选择自己的工具栏颜色/结构和固定文字内容，并遵循字号、字体、可见性及页边距；不会冒充默认模板的全部样式行为。
 
-DemoReaderPlaceholderFactory 展示进度指示、友好的加载/空内容/失败文案和 retry 按钮，只调用 PlaceholderActions，不直接打开来源；unbind 清掉监听器并隐藏进度指示。Demo 设置可分别切换页面模板和占位工厂，页面选择回到默认后恢复原默认内容配置。Activity Bundle 只存两个宿主选择标志，重建由宿主重新创建工厂，Widget 状态不序列化工厂实例；独立冷启动尚不保存这些示例选择偏好。
+CustomPlaceholderFactory 展示进度指示、友好的加载/空内容/失败文案和 retry 按钮，只调用 PlaceholderActions，不直接打开来源；unbind 清掉监听器并隐藏进度指示。Demo 设置可分别切换页面模板和占位工厂，页面选择回到默认后恢复原默认内容配置。Activity Bundle 只存两个宿主选择标志，重建由宿主重新创建工厂，Widget 状态不序列化工厂实例；独立冷启动尚不保存这些示例选择偏好。
 
 ### Demo 最近阅读记录
 
-DemoReadingStorage 在原逐书 ReaderSnapshot 和 recent v1/v2 记录外新增 version 1 history 数组，最多32条，按书籍身份去重、最近进度保存优先；记录包含来源类型、URI/TXT编码、书名与最近更新时间。书名规范化换行并限制256个UTF-16字符（末尾不截断代理对），损坏单项忽略，重复项取首项，未知/无效数组回退可用旧 recent。原单条最近记录在下次成功保存时自然进入列表，ReaderSnapshot 协议不改变。
+ReadingStorage 在原逐书 ReaderSnapshot 和 recent v1/v2 记录外新增 version 1 history 数组，最多32条，按书籍身份去重、最近进度保存优先；记录包含来源类型、URI/TXT编码、书名与最近更新时间。书名规范化换行并限制256个UTF-16字符（末尾不截断代理对），损坏单项忽略，重复项取首项，未知/无效数组回退可用旧 recent。原单条最近记录在下次成功保存时自然进入列表，ReaderSnapshot 协议不改变。
 
 进度、recent和history由同次 SharedPreferences editor.apply 更新；超过32项淘汰已知旧记录及其进度，标注和原文件仍保留。history 返回不可变拷贝；宿主 forget(bookId) 移除该条与进度，移除当前 recent 时选择剩余首项或清空。该机制不列举并删除未知旧存储键，也不宣称 apply 在任意强杀时均已持久化。
 
@@ -919,7 +921,7 @@ Demo“打开书籍→最近阅读”显示书名、来源类型/编码、章节
 
 ### Demo URI读授权生命周期
 
-DemoUriGrantStore 是 applicationContext 单例，独立 IO 队列串行处理授权取得和清理；不扩展 Widget API、ReaderSnapshot 或 BookSource。Android 的持久授权属于应用而非阅读器，旧版本/其他功能已经取得的读授权不纳入本账本，写授权不释放。仅在选择结果同时允许持久授权和读授权时尝试保留；失败仍允许当前会话尝试读取。
+UriGrantStore 是 applicationContext 单例，独立 IO 队列串行处理授权取得和清理；不扩展 Widget API、ReaderSnapshot 或 BookSource。Android 的持久授权属于应用而非阅读器，旧版本/其他功能已经取得的读授权不纳入本账本，写授权不释放。仅在选择结果同时允许持久授权和读授权时尝试保留；失败仍允许当前会话尝试读取。
 
 新读授权先提交宿主账本，再调用 ContentResolver，避免 Activity 协程取消留下无追踪授权。Activity 等待结果时检查选择序号，切书/新选择使旧结果失效；后台事务不受 Activity 销毁取消。URI相同但编码/来源身份不同的记录共享读授权引用。引用集合包括历史、当前成功输入、当前请求、待取得授权的选择与占位重试输入。
 
@@ -947,11 +949,11 @@ DemoUriGrantStore 是 applicationContext 单例，独立 IO 队列串行处理�
 
 标题letterSpacingEm直接作用于TextPaint；四组边距与标题字距可用XML初始化、applyStyle事务修改，参与ReaderStyle缓存键和布局失效。style SavedState version 1追加可选原始字段，旧状态缺失字段保留当前XML/默认值，非法数组/数值仍拒绝整个样式恢复。ReaderSnapshot不添加样式。
 
-Demo“输入设置→排版设置”提供五层四边dp输入以及标题字距em输入，校验有限/非负边距；使用现有applyStyle，当前值在点击应用时合并，失败按Widget事务回滚并显示错误。此入口仍属Demo，独立冷启动偏好已由DemoReaderPreferences接入。Debug构建通过，未新增或运行测试；跨页首尾、长段落/自定义块、RTL、可见行恢复、选区/手柄、无障碍范围及旋转/旧状态恢复待设备验证。
+Demo“输入设置→排版设置”提供五层四边dp输入以及标题字距em输入，校验有限/非负边距；使用现有applyStyle，当前值在点击应用时合并，失败按Widget事务回滚并显示错误。此入口仍属Demo，独立冷启动偏好已由ReaderPreferences接入。Debug构建通过，未新增或运行测试；跨页首尾、长段落/自定义块、RTL、可见行恢复、选区/手柄、无障碍范围及旋转/旧状态恢复待设备验证。
 
 ### Demo偏好与主题
 
-DemoReaderPreferences是宿主自己的version 1 JSON协议，不调用库internal的ReaderStyleStateCodec，不把偏好并入ReaderSnapshot。单独的reader-preferences存储保存样式、输入、翻页参数、内置模式、宿主可重建效果标识和自定义页面/占位选择标志；各组独立解码，无效样式整体保留XML，坏输入/翻页组选项不影响其他组，未知版本/超64Ki UTF-16字符记录忽略。保存数据相同则不重复apply；样式组超60000字符则不保存该组，其余偏好仍可恢复。
+ReaderPreferences是宿主自己的version 1 JSON协议，不调用库internal的ReaderStyleStateCodec，不把偏好并入ReaderSnapshot。单独的reader-preferences存储保存样式、输入、翻页参数、内置模式、宿主可重建效果标识和自定义页面/占位选择标志；各组独立解码，无效样式整体保留XML，坏输入/翻页组选项不影响其他组，未知版本/超64Ki UTF-16字符记录忽略。保存数据相同则不重复apply；样式组超60000字符则不保存该组，其余偏好仍可恢复。
 
 样式覆盖页面背景/边距/viewport、正文字体描述与排版/分层边距、标题字体/颜色/字距/边距/对齐/后间距、chrome内容/字体/高度/背景/边距、选区及有界高亮调色表。字体仅保存System/Resource（family最多4096字符）；背景仅Color/Resource/null，资源保存完整名称并在当前安装解析与验证资源类型，避免用跨安装的整数ID。Runtime Typeface、旧font对象和DrawableFactory不序列化，未写入描述时保留XML/宿主的当前值；明确null写default描述，区分遗漏与回退。已消失资源导致样式组恢复失败，使用XML，实际字体/Drawable加载仍沿Widget准备流程。高亮最多256项、ID字符总和16384，超限调色表省略并保留XML。
 
@@ -959,13 +961,13 @@ Activity无savedInstanceState时读取偏好，View恢复时机之后依次调�
 
 MainActivity缓存最近成功提交的ReaderStyle，仅成功回调更新；输入/效果/模板等同步设置成功后及模式成功回调、onStop/onSaveInstanceState补存。样式等待/失败/取消不会把预备版式作为偏好写出；偏好初始化完成前不保存，避免初始化中覆盖已有整组数据。SharedPreferences.apply不承诺任意强杀瞬间落盘。
 
-DemoReaderThemes提供纸色（渐变资源）、清晰白、柔和绿、夜间四种宿主配色；通过ReaderStyle同时修改背景、正文/标题/chrome文字与手柄颜色，保留排版、字体、位置和标注数据。入口为“输入设置→阅读主题”，调用既有applyStyle事务。自定义工具栏跟随主题底色，仍是自身结构/内容策略，不宣称应用默认模板所有装饰。主题选择保存最终配置，不保存脆弱的数组序号；库不固定主题集合。
+ReaderThemes提供纸色（渐变资源）、清晰白、柔和绿、夜间四种宿主配色；通过ReaderStyle同时修改背景、正文/标题/chrome文字与手柄颜色，保留排版、字体、位置和标注数据。入口为“输入设置→阅读主题”，调用既有applyStyle事务。自定义工具栏跟随主题底色，仍是自身结构/内容策略，不宣称应用默认模板所有装饰。主题选择保存最终配置，不保存脆弱的数组序号；库不固定主题集合。
 
 Debug构建通过，未新增或运行测试；冷启动/旋转/进程重建、逐书与全局配置优先级、坏组/未知版本、资源更新、超大调色表、设置失败/取消与主题实际对比度/服务阅读仍待设备验证。
 
 ### Demo完整排版面板
 
-DemoReaderStylePanel替代原MainActivity间距编辑函数，是只使用公开ReaderStyle模型的宿主UI组件。注入currentStyle与apply回调，不持有Widget内部对象、不创建独立样式副本或存储协议；所有修改沿MainActivity.applyDemoStyle→Widget事务→成功偏好保存执行。菜单分为页面/正文区域、正文、章节标题、页眉、页脚：
+TypographySheet替代原MainActivity间距编辑函数，是只使用公开ReaderStyle模型的宿主UI组件。注入currentStyle与apply回调，不持有Widget内部对象、不创建独立样式副本或存储协议；所有修改沿ReaderActivity.applyReaderStyle→Widget事务→成功偏好保存执行。菜单分为页面/正文区域、正文、章节标题、页眉、页脚：
 
 | 分组 | 已提供编辑 |
 |---|---|
@@ -982,7 +984,7 @@ DemoReaderStylePanel替代原MainActivity间距编辑函数，是只使用公开
 
 ### Demo阅读控制面板与章节页进度
 
-DemoReaderControlPanel使用Activity内容FrameLayout上的非模态ScrollView覆盖层，显示/隐藏不改ReaderView尺寸，不触发控制面板引起的重排；中间点击toggle，底部“控制面板”按钮提供键盘/辅助技术入口，收起/返回键关闭。面板提供目录、排版、阅读设置、上一章/下一章、章节页SeekBar与精确页号输入。当前固定页数来自公开getChapterPagination的Ready状态，不触发全书页索引计算；滚动模式中的页数/跳转继续使用既有虚拟分页与ReadingPosition契约。
+ReaderMenuController使用Activity内容FrameLayout上的非模态ScrollView覆盖层，显示/隐藏不改ReaderView尺寸，不触发控制面板引起的重排；中间点击toggle，底部“控制面板”按钮提供键盘/辅助技术入口，收起/返回键关闭。面板提供目录、排版、阅读设置、上一章/下一章、章节页SeekBar与精确页号输入。当前固定页数来自公开getChapterPagination的Ready状态，不触发全书页索引计算；滚动模式中的页数/跳转继续使用既有虚拟分页与ReadingPosition契约。
 
 导航只在ReaderPhase.Ready、Idle、有当前位置与已知正数章节页数时启用；上一章/下一章再检查实际目录边界，准备期不保留伪可用按钮。Target捕获BookDescriptor实例、章节ID、revision、layoutKey、pageCount，提交前和宿主协程开始时均重新检查当前目标及Widget启用状态。显式构造ReadingPosition提交goToPosition，不在排队后通过goToPage重新猜测章节。版本/排版改变、换书、导航忙碌使旧目标失效；页号输入主动关闭，触摸拖动预览取消。触摸拖动只预览目标页，释放后一次导航，真实位置/进度只取Widget成功提交结果；键盘/辅助技术修改SeekBar通过fromUser且无触摸跟踪的分支进入同一跳转。
 
@@ -994,17 +996,17 @@ FR-DEMO-02的控制面板入口和章节导航/进度已接入；构建通过，
 
 ### 宿主自定义翻页效果示例
 
-DemoReaderEffects维护宿主效果目录：六种内置工厂加demo.wipe自定义工厂，工厂每次create返回新的WipeEffect实例。fromId只在Demo中解析自定义标识，PageTurnEffects.fromId和ReaderSnapshot协议不扩展。效果菜单可选择“宿主擦除示例”，沿公开setPageTurnEffect；滚动中沿既有DeferredUntilPaged、减少动画/纵向分页仍由Widget策略处理。
+ReaderEffects维护宿主效果目录：六种内置工厂加demo.wipe自定义工厂，工厂每次create返回新的WipeEffect实例。fromId只在Demo中解析自定义标识，PageTurnEffects.fromId和ReaderSnapshot协议不扩展。效果菜单可选择“宿主擦除示例”，沿公开setPageTurnEffect；滚动中沿既有DeferredUntilPaged、减少动画/纵向分页仍由Widget策略处理。
 
 WipeEffect仅依赖PageTurnEffect公开接口：attach声明绑定，supports检查有效viewport，start保留当前事务PageTurnContext并验证两页面尺寸相同，draw使用progress对target做矩形裁剪叠到current上，方向取Forward/Backward与rightToLeft；0完整当前页，1完整目标页，中间添加细阴影。Canvas两层save/restoreToCount均用finally保护，页面引用在finish/abort/detach清空，detach解除绑定。不调用导航、不写阅读位置、不启动动画、不分配缓存位图、不借用未使用的host/BitmapLease；拖动、反向复位、结算、回退和提交生命周期由Widget统一管理，效果类不决定是否翻页成功。
 
-DemoReaderPreferences的既有effect字符串现在允许宿主目录已知标识，不序列化实例或任意类名；冷启动按宿主resolver重建。Activity Bundle仅为自定义效果追加demoCustomEffect标识，在View SavedState恢复前安装工厂；内置效果仍由原Widget SavedState负责。自定义效果的ReaderSnapshot.builtInEffectId继续为null，打开时保留宿主工厂；其他书籍已有内置效果快照仍按原契约覆盖全局初始选择。目录移除/未知标识不反射加载类，保留XML默认。
+ReaderPreferences的既有effect字符串现在允许宿主目录已知标识，不序列化实例或任意类名；冷启动按宿主resolver重建。Activity Bundle仅为自定义效果追加demoCustomEffect标识，在View SavedState恢复前安装工厂；内置效果仍由原Widget SavedState负责。自定义效果的ReaderSnapshot.builtInEffectId继续为null，打开时保留宿主工厂；其他书籍已有内置效果快照仍按原契约覆盖全局初始选择。目录移除/未知标识不反射加载类，保留XML默认。
 
 本例满足FR-DEMO-07的自定义效果接入展示，独立通用容器演示继续实施。Debug构建通过，未新增或运行测试；拖动/回退端点、RTL、效果切换/释放/模式恢复、减少动画和真实Canvas外观仍待设备验证。
 
 ### 独立通用容器效果Demo
 
-DemoContainerActivity是独立宿主页面，从“打开书籍与演示→独立容器效果演示”进入，Manifest仅应用内部可启动。DemoCardReadView继承BaseReadView<Int>，Int为五张固定卡片的零基序号；CardAdapter实现公开ReadContentAdapter<Int>，不引用BookReadView、BookSource、章节/位置/排版内部对象。
+ContainerActivity是独立宿主页面，从“打开书籍与演示→独立容器效果演示”进入，Manifest仅应用内部可启动。CardReadView继承BaseReadView<Int>，Int为五张固定卡片的零基序号；CardAdapter实现公开ReadContentAdapter<Int>，不引用BookReadView、BookSource、章节/位置/排版内部对象。
 
 adapter attach绑定公开ReadContentHost，prepare按First/Last/Next/Previous/Position解析边界并检查有效viewport，在主线程创建和精确测量独立TextView候选；PreparedRead包含目标序号、代次和可绘制PageSurface，show检查所有者/代次/未dispose后同步替换可见卡片并转移surface所有权。未显示候选dispose清surface引用；已转移候选dispose不清已显示内容，下一次显示/adapter detach清旧surface。候选取消之前不改变可见卡片，show没有挂起点、不自行提交位置；BaseReadView统一完成提交与事件。卡片文字由原生TextView提供辅助技术语义，通用前后能力按卡片实际边界查询。
 
@@ -1016,7 +1018,7 @@ Activity展示前后按钮、宿主统一效果目录（六种内置+自定义�
 
 ### 网络章节来源Demo
 
-DemoNetworkActivity与DemoNetworkBookSource只在宿主app中实现，不给Widget增加HTTP/站点/认证分支。入口为“打开书籍与演示→网络章节来源演示”；用户显式输入HTTPS目录地址后请求，未绑定第三方生产服务，不启动时自动探测站点。Demo Manifest声明INTERNET，库Manifest不申请网络权限。
+NetworkActivity与NetworkBookSource只在宿主app中实现，不给Widget增加HTTP/站点/认证分支。入口为“打开书籍与演示→网络章节来源演示”；用户显式输入HTTPS目录地址后请求，未绑定第三方生产服务，不启动时自动探测站点。Demo Manifest声明INTERNET，库Manifest不申请网络权限。
 
 宿主示例协议为UTF-8 JSON目录：version=1、title、chapters数组，每项id/title/url；url相对目录地址解析，也可为同源绝对HTTPS。参考docs/examples/network/catalog.json及两份chapter-*.txt，可把这些文件部署到自己的HTTPS服务后输入目录地址。请求只接受HTTP200，不跟随重定向、不读取压缩响应，不使用登录/账号信息/URL片段，不发送全文/标注/进度；服务器需直接返回同源UTF-8资源。此格式展示BookSource接入方式，不宣称通用小说站点抓取或服务可靠性。
 
@@ -1034,7 +1036,7 @@ Debug构建通过，未新增或运行测试，未实际请求远端服务；DNS
 
 ### Demo全书页数面板
 
-DemoPageIndexPanel管理计算进度与全书页号输入窗口，仅调用公开buildBookPageIndex/goToGlobalPage挂起API。宿主持有一个请求Job和窗口监听器：关闭/取消、换书、再次打开、Activity停止/销毁时解除监听并取消任务；计算完成转入页号窗口时先解除旧窗口的dismiss动作，避免窗口切换取消正在完成的请求。序号使旧任务不能打开新窗口或发布结果，延迟启动确保Job在同步完成前已有明确所有者。
+PageIndexPanel管理计算进度与全书页号输入窗口，仅调用公开buildBookPageIndex/goToGlobalPage挂起API。宿主持有一个请求Job和窗口监听器：关闭/取消、换书、再次打开、Activity停止/销毁时解除监听并取消任务；计算完成转入页号窗口时先解除旧窗口的dismiss动作，避免窗口切换取消正在完成的请求。序号使旧任务不能打开新窗口或发布结果，延迟启动确保Job在同步完成前已有明确所有者。
 
 页号使用Long并按捕获索引的totalPageCount验证。页号窗口绑定BookDescriptor和BookPageIndex实例；公开索引变化通知发现实例失效即关闭，提交及协程执行前再次复核。最终仍调用goToGlobalPage，沿Widget内部索引解析与导航期间失效取消规则执行，不在宿主复制全书索引或把全书页号转换成绕过检查的位置导航。计算失败/拒绝/被新排版取代明确显示结果，目录空时不创建输入窗口。
 
@@ -1042,11 +1044,11 @@ Debug构建通过，未新增或运行测试；真实计算取消、快速换书
 
 ### Demo书签与高亮管理面板
 
-DemoAnnotationPanel替代MainActivity的内嵌书签弹窗和高亮点击弹窗，仅使用exportAnnotations/getAnnotationStatus、公开增删改与导航API。目录“书签”入口打开计数菜单，分别展示书签和高亮、添加当前位置书签、保留示例高亮动作；点击正文高亮也进入同一详情。高亮列表显示前80字符预览（先截取再归一化换行），详情最多4096字符，截尾不破坏代理对，UI显示截取不改变原quote或标注模型。
+AnnotationPanel替代MainActivity的内嵌书签弹窗和高亮点击弹窗，仅使用exportAnnotations/getAnnotationStatus、公开增删改与导航API。目录“书签”入口打开计数菜单，分别展示书签和高亮、添加当前位置书签、保留示例高亮动作；点击正文高亮也进入同一详情。高亮列表显示前80字符预览（先截取再归一化换行），详情最多4096字符，截尾不破坏代理对，UI显示截取不改变原quote或标注模型。
 
 详情区分Valid/PendingValidation/Invalid及失效原因。有效高亮通过带原revision和start锚点的ReadingPosition严格跳转，不提供书签式章首回退；待校验高亮明确提供“打开章节校验”，先正常导航到该章首以触发Widget现有验证，再重开详情查看结果，而非在未校验摘录上宣称精确定位。失效高亮仅查看/删除/改色，不提供精确跳转。书签仍使用goToBookmark原恢复契约，失效/回退文案由公开状态与原事件提供。
 
-删除/改色检查当前书籍实例和当前标注与捕获记录相同；颜色使用公开调色表ID，不改语义位置/quote/revision。导航在宿主scope中执行前再次校验实例和标注，使用既有导航结果处理；一个Job及序号防旧回调，换书/onStop/onDestroy关闭窗口、取消导航。窗口菜单/按钮检查当前窗口身份，旧窗口不能修改另一书籍；取消无隐式删除。增删改事件继续由DemoAnnotationStorage监听保存，面板不写数据库或新增标注协议。
+删除/改色检查当前书籍实例和当前标注与捕获记录相同；颜色使用公开调色表ID，不改语义位置/quote/revision。导航在宿主scope中执行前再次校验实例和标注，使用既有导航结果处理；一个Job及序号防旧回调，换书/onStop/onDestroy关闭窗口、取消导航。窗口菜单/按钮检查当前窗口身份，旧窗口不能修改另一书籍；取消无隐式删除。增删改事件继续由AnnotationStorage监听保存，面板不写数据库或新增标注协议。
 
 Debug构建通过，未新增或运行测试；真实尚未加载章节校验、内容更新/摘录不符、回退/Busy、颜色/删除/旧窗口、超长摘录与服务阅读仍待设备验证。
 
@@ -1234,17 +1236,17 @@ ReaderViewOwnership 统一按 View 实例管理页面 root、占位 View 与自�
 
 setSelectionToolbarFactory 接受 null，恢复组件原生 ActionMode；当前选区仍沿原动作/修订号显示工具栏，不重建选区或标注。运行时工厂依旧由宿主提供，不进入 Widget SavedState 或 ReaderSnapshot。
 
-DemoSelectionToolbarFactory 只依赖公开 SelectionToolbarFactory/SelectionActions 与样式模型，每次创建独立视图，提供选择长度提示、复制、高亮与取消；失败/拒绝/被替代结果有提示，成功行为由受控动作完成。unbind 清除监听及提示文本。输入设置可在系统默认和该示例之间切换；宿主偏好 JSON 与 Activity 状态保存选择标志，恢复时重建工厂，旧偏好缺字段默认系统工具栏。示例采用自己的结构和当前主题底色/文字色，不宣称套用默认页眉排版。
+CustomSelectionToolbarFactory 只依赖公开 SelectionToolbarFactory/SelectionActions 与样式模型，每次创建独立视图，提供选择长度提示、复制、高亮与取消；失败/拒绝/被替代结果有提示，成功行为由受控动作完成。unbind 清除监听及提示文本。输入设置可在系统默认和该示例之间切换；宿主偏好 JSON 与 Activity 状态保存选择标志，恢复时重建工厂，旧偏好缺字段默认系统工具栏。示例采用自己的结构和当前主题底色/文字色，不宣称套用默认页眉排版。
 
 Debug 构建通过，未新增或运行测试；长按后的切换、复制/高亮结果、解绑、旋转/冷启动及窄窗口和辅助功能交互仍待设备验证。
 
 ### 自定义正文块的宿主示例
 
-DemoDividerBlock/DemoDividerLayoutProvider 展示公开 ContentBlock 与 BlockLayoutProvider 接入。块为不可变图形分隔标记，稳定 blockId、非负持有字节估算；provider 有固定 id/version，工作线程只读取布局上下文、检查取消和创建绘制数据，不使用 View 或 Activity。单个 24dp 单位提供同一 fragment 给分页和连续流，组件仍应用 block padding；绘制结果不持有完整上下文或其取消回调。布局提供保守资源估算。
+DividerBlock/DividerLayoutProvider 展示公开 ContentBlock 与 BlockLayoutProvider 接入。块为不可变图形分隔标记，稳定 blockId、非负持有字节估算；provider 有固定 id/version，工作线程只读取布局上下文、检查取消和创建绘制数据，不使用 View 或 Activity。单个 24dp 单位提供同一 fragment 给分页和连续流，组件仍应用 block padding；绘制结果不持有完整上下文或其取消回调。布局提供保守资源估算。
 
 图形没有可选择原文，start/end offset 为 null，不伪造文字几何；提供完整无障碍描述和 block/0 的可见位置锚点。跨越该非文本块的文字选区仍按现有 UnsupportedContent 规则拒绝，普通文本能力保持。块超过真实视口时沿既有排版失败处理，不缩放正文或绕过排版约束。
 
-DemoCustomContentActivity 独立书籍接入该 provider，菜单“打开书籍与演示→自定义正文块演示”可查看并切换分页/滚动、前后导航或重试。固定 Widget ID 沿控件 View 状态恢复路径；onStart 延后打开，onStop 取消未完成打开并移除排队回调，打开序号避免旧完成清掉新请求，onDestroy 释放控件。未改普通全文本样例或引入图像来源功能。
+CustomContentActivity 独立书籍接入该 provider，菜单“打开书籍与演示→自定义正文块演示”可查看并切换分页/滚动、前后导航或重试。固定 Widget ID 沿控件 View 状态恢复路径；onStart 延后打开，onStop 取消未完成打开并移除排队回调，打开序号避免旧完成清掉新请求，onDestroy 释放控件。未改普通全文本样例或引入图像来源功能。
 
 Debug 构建通过，未新增或运行测试；图形跨页边界、锚点恢复/旋转、滚动切换、缓存趋势、取消及无障碍朗读仍待设备验证。
 
@@ -1346,11 +1348,11 @@ TextBookOptions.normalization 接受 TextNormalization，默认 PRESERVE 保留�
 
 ### TXT 来源配置的宿主示例
 
-DemoTextSourceActivity 通过 MainActivity 的“打开书籍与演示 → TXT 来源配置演示”进入，只使用 ReaderInput、TextBookSource/TextBookOptions、TextContentIdProvider、TextNormalization 与 ReaderView 公开接口。示例数据包含 BOM、CRLF、章节标题、缩进、行尾空白及重复空白行。提供内存/磁盘切换、三种规范化、顺序/内容摘要 ID、模式切换、翻页和重读。
+TextSourceActivity 通过 MainActivity 的“打开书籍与演示 → TXT 来源配置演示”进入，只使用 ReaderInput、TextBookSource/TextBookOptions、TextContentIdProvider、TextNormalization 与 ReaderView 公开接口。示例数据包含 BOM、CRLF、章节标题、缩进、行尾空白及重复空白行。提供内存/磁盘切换、三种规范化、顺序/内容摘要 ID、模式切换、翻页和重读。
 
 示例的内容 ID 对唯一章节标题/非空行使用摘要，对重复空白行使用章内编号；这是该样例的身份策略，不是任意书籍的稳定 ID 算法。相同文本多次出现时，真实宿主需自行消除歧义，不能宣称摘要天然唯一。配置切换重建来源，保留最后快照交给组件恢复；身份/修订号变化时允许既有回退并提示。
 
-onStop 先导出最后位置、撤销请求归属并取消，再 closeBook 与 close 来源；onStart 创建新来源并恢复，onDestroy release Widget。设置和轻量 ReaderSnapshot 以版本化 Bundle 保存，固定 View ID 接入控件状态；不保存来源、工厂、流或临时文件。网络与 TXT 示例共用 DemoSnapshotState 宿主序列化格式，网络旧版 Bundle 字段保持兼容。没有向最近书籍记录新增样例项或冷启动书架持久化。
+onStop 先导出最后位置、撤销请求归属并取消，再 closeBook 与 close 来源；onStart 创建新来源并恢复，onDestroy release Widget。设置和轻量 ReaderSnapshot 以版本化 Bundle 保存，固定 View ID 接入控件状态；不保存来源、工厂、流或临时文件。网络与 TXT 示例共用 SnapshotState 宿主序列化格式，网络旧版 Bundle 字段保持兼容。没有向最近书籍记录新增样例项或冷启动书架持久化。
 
 ### 默认页脚的需求修订
 
@@ -1406,12 +1408,12 @@ applyStyle 在会触发回调的导航中断、布局失效和状态发布之前
 示例更新目录对话框捕获打开时的 BookDescriptor 实例，点击时检查同一实例及 Activity 有效性后才修改内存来源和重新加载，避免换书/目录更新后旧对话框写入新会话。以上属于宿主 UI 与生命周期策略，未增加 Widget 接口或库内目录/持久化管理器。
 ### 网络宿主的停止与连接清理
 
-DemoNetworkActivity.stop 在递增会话序号/保存可用快照后，把 request/source 转移到局部变量并清空字段，再取消旧请求。finally 链保证继续关闭阅读器和旧来源；创建新来源后若停止旧会话失败，关闭未安装的新来源。来源属于宿主，Widget.closeBook 不替宿主关闭 BookSource。
+NetworkActivity.stop 在递增会话序号/保存可用快照后，把 request/source 转移到局部变量并清空字段，再取消旧请求。finally 链保证继续关闭阅读器和旧来源；创建新来源后若停止旧会话失败，关闭未安装的新来源。来源属于宿主，Widget.closeBook 不替宿主关闭 BookSource。
 
-DemoNetworkBookSource.close 在连接锁下标记 closed、移除元数据快照并取出/清空连接登记，锁外逐个 disconnect。普通连接清理异常记录诊断并继续其余连接；读取任务仍在自己的 finally 中清理连接。重复 close 不再重复枚举已退休连接，不引入 Widget 内部网络层。disconnect 属于尽力取消，既有连接/读取超时仍为最终阻塞边界，未验证设备的实时中断延迟。
+NetworkBookSource.close 在连接锁下标记 closed、移除元数据快照并取出/清空连接登记，锁外逐个 disconnect。普通连接清理异常记录诊断并继续其余连接；读取任务仍在自己的 finally 中清理连接。重复 close 不再重复枚举已退休连接，不引入 Widget 内部网络层。disconnect 属于尽力取消，既有连接/读取超时仍为最终阻塞边界，未验证设备的实时中断延迟。
 ### 网络示例章节修订 v2
 
-目录中的章节标题会生成正文 HeadingBlock，因此章节 revision 必须包含标题。DemoNetworkBookSource.chapterRevision 将版本域标识、长度前缀和精确 UTF-16 标题、原始正文响应字节共同摘要；正文按8 KiB分块更新并检查取消，完成摘要后再复核取消/来源关闭。固定输出规则的变化需提高版本域，来源 URL/对象实例不作为正文版本字段。
+目录中的章节标题会生成正文 HeadingBlock，因此章节 revision 必须包含标题。NetworkBookSource.chapterRevision 将版本域标识、长度前缀和精确 UTF-16 标题、原始正文响应字节共同摘要；正文按8 KiB分块更新并检查取消，完成摘要后再复核取消/来源关闭。固定输出规则的变化需提高版本域，来源 URL/对象实例不作为正文版本字段。
 
 此前仅原始响应字节的章节修订被替换：相同正文不同标题得到不同版本，旧位置/标注继续按现有版本不匹配规则处理，不静默迁移。目录版本与 bookId 规则不变；实现留在网络宿主示例，不为 Widget 增加网络协议。实际标题更新、恢复、标注失效与取消时点仍待验证。
 ### 页面扩展切换与延后重排的归属
@@ -1425,9 +1427,9 @@ restoreVisiblePosition 使用独立递增序号合并同一内容代次下的重
 
 公开 ReaderListenerAdapter : ReaderListener 与 ReadViewListenerAdapter<L> : ReadViewListener<L> 是抽象空实现适配器。Java 匿名子类仅覆盖关心的回调，Kotlin 仍可直接实现原接口；适配器无状态、无导航/请求所有权，也不改变回调线程及异常策略。本项目当前编译方式下，原 Kotlin 接口的默认函数在 Java 看来仍是 abstract，适配器避免宿主手工补齐所有方法，未切换全库 JVM 默认方法 ABI。
 
-DemoJavaActivity.java 是真实加入 APK 的 Java 宿主：直接构造 ReaderView、BookDescriptor/TocEntry/ChapterContent/MemoryBookSource，使用 callback 重载打开/恢复/导航和 ReaderRequest.cancel/isCompleted；监听仅覆盖 onStateChanged。默认参数并非全部转换为 Java 重载，模型示例明确传入完整字段；全默认配置如 NavigationOptions 可调用无参构造。
+JavaReaderActivity.java 是真实加入 APK 的 Java 宿主：直接构造 ReaderView、BookDescriptor/TocEntry/ChapterContent/MemoryBookSource，使用 callback 重载打开/恢复/导航和 ReaderRequest.cancel/isCompleted；监听仅覆盖 onStateChanged。默认参数并非全部转换为 Java 重载，模型示例明确传入完整字段；全默认配置如 NavigationOptions 可调用无参构造。
 
-请求字段在取消前撤销、序号拒绝旧回调；请求返回时检查序号与 isCompleted，不把已经同步完成的句柄重新登记。前后台保存位置并 closeBook，前台重建内存来源恢复；有稳定 View ID，Bundle 复用宿主 DemoSnapshotState，不保存来源/协程/工厂。回调次数展示只是示例数据，不构成恰好一次验收证据。入口在首页“打开书籍与演示”，Activity 不导出。
+请求字段在取消前撤销、序号拒绝旧回调；请求返回时检查序号与 isCompleted，不把已经同步完成的句柄重新登记。前后台保存位置并 closeBook，前台重建内存来源恢复；有稳定 View ID，Bundle 复用宿主 SnapshotState，不保存来源/协程/工厂。回调次数展示只是示例数据，不构成恰好一次验收证据。入口在首页“打开书籍与演示”，Activity 不导出。
 ### 可取消的内置内容指纹准备
 
 ChapterRepository 在来源工作线程取得 ChapterContent 后，调用内部 prepareContentFingerprint 并传入当前协程的 ensureActive。类型扫描、块/字符串边界及每4096字节 UTF-16 缓冲批次检查取消；整章复用同一缓冲，不再逐字符串分配。指纹序列仍为原块数、块ID、类型/标题级别、原文长度及 UTF-16 数据，结果不因实现调整改变。
@@ -1463,7 +1465,7 @@ reportReaderError 捕获会话/代次并按 lastError 对象归属分发，通�
 
 ReaderInput 的六个 companion 工厂均增加 @JvmStatic，Java 可通过接口名调用 fromFile/fromAsset/fromResource/fromUri 两个重载/fromStream。openStream 声明 throws IOException，支持 Java 直接实现会抛受检 IO 异常的 SAM；Kotlin 行为及来源关闭流的规则不变。fromStream 保留 Function0 签名，受检 IO opener 推荐直接 ReaderInput SAM 或已有文件/URI工厂，不新增重复输入抽象。
 
-TextBookSource/EpubTextBookSource 增加 @JvmOverloads 默认 options 构造入口，完整配置构造保留。DemoJavaActivity 用静态流工厂与二参 TXT 构造实际编译，提供内存模型/TXT 切换；来源字段先撤销，阅读器关闭/release 的 finally 退休旧 TXT 来源。Bundle 保存来源选择与同源快照，切换身份不复用异书位置；没有新增宿主全文存储/书架。
+TextBookSource/EpubTextBookSource 增加 @JvmOverloads 默认 options 构造入口，完整配置构造保留。JavaReaderActivity 用静态流工厂与二参 TXT 构造实际编译，提供内存模型/TXT 切换；来源字段先撤销，阅读器关闭/release 的 finally 退休旧 TXT 来源。Bundle 保存来源选择与同源快照，切换身份不复用异书位置；没有新增宿主全文存储/书架。
 
 源码及 javap 确认静态工厂、IOException 声明及两个来源默认构造存在，Java/Debug/Release 构建通过，未运行测试。现有 Java 代码直接调用 openStream 现在须处理其已声明的 IOException；运行关闭、恢复和受检异常路径仍待行为证据。
 ### 自定义布局的片段与取消边界
@@ -1596,7 +1598,7 @@ Debug/Java/Release构建通过，未新增或运行测试；描述/range/heading
 
 TextContentIdProviderAdapter是无状态抽象类，继承策略接口并生成Kotlin默认成员的JVM桥接，Java可只覆盖需要的blockId/chapterId/persistentIndexKey。不引入策略状态、配置builder或全局JVM默认模式，默认键仍null。直接实现接口仍须满足Java视角抽象成员。
 
-DemoJavaActivity实际构造TextBookOptions，复用默认规则/预算getter，设置私有磁盘目录、复用开关与版本化策略；匿名适配器只覆盖块ID和缓存键，章ID沿默认实现。块ID改为java-line-N，旧保存TXT修订按原规则失配/回退，不静默迁移。已有取消/来源关闭/模式来源选择规则保留，界面不宣称缓存命中。
+JavaReaderActivity实际构造TextBookOptions，复用默认规则/预算getter，设置私有磁盘目录、复用开关与版本化策略；匿名适配器只覆盖块ID和缓存键，章ID沿默认实现。块ID改为java-line-N，旧保存TXT修订按原规则失配/回退，不静默迁移。已有取消/来源关闭/模式来源选择规则保留，界面不宣称缓存命中。
 
 Debug/Java/Release构建通过，当前产物清单刷新到490类条目/208个所选包Java声明，Demo/测试类名匹配0，摘要同步。Java编译支持这个具体策略/config调用；未新增或运行测试，策略默认桥接运行、复用/关闭/恢复及全部Java扩展仍待验收。
 
@@ -1613,7 +1615,7 @@ BodyAccessibilityHelper.refresh同时检查辅助服务与键盘虚拟焦点：�
 
 同章选择与文本匹配、标注校验、分页锚点/文本范围和离屏辅助来源遍历改为识别此接口，没有增加独立提交或选择管线。纯图形继续ContentBlock，无原文的描述不能被当作文本。ChapterContent指纹仍仅覆盖内置TextBlock/HeadingBlock，自定义元数据需由章节revision表达；估算大小getter仍在工作线程执行，null意味着不入缓存。Java实现该接口须实现getText/getBlockId及JVM抽象的getEstimatedRetainedBytes（未知可返回null）。
 
-DemoAttributedTextBlock携带sourceTag，沿默认正文排版；自定义内容Demo保留图形提供者并加入长文本，书/章版本同步更新2。Debug/Java/Release构建通过；运行选择、恢复、服务遍历及复杂自定义几何尚未验收。
+AttributedTextBlock携带sourceTag，沿默认正文排版；自定义内容Demo保留图形提供者并加入长文本，书/章版本同步更新2。Debug/Java/Release构建通过；运行选择、恢复、服务遍历及复杂自定义几何尚未验收。
 
 
 ### 原文布局范围校验（2026-10-07）
@@ -1852,4 +1854,8 @@ Android卷页已改用统一GLES2完整帧绘制：直接反求材料UV，纹理
 
 CornerCurlEffect改用IBookCurlShadow，锥面/圆柱统一按真实轮廓高度、投影边长计算柔化宽度和透明度；端部采用高斯软圆帽。解决旧实现固定宽度在radius=0时突然关闭、端部硬切断的问题。公共CurlOptions参数不变，注释已更新。当前算法与范围见[阴影连续性文档](25_IBOOK_SHADOW_CONTINUITY.md)。
 
+
+## 段落选择与图文菜单更新（2026-10-14）
+
+分页/滚动的长按入口改为源段落选择；原跨页手柄导航保留。默认选择工具栏改为图标+文字的分页浮动菜单，宿主可通过 setSelectionMenuItems 和 SelectionMenuItem 自定义项目、图标和回调，完整 View 工厂仍支持。宽度上限和 item 目标宽度由 SelectionMenuOptions 配置，超过容量显示右侧下一组箭头；SelectionActions.isValid 防止失效菜单动作。完整接口、兼容性及验收范围见[段落选择与图文菜单](27_PARAGRAPH_SELECTION_AND_MENU.md)。
 

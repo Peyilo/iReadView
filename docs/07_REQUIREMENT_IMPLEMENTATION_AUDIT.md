@@ -39,7 +39,7 @@
 | 原始需求 | 当前代码入口/承担对象 | 本轮核对结论 | 尚缺证据 |
 |---|---|---|---|
 | FR-BOOK-01 目录标题/顺序/卷与章节 | BookDescriptor/TocEntry | 模型复制目录，按深度优先展平，限制深度并拒绝重复章 ID | 分组/空目录/重复 ID/变更顺序的来源与导航一致性 |
-| FR-BOOK-02 本地/远程按需章节 | BookSource；Memory/Text/Epub 来源；DemoNetworkBookSource | 已定位双阶段目录/章契约、来源独立于 Widget，网络宿主逐章读取 | 慢来源、多请求/取消、并发与当前章响应；不能仅凭接口证明不卡顿 |
+| FR-BOOK-02 本地/远程按需章节 | BookSource；Memory/Text/Epub 来源；NetworkBookSource | 已定位双阶段目录/章契约、来源独立于 Widget，网络宿主逐章读取 | 慢来源、多请求/取消、并发与当前章响应；不能仅凭接口证明不卡顿 |
 | FR-BOOK-03 编码/规则/前言/文件流资源 | ReaderInput；TextBookSource；TextSnapshotParser | 读取严格指定编码，共用规则保留前言/空行并产生空章节；修复版本未覆盖实际解析输出，新增 revision v2 | 边界输入、不同编码/规则/ID 与两个存储等价；旧快照/标注迁移不匹配 |
 | FR-BOOK-04 轻量 EPUB 目录/正文提取 | EpubTextBookSource；EpubArchive/Package/Navigation/Xhtml/Xml | 已定位容器/目录/按需文本提取；没有把 CSS/图片/脚注当作完整阅读能力 | 真实 EPUB2/3、损坏资源、预算、取消/关闭、目录/片段导航和提取顺序 |
 | FR-BOOK-05 加载/合并/失败重试 | ChapterRepository；ChapterState；BookReadView.retryChapter | 已定位状态、inFlight 请求归属及共享消费者；尚非并发行为通过证据 | 重复请求、最后消费者取消、失败后新请求、重入状态与迟到任务 |
@@ -69,11 +69,11 @@
 | 原始需求 | 当前代码入口/承担对象 | 本轮核对结论 | 尚缺证据 |
 |---|---|---|---|
 | FR-MARK-01 书签读入与重排锚定 | AnnotationSnapshot/Bookmark；replaceAnnotations；AnnotationStore | 输入快照复制列表，记录独立位置和修订号；未加载章待验证 | 导入/重排/模式切换/未加载章节与书籍不匹配 |
-| FR-MARK-02 添加/查看/删除与变更输出 | addBookmark/removeBookmark；ReaderListener；DemoAnnotationPanel | 已定位独立存储变更及快照事件，ID 与高亮共用冲突域 | 增删/重复/不存在、事件次数、宿主保存和回调重入 |
+| FR-MARK-02 添加/查看/删除与变更输出 | addBookmark/removeBookmark；ReaderListener；AnnotationPanel | 已定位独立存储变更及快照事件，ID 与高亮共用冲突域 | 增删/重复/不存在、事件次数、宿主保存和回调重入 |
 | FR-MARK-03 集合读取与书签访问 | annotations/goToBookmark；AnnotationStore.validate | 已定位严格导航及显式近似恢复；新增文本锚点字符边界验证 | 删除章/块、版本变化、未知ID、近似回退原因和不跳错书 |
 | FR-MARK-04 高亮导入/导出/增删改 | Highlight/TextRange；add/update/removeHighlight；AnnotationSnapshot | 高亮、状态分离，导出保留原记录；修改重新进入验证 | 全量替换原子性、ID冲突、状态变化、修改/事件及持久化 |
 | FR-MARK-05 长按/调整与选择数据 | TextSelectionResolver；ReaderBodyView；分页/滚动选择；SelectionToolbarController | 已定位共享几何/原文选择与工具栏；extract 新增字符端点检查 | 多语言、手柄/跨页/离屏、逆向缩小、取消、旧工具栏动作 |
-| FR-MARK-06 呈现/创建/查看/删除与样式 | AnnotationStore；ReaderBodyView；highlightSelection；HighlightStyles；DemoAnnotationPanel | 仅有效记录进入装饰，quote/版本/范围校验；修复导入非法字符端点可通过的问题 | 几何/RTL、跨页/块、改色/未知样式回退、删除和查看命中 |
+| FR-MARK-06 呈现/创建/查看/删除与样式 | AnnotationStore；ReaderBodyView；highlightSelection；HighlightStyles；AnnotationPanel | 仅有效记录进入装饰，quote/版本/范围校验；修复导入非法字符端点可通过的问题 | 几何/RTL、跨页/块、改色/未知样式回退、删除和查看命中 |
 | FR-MARK-07 跨段边界/文本变更与失效 | TextRange；AnnotationStore.validateHighlight；TextCharacterBoundaries | 同章跨块按原文顺序及单换行 quote 比对，拒绝不支持块/范围；导入不静默修正端点 | 空段/章界、内容变化/缺失/歧义、字符边界差异及失效不绘制 |
 | FR-MARK-08 所有权与明确输出 | 不可变模型；AnnotationStore.snapshot/statusSnapshot；Widget 变更事件 | 宿主列表被复制，状态不改写原记录；本轮失效范围继续可导出 | 外部集合修改、监听重入、多实例、不上传正文/记录及线程行为 |
 
@@ -102,7 +102,7 @@
 | FR-FLIP-05 程序导航/间隔/force | BaseReadView.navigateInternal；NavigationOptions；lastTurnUptime | 普通导航检查Busy与Throttled，force替代请求仍走呈现边界 | 间隔时点、取消不节流、force中断、边界/没有位置与滚动 |
 | FR-FLIP-06 重入/中断与最终位置 | NavigationController；EffectManager；View生命周期 | show后归属校验并单次提交，终止效果与租约清理独立 | 连续触摸/点击、切效果/样式/换书/尺寸、回调重入、无残影/半翻 |
 | FR-FLIP-07 效果与呈现兼容 | BookReadView模式；isPageTurnEffectActive；EffectSelection | 滚动保存分页效果选择，回分页启用，效果不改变ReadingMode | 模式反复切换/失败、DeferredUntilPaged、资源与恢复 |
-| FR-FLIP-08 自定义效果输入/生命周期 | PageTurnEffect/Host/Context/Frame/Surface；DemoReaderEffects | 容器驱动进度/时钟/提交，扩展仅绘制，普通异常回退及独立清理诊断；最终端点仍发update | 所有钩子异常/重入/取消、Surface不支持、绘制异常与lease释放 |
+| FR-FLIP-08 自定义效果输入/生命周期 | PageTurnEffect/Host/Context/Frame/Surface；ReaderEffects | 容器驱动进度/时钟/提交，扩展仅绘制，普通异常回退及独立清理诊断；最终端点仍发update | 所有钩子异常/重入/取消、Surface不支持、绘制异常与lease释放 |
 | FR-FLIP-09 稳定ID与选项 | PageTurnEffects.fromId；配置XML/SavedState；ReaderSnapshot | 内置工厂标识与自定义宿主工厂分开，参数校验及轻量恢复已定位 | 未知ID/旧状态/显式覆盖、多实例、配置变更/减少动画与外观 |
 
 本轮通过 Debug 构建，未新增或运行测试。静态检查与端点路径优化不证明完整交互、生命周期、画面或性能验收；本表尚缺证据必须继续取得，不能用预设工厂数量或可编译代替视觉要求。
@@ -115,7 +115,7 @@
 | FR-STYLE-02 字体 | BodyStyle/TitleStyle/ChromeStyle；ReaderFontResolver | 独立字号/色/字体，资源/本地/运行时/系统字体；非装饰变化重排 | 字体缺失/损坏、字体优先级、取消、异步解析与设备兼容 |
 | FR-STYLE-03 间距 | EdgeInsets；ReaderBodyInsets；文本布局和页面 factory | 三层正文视口边距合并一次，页/标题/段落/页眉页脚各层有配置 | 各层叠加、缩进/字符/行/段间距、极端范围与方向 |
 | FR-STYLE-04 标题对齐 | TitleAlignment；TextBlockLayoutProvider | START/CENTER/END 方向语义入口已定位 | LTR/RTL、跨页标题和不同字体实况 |
-| FR-STYLE-05 示例主题 | DemoReaderThemes；MainActivity 样式面板 | 示例通过公开样式组合主题，库无固定主题清单 | 明暗/纹理背景、各区文字对比和选择/高亮可见性 |
+| FR-STYLE-05 示例主题 | ReaderThemes；MainActivity 样式面板 | 示例通过公开样式组合主题，库无固定主题清单 | 明暗/纹理背景、各区文字对比和选择/高亮可见性 |
 | FR-STYLE-06 重排位置与页码 | BookReadView.applyStyle；统一位置导航；ReaderCoordinator | 修复事务代次在回调前捕获及回滚保留装饰，原文位置强制导航 | 成功/失败/取消、监听重入、最新请求优先、页码/索引及位置一致 |
 | FR-STYLE-07 页眉页脚定制 | ChromeStyle；DefaultReaderPageFactory；ReaderPageFactory | 可见/内容/尺寸/对齐/字体/色/背景/padding，默认进度与时间 | 自定义测量、极端高度、隐藏/恢复、时钟和正文视口 |
 | FR-STYLE-08 页面组合 | ReaderPageTemplate；ReaderPageFactory；BlockLayoutProvider | 页面模板/正文容器与自定义块提供组合入口及位置上下文 | 宿主实际组合、所有权、异常/解绑、图片自定义实现 |
@@ -126,13 +126,13 @@
 
 | 原始需求 | 当前代码入口/承担对象 | 本轮核对结论 | 尚缺证据 |
 |---|---|---|---|
-| FR-DEMO-01 体验入口 | MainActivity；DemoNetworkActivity/DemoContainerActivity/DemoCustomContentActivity/DemoTextSourceActivity；Manifest | 已定位示例书/文件选择/网络/独立容器和文本配置入口 | 各入口实际打开、取消选择、来源失败与后台返回 |
-| FR-DEMO-02 控制面板 | DemoReaderControlPanel；MainActivity 中央点击与公开动作 | 不改变阅读器视口的覆盖面板；目录/排版/设置/邻章/页号/进度入口已定位 | 中央显隐、辅助输入、拖动时改布局/换书、忙/失败及生命周期 |
+| FR-DEMO-01 体验入口 | MainActivity；NetworkActivity/ContainerActivity/CustomContentActivity/TextSourceActivity；Manifest | 已定位示例书/文件选择/网络/独立容器和文本配置入口 | 各入口实际打开、取消选择、来源失败与后台返回 |
+| FR-DEMO-02 控制面板 | ReaderMenuController；MainActivity 中央点击与公开动作 | 不改变阅读器视口的覆盖面板；目录/排版/设置/邻章/页号/进度入口已定位 | 中央显隐、辅助输入、拖动时改布局/换书、忙/失败及生命周期 |
 | FR-DEMO-03 目录可用性 | showEpubContents/showSpineContents；控制面板 refresh | 修复空目标 EPUB 行伪可用，文字说明并禁用；控制面板就绪/空闲/非空才启用目录；更新对话框复核书籍实例 | 层级目录、禁用行辅助服务、有效目标缺失/读取失败、目录替换与旧对话框 |
-| FR-DEMO-04 排版编辑 | DemoReaderStylePanel；applyDemoStyle | 最新不可变样式复制+公开事务；分层边距、字号、字符/行/段间距与标题对齐已定位 | 各参数独立可用、非法输入、失败回滚、实时恢复及持久配置 |
-| FR-DEMO-05 效果与主题 | DemoReaderEffects/DemoReaderThemes；MainActivity 设置 | 内置/自定义效果工厂、宿主主题组合及减少动画配置入口 | 全部效果/主题、滚动延后生效、恢复/配置变更与可读性 |
-| FR-DEMO-06 退出与进度 | ReaderActionHandler；DemoReadingStorage/DemoSnapshotState；Activity 生命周期 | 退出由宿主接管，进度/来源元信息存宿主；网络/TXT 独立页停止关闭来源 | 页眉退出、系统返回、前后台/进程恢复、来源/任务/授权最终释放 |
-| FR-DEMO-07 API 扩展示例 | DemoNetworkBookSource；DemoAnnotationPanel/Storage；DemoReaderPageFactory/Effects；DemoCardReadView/Divider | 已定位来源、恢复、标注导入导出、页面和效果/容器扩展；不代表第三方实际集成通过 | 全流程行为、所有权/错误策略、持久记录兼容、Java 与真实宿主接入 |
+| FR-DEMO-04 排版编辑 | TypographySheet；applyDemoStyle | 最新不可变样式复制+公开事务；分层边距、字号、字符/行/段间距与标题对齐已定位 | 各参数独立可用、非法输入、失败回滚、实时恢复及持久配置 |
+| FR-DEMO-05 效果与主题 | ReaderEffects/ReaderThemes；MainActivity 设置 | 内置/自定义效果工厂、宿主主题组合及减少动画配置入口 | 全部效果/主题、滚动延后生效、恢复/配置变更与可读性 |
+| FR-DEMO-06 退出与进度 | ReaderActionHandler；ReadingStorage/SnapshotState；Activity 生命周期 | 退出由宿主接管，进度/来源元信息存宿主；网络/TXT 独立页停止关闭来源 | 页眉退出、系统返回、前后台/进程恢复、来源/任务/授权最终释放 |
+| FR-DEMO-07 API 扩展示例 | NetworkBookSource；AnnotationPanel/Storage；CustomPageFactory/Effects；CardReadView/Divider | 已定位来源、恢复、标注导入导出、页面和效果/容器扩展；不代表第三方实际集成通过 | 全流程行为、所有权/错误策略、持久记录兼容、Java 与真实宿主接入 |
 
 本轮静态核对并通过 Debug 构建，未新增或运行测试。来源/页面/标注/效果示例代码只是接入证据，生命周期、交互与设备行为仍未得到验证；质量属性、一致性规则和原始20个验收场景继续保留。
 ## 11. 质量属性逐条证据映射
@@ -154,9 +154,9 @@
 | Q-5.3-2 状态不只靠颜色 | 占位/错误文字；本轮 EPUB 无目标禁用并文字说明 | 加载/错误/选择全部 UI、辅助播报；无颜色时仍可理解 |
 | Q-5.3-3 字体缩放/深色/服务/触控尺寸 | sp 配置；宿主明暗主题；选区/控件几何 | 系统 fontScale/深色场景、正文/页眉截断、最小触控尺寸与服务实况 |
 | Q-5.3-4 减少动态效果保留导航 | PageTurnOptions.reduceMotion；效果无动画路径；Demo 设置 | 系统偏好/宿主设置、所有输入/效果、完成/取消/边界 |
-| Q-5.4-1 URI 授权及取消选择 | ReaderInput.fromUri；MainActivity picker；DemoUriGrantStore 宿主授权账本 | 授权拒绝/撤销/临时/持久、选择取消、进程恢复与账本释放 |
+| Q-5.4-1 URI 授权及取消选择 | ReaderInput.fromUri；MainActivity picker；UriGrantStore 宿主授权账本 | 授权拒绝/撤销/临时/持久、选择取消、进程恢复与账本释放 |
 | Q-5.4-2 不擅自上传正文/位置/配置 | 来源、持久化留在宿主；库无网络传输实现 | 发布依赖/Manifest 边界核对及网络行为证据；不能仅凭文本搜索通过 |
-| Q-5.4-3 宿主管理权限/认证/重试 | DemoNetworkBookSource 有限 HTTPS 示例；Widget 仅 BookSource | 真实宿主接入、权限/认证/重试边界、示例约束文档；不承诺生产服务可靠性 |
+| Q-5.4-3 宿主管理权限/认证/重试 | NetworkBookSource 有限 HTTPS 示例；Widget 仅 BookSource | 真实宿主接入、权限/认证/重试边界、示例约束文档；不承诺生产服务可靠性 |
 
 本轮网络 close 先锁内退休登记，锁外独立断开；stop 的 finally 确保旧来源释放。Debug 构建通过，未新增或运行测试，不能证明上述条目中的取消延迟、异常覆盖或资源趋势。第6节九项一致性规则及第8节二十个验收场景仍需单独逐项证据，不能由此表推定通过。
 ## 12. 九项状态与一致性规则
@@ -173,7 +173,7 @@
 | I-6 重试隔离迟到章节 | ChapterRepository inFlight/消费者与章节代次；retryChapter | 失败/最后消费者取消后重试、旧任务迟到、结果/状态归属 |
 | I-7 换书隔离内容/缓存/回调/动画 | openSequence/contentGeneration；协调器/repository 关闭；效果/页面所有权；宿主序号 | 相同章ID换书/重入、各阶段销毁与迟到任务、最终资源和画面 |
 | I-8 自定义遵守所有权及规则 | BookPresentationHost；ReaderPage/ViewOwnership；BlockLayoutProvider；公开导航协议 | 实际自定义接入、View复用、钩子异常/重入、锚点/状态/边界与清理 |
-| I-9 宿主掌控标注存储 | AnnotationSnapshot/Store；公开输入/输出；DemoAnnotationStorage | 集合所有权/导入导出/变更事件、宿主持久恢复及不强制后端 |
+| I-9 宿主掌控标注存储 | AnnotationSnapshot/Store；公开输入/输出；AnnotationStorage | 集合所有权/导入导出/变更事件、宿主持久恢复及不强制后端 |
 
 本轮修复网络来源版本遗漏合成标题：HeadingBlock 的目录标题参与章节摘要 v2，旧修订失配按现有恢复/标注规则处理。TXT revision v2 与网络示例分别保持来源自己的版本语义，Widget 不规定网络或存储格式。构建成功仅证明可编译，标题变化缓存/索引/标注失效与全部九项规则尚缺当前运行证据；第8节二十个验收场景仍继续待逐项核对。
 ## 13. 原始二十项验收场景
@@ -189,7 +189,7 @@
 | A-5 首尾/跨章全部输入 | 呈现方向能力；FR-NAV-04 | 手势/点击/程序在书与章首尾的实际边界和跨章结果 |
 | A-6 动画中反向/连续点击/效果/尺寸 | 效果管理；FR-FLIP-06；FR-VIEW-04 | 组合中断录屏及位置事件，无卡页/残影/重复提交 |
 | A-7 全部六种效果 | PageTurnEffects；FR-FLIP-03/08 | 每个预设的拖动/程序/边界/中断/切换、卷页多尺寸视觉 |
-| A-8 慢在线来源预载/失败重试 | DemoNetworkBookSource；repository；FR-BOOK-05/06 | 受控慢/失败网络下触摸响应、续接、重试且原位置保持 |
+| A-8 慢在线来源预载/失败重试 | NetworkBookSource；repository；FR-BOOK-05/06 | 受控慢/失败网络下触摸响应、续接、重试且原位置保持 |
 | A-9 改字号/字体/边距/背景锚定 | applyStyle；FR-STYLE-01/02/03/06 | 各参数和组合的正文、页数/页码、原文锚点及失败恢复 |
 | A-10 双模式跨两章位置转换 | setReadingMode；FR-MODE-02/04 | 滚动跨两章后分页与反向切换的可见原文对应 |
 | A-11 旋转/窗口与加载动画 | View生命周期；FR-VIEW-04；Q-5.2-1 | 加载/动画各阶段旋转与窗口记录，位置和事件无错乱 |
@@ -208,7 +208,7 @@
 
 2026-10-06：检查当前编译产物，ReaderListener 的15个回调均呈现为 Java abstract 方法。新增 ReaderListenerAdapter 与泛型 ReadViewListenerAdapter 空实现抽象类，保留原接口，不改全库默认方法编译配置。
 
-DemoJavaActivity.java 实际纳入应用，Debug 构建执行 compileDebugJavaWithJavac 并通过，证明：Java 能构造这些公开内容/来源/ReaderView，使用打开/恢复/前后导航的 ReaderCallback 重载、取得/取消 ReaderRequest、读取 isCompleted、导出 ReaderSnapshot，并仅覆盖适配器 onStateChanged。入口与非导出 Activity/固定 ID 已登记，Bundle 编解码属于宿主。
+JavaReaderActivity.java 实际纳入应用，Debug 构建执行 compileDebugJavaWithJavac 并通过，证明：Java 能构造这些公开内容/来源/ReaderView，使用打开/恢复/前后导航的 ReaderCallback 重载、取得/取消 ReaderRequest、读取 isCompleted、导出 ReaderSnapshot，并仅覆盖适配器 onStateChanged。入口与非导出 Activity/固定 ID 已登记，Bundle 编解码属于宿主。
 
 此证据补充 FR-BOOK-08、FR-DEMO-07 和 A-20，但不宣告这些需求通过：示例不覆盖全部 API 的 Java 调用、真正 Java 自定义 BookSource 的异步实现、对全部请求分支计数、旋转/后台恢复和发布 AAR 独立消费。界面的回调次数是演示而非测试断言，当前未新增或运行测试；取消恰好一次及边界/不支持结果仍需行为证据。
 ## 15. 大章节内容指纹准备
@@ -225,7 +225,7 @@ Debug/Java 编译通过，未新增或运行测试。当前结构不等于证明
 
 2026-10-06 当前 Debug/Java 编译与 :app:ireadview:assembleRelease 成功。直接读取 app/ireadview/build/outputs/aar/ireadview-release.aar：Manifest 为 org.peyilo.ireadview/minSdk21，无权限/Activity；classes.jar 518条目，ReaderView/ReaderListenerAdapter存在，Demo包及测试类名称匹配数为0。这是当前产物内容证据，不是设备或独立消费验证。
 
-protected readerScope 原签名暴露 CoroutineScope，已收为 Kotlin internal；DemoCardReadView 改公开 callback 导航。javap 显示模块后缀的 public 合成 getter 仍存在，内部/合成入口不能作为支持契约；不以源码 internal 宣称 Java 强隔离。consumer-rules 未增加 blanket keep。
+protected readerScope 原签名暴露 CoroutineScope，已收为 Kotlin internal；CardReadView 改公开 callback 导航。javap 显示模块后缀的 public 合成 getter 仍存在，内部/合成入口不能作为支持契约；不以源码 internal 宣称 Java 强隔离。consumer-rules 未增加 blanket keep。
 
 FR-BOOK-08/A-15/A-17/A-20/Q-5.4-2 的交付范围仍缺：外部消费 AAR及依赖配置、实际压缩后的 XML/扩展资源、全部公开签名、依赖/Manifest安全边界与设备行为。当前未配置/发布 Maven 坐标，未新增或运行测试，也不把 AAR 生成成功认定为发布就绪。
 ## 18. 位置与导航事件重入
@@ -368,7 +368,7 @@ Debug/Java/Release构建通过，未新增或运行测试。双焦点、裁切�
 
 FR-BOOK/FR-MARK与Q-5.3-2静态核对：此前原文流程只能识别TextBlock/HeadingBlock，宿主文本块即使提供正确几何也被视作不支持。现新增TextContentBlock，默认排版、分页范围/锚点、选择提取/匹配、标注校验和辅助来源遍历识别它。内置标题仍HeadingBlock，宿主提供者优先；纯图形和任意局部描述不自动成为原文。
 
-DemoAttributedTextBlock及长文本示例沿公开模型，无新导航/选择管线。自定义元数据未被不完整text指纹替代，revision/提供者version责任保持。Debug/Java/Release构建通过，产物清单492类/210声明，Demo/测试类名匹配0；getText及内置文本实现关系有字节码证据。未新增或运行测试，自定义文本选择/标注/Unicode边界/跨视口与跨章普通辅助移动、元数据更新/恢复、宿主提供者优先与设备行为仍待验收。复杂非文本局部语义继续未完成，不认定原需求完整通过。
+AttributedTextBlock及长文本示例沿公开模型，无新导航/选择管线。自定义元数据未被不完整text指纹替代，revision/提供者version责任保持。Debug/Java/Release构建通过，产物清单492类/210声明，Demo/测试类名匹配0；getText及内置文本实现关系有字节码证据。未新增或运行测试，自定义文本选择/标注/Unicode边界/跨视口与跨章普通辅助移动、元数据更新/恢复、宿主提供者优先与设备行为仍待验收。复杂非文本局部语义继续未完成，不认定原需求完整通过。
 
 
 ## 41. 原文布局偏移上界
@@ -542,7 +542,7 @@ Debug/Java/Release构建通过（5秒），未新增或运行测试。证据不�
 
 按用户最新优先级完善 Apple/iBook、Google/MoonReader 两类仿真。curl 保留为 Apple 兼容别名；CurlOptions/CurlControlPointPolicy 公开外观、网格和控制点策略，非默认配置不伪装成可恢复默认工厂。Apple 用纯几何 BoundCurlGeometry 取代归位零向量奇点，约束正面装订边并使两端网格连续退化；是逐行圆柱二维近似，倾斜折边阴影仍有局限。Google 以本机 PlayLikeCurl 为主要参考，移植波形/半径增长/平移/透视关系至 Canvas 网格，许可通知保留。两种效果共用双快照预算生命周期。
 
-ReaderPageFactories.withDecorations 组合任意 View 页眉/页脚，默认正文继续参与既有测量和导航；提供独立 create/bind/unbind/分钟更新协议。DemoCurlActivity 以真实 ImageView/ProgressBar 装饰展示效果切换和拖动，状态区固定高度以避免切换时重排。
+ReaderPageFactories.withDecorations 组合任意 View 页眉/页脚，默认正文继续参与既有测量和导航；提供独立 create/bind/unbind/分钟更新协议。CurlActivity 以真实 ImageView/ProgressBar 装饰展示效果切换和拖动，状态区固定高度以避免切换时重排。
 
 Debug/Java/Release 构建通过（5秒）。本次源码 APK 在 API36、1080×2424 模拟器手动检查两种效果，各观察到前翻/短拖复位/后翻页码 1→2→2→1，并检查实际中间帧。直接调用已编译几何的临时采样覆盖 70,525,455 材料点：装订边位移0；相邻控制点 x/y 各0.01px的样本最大位移0.103272px，归位差0.001px时最大位移0.005982px；端点断言通过。这是有限采样，不是全域误差上界或完整交互验收。未新增/运行仓库自动化测试套件。
 
@@ -553,7 +553,7 @@ Debug/Java/Release 构建通过（5秒）。本次源码 APK 在 API36、1080×2
 
 ## 67. 全模式演示、交互装饰与 RTL 观察（2026-10-08）
 
-补齐 DemoCurlActivity 的六效果入口、方向/自定义参数/模式切换；任意 View 装饰增加真实 Button 与 SeekBar 交互。控件绑定使用页上下文，解绑撤销监听；ReaderPageDecoration 的主线程、稳定 View、重复绑定/尺寸/清理契约已写入公开注释。自定义策略重映射 x 的平滑行程，使 Google 示例实际消费控制点策略。状态容器固定48dp、标题单行省略，提示文字不再改变正文视口。实测发现 Demo 未声明 supportsRtl，已修正并构建/安装；最后 Debug/Java/Release 构建通过（1秒）。
+补齐 CurlActivity 的六效果入口、方向/自定义参数/模式切换；任意 View 装饰增加真实 Button 与 SeekBar 交互。控件绑定使用页上下文，解绑撤销监听；ReaderPageDecoration 的主线程、稳定 View、重复绑定/尺寸/清理契约已写入公开注释。自定义策略重映射 x 的平滑行程，使 Google 示例实际消费控制点策略。状态容器固定48dp、标题单行省略，提示文字不再改变正文视口。实测发现 Demo 未声明 supportsRtl，已修正并构建/安装；最后 Debug/Java/Release 构建通过（1秒）。
 
 
 没有新增/运行仓库自动化测试套件。iBook保持回退、未完成；连续滚动组合、快速变向、生命周期配置变化、API21/不同尺寸/性能与完整原始需求仍待独立确认。历史发布包/JVM清单未更新。
@@ -679,7 +679,7 @@ Debug与库Release构建通过（6秒），仅操作5556/5558，未操作用户5
 
 ## 82. Java自定义接入与Release产物一致性（2026-10-08）
 
-ReaderPageDecorationAdapter补足Java不可直接继承Kotlin接口默认值的接入成本，保留原接口和生命周期。实际Java工厂创建普通TextView/Button装饰并清理监听器；Google CurlOptions和控制点SAM由DemoJavaActivity使用，编译通过。API36 LTR一条实际路线观察绑定页动作到达宿主、页眉1→2→1及短拖曲面/复位；不外推全部Java客户端、Android版本、参数或视觉质量。
+ReaderPageDecorationAdapter补足Java不可直接继承Kotlin接口默认值的接入成本，保留原接口和生命周期。实际Java工厂创建普通TextView/Button装饰并清理监听器；Google CurlOptions和控制点SAM由JavaReaderActivity使用，编译通过。API36 LTR一条实际路线观察绑定页动作到达宿主、页眉1→2→1及短拖曲面/复位；不外推全部Java客户端、Android版本、参数或视觉质量。
 
 
 Debug/Java及本地发布包构建通过，状态栏修改后Debug再构建3秒。仅操作独立5556，未操作用户5554，未新增/运行仓库自动化测试套件。内置iBook回退继续生效，候选未获视觉认可；完整效果质量、连续性、旧硬件性能和最低API/真机仍待完成，不缩小目标或标记完成。

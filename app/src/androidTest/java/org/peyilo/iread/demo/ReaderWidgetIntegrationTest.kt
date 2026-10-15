@@ -1,5 +1,7 @@
 package org.peyilo.iread.demo
 
+import org.peyilo.iread.demo.ui.reader.ReaderActivity
+
 import android.widget.LinearLayout
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -19,7 +21,7 @@ import java.util.concurrent.TimeUnit
 @RunWith(AndroidJUnit4::class)
 class ReaderWidgetIntegrationTest {
     @Test fun xmlWidgetNavigatesSafelyAndInvalidTargetsPreservePosition() {
-        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+        ActivityScenario.launch(ReaderActivity::class.java).use { scenario ->
             awaitReady(scenario)
             val opened = request<OpenResult>(scenario) { view, callback -> view.openBook(book(), OpenBookRequest(), callback) }
             assertTrue(value(opened) is OpenResult.Opened)
@@ -36,7 +38,7 @@ class ReaderWidgetIntegrationTest {
     }
 
     @Test fun invalidInitialPositionReturnsAnObservableFallback() {
-        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+        ActivityScenario.launch(ReaderActivity::class.java).use { scenario ->
             awaitReady(scenario)
             val result = value(request<OpenResult>(scenario) { view, callback -> view.openBook(book(), OpenBookRequest(initialChapterNumber = 500), callback) }) as OpenResult.Opened
             assertTrue(result.restoration is Restoration.Fallback)
@@ -46,7 +48,7 @@ class ReaderWidgetIntegrationTest {
     }
 
     @Test fun changingFontRestoresThePageContainingTheOldContentAnchor() {
-        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+        ActivityScenario.launch(ReaderActivity::class.java).use { scenario ->
             awaitReady(scenario)
             value(request<OpenResult>(scenario) { view, callback -> view.openBook(book(), OpenBookRequest(), callback) })
             val jumped = value(request<NavigationResult<ReadingPosition>>(scenario) { view, callback -> view.goToPage(3, callback) }) as NavigationResult.Moved
@@ -63,7 +65,7 @@ class ReaderWidgetIntegrationTest {
     }
 
     @Test fun twoInstancesCanOpenBeforeTheirFirstMeasurementWithoutSharingState() {
-        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+        ActivityScenario.launch(ReaderActivity::class.java).use { scenario ->
             awaitReady(scenario)
             val firstQueue = LinkedBlockingQueue<ReaderCompletion<OpenResult>>()
             val secondQueue = LinkedBlockingQueue<ReaderCompletion<OpenResult>>()
@@ -93,7 +95,7 @@ class ReaderWidgetIntegrationTest {
     }
 
     @Test fun cancellingACallbackRequestDeliversExactlyOneCancellation() {
-        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+        ActivityScenario.launch(ReaderActivity::class.java).use { scenario ->
             awaitReady(scenario)
             val queue = LinkedBlockingQueue<ReaderCompletion<OpenResult>>()
             scenario.onActivity { activity ->
@@ -108,7 +110,7 @@ class ReaderWidgetIntegrationTest {
     }
 
     @Test fun activityRecreationRestoresSemanticReadingPositionAfterSourceRebinding() {
-        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+        ActivityScenario.launch(ReaderActivity::class.java).use { scenario ->
             awaitReady(scenario)
             val navigation = value(request<NavigationResult<ReadingPosition>>(scenario) { view, callback -> view.goToChapter("chapter-2", 2, callback) })
             assertTrue("Expected a move, got $navigation", navigation is NavigationResult.Moved)
@@ -123,7 +125,7 @@ class ReaderWidgetIntegrationTest {
         }
     }
 
-    private fun <T> request(scenario: ActivityScenario<MainActivity>, invoke: (ReaderView, ReaderCallback<T>) -> Unit): ReaderCompletion<T> {
+    private fun <T> request(scenario: ActivityScenario<ReaderActivity>, invoke: (ReaderView, ReaderCallback<T>) -> Unit): ReaderCompletion<T> {
         val queue = LinkedBlockingQueue<ReaderCompletion<T>>()
         scenario.onActivity { invoke(it.findViewById(R.id.reader), ReaderCallback { result -> queue.add(result) }) }
         return await(queue)
@@ -137,7 +139,7 @@ class ReaderWidgetIntegrationTest {
         return (completion as ReaderCompletion.Completed).value
     }
 
-    private fun awaitReady(scenario: ActivityScenario<MainActivity>) {
+    private fun awaitReady(scenario: ActivityScenario<ReaderActivity>) {
         val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(15)
         var observed = ""
         do {

@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:tools="http://schemas.android.com/tools"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    style="?android:attr/buttonBarStyle"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:paddingStart="8dp" android:paddingEnd="8dp"
+    android:paddingBottom="8dp"
+    android:paddingTop="8dp"
+    android:background="#F6F6F6">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        tools:ignore="RtlSymmetry">
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/reader_menu_previous_chapter"
+            style="?android:attr/buttonBarButtonStyle"
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="上一章"
+            android:gravity="center"
+            android:textColor="#000000"
+            android:drawableStart="@drawable/ic_reader_previous_chapter"
+            tools:ignore="HardcodedText" />
+
+        <org.peyilo.iread.demo.ui.reader.menu.ChapterProgressView
+            android:id="@+id/reader_menu_chapter_progress"
+            android:layout_weight="2"
+            android:layout_width="0dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="12dp"
+            android:paddingStart="10dp" android:paddingEnd="10dp"
+            android:layout_height="wrap_content"/>
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/reader_menu_next_chapter"
+            style="?android:attr/buttonBarButtonStyle"
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="下一章"
+            android:textColor="#000000"
+            android:drawableEnd="@drawable/ic_reader_next_chapter"
+            tools:ignore="HardcodedText" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_horizontal"
+        android:layout_marginTop="10dp"
+        tools:ignore="RtlSymmetry">
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/reader_menu_contents"
+            style="?android:attr/buttonBarButtonStyle"
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="目录"
+            android:gravity="center"
+            android:textColor="#000000"
+            android:drawableTop="@drawable/ic_reader_contents"
+            tools:ignore="HardcodedText" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/reader_menu_typography"
+            style="?android:attr/buttonBarButtonStyle"
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="排版"
+            android:textColor="#000000"
+            android:drawableTop="@drawable/ic_reader_typography"
+            tools:ignore="HardcodedText" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/reader_menu_settings"
+            style="?android:attr/buttonBarButtonStyle"
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="设置"
+            android:textColor="#000000"
+            android:drawableTop="@drawable/ic_reader_settings"
+            tools:ignore="ContentDescription,HardcodedText" />
+
+    </LinearLayout>
+
+</LinearLayout>

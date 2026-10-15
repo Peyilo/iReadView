@@ -148,10 +148,13 @@ iReadView/
 │  └─ src/
 │     ├─ main/
 │     │  ├─ AndroidManifest.xml
-│     │  ├─ java/.../demo/               # Demo 页面、宿主接入示例、示例数据源
+│     │  ├─ java/.../demo/               # 子目录职责见 app/README.md
+│     │  │  ├─ ui/                      # 主阅读界面、面板、效果/容器和独立示例
+│     │  │  ├─ data/                    # 来源、存储和快照编解码
+│     │  │  ├─ reader/                  # 公开 API/SPI 的宿主配置与扩展
+│     │  │  └─ content/                 # 自定义正文模型与布局提供者
 │     │  ├─ res/                         # Demo 专属界面和资源
 │     │  └─ assets/                      # 仅供 Demo 演示的书籍/字体资源
-│     ├─ test/                           # Demo 逻辑测试
 │     └─ androidTest/                    # Demo 集成与端到端场景
 └─ app/ireadview/                      # 可发布 Android Library（Gradle :app:ireadview）
    ├─ build.gradle.kts

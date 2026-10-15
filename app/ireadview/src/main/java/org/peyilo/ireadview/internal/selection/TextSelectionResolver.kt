@@ -112,4 +112,17 @@ internal object TextSelectionResolver {
         if (start >= end || text.substring(start, end).isBlank()) return null
         return TextSelection(TextRange(content.bookId, content.chapterId, content.revision, ContentAnchor(block.blockId, start), ContentAnchor(block.blockId, end)), text.substring(start, end))
     }
+    /** Source paragraph, including its invisible continuation on other pages. Never spans blocks. */
+    fun paragraphAt(content: ChapterContent, anchor: ContentAnchor): TextSelection? {
+        val block = content.blockForId(anchor.blockId) as? TextContentBlock ?: return null
+        val text = block.text
+        if (text.isEmpty() || anchor.offset !in 0..text.length) return null
+        val offset = anchor.offset.coerceAtMost(text.lastIndex)
+        if (text[offset] == '\n' || text[offset] == '\r') return null
+        val start = text.lastIndexOfAny(charArrayOf('\n', '\r'), offset - 1) + 1
+        val end = text.indexOfAny(charArrayOf('\n', '\r'), offset).let { if (it < 0) text.length else it }
+        if (start >= end || text.substring(start, end).isBlank()) return null
+        return TextSelection(TextRange(content.bookId, content.chapterId, content.revision,
+            ContentAnchor(block.blockId, start), ContentAnchor(block.blockId, end)), text.substring(start, end))
+    }
 }

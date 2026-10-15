@@ -1,0 +1,70 @@
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:fitsSystemWindows="true" android:fillViewport="true"
+    android:clipToPadding="false" android:scrollbars="none" android:background="#F6F4ED">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical" android:paddingStart="24dp" android:paddingEnd="24dp" android:paddingTop="20dp" android:paddingBottom="32dp">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
+            <ImageView android:layout_width="28dp" android:layout_height="28dp" android:src="@drawable/ic_home_book" android:tint="#244D44" android:importantForAccessibility="no" />
+            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="10dp"
+                android:text="iReadView" android:textSize="20sp" android:textStyle="bold" android:fontFamily="sans-serif-medium" android:textColor="#244D44" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="阅读示例" android:textSize="11sp"
+                android:textColor="#617167" android:background="@drawable/home_badge" android:paddingStart="12dp" android:paddingEnd="12dp" android:paddingTop="6dp" android:paddingBottom="6dp" />
+        </LinearLayout>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="30dp"
+            android:text="从一页，\n开始阅读。" android:textSize="32sp" android:fontFamily="serif" android:textColor="#203D35" android:lineSpacingExtra="3dp" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:layout_marginBottom="24dp"
+            android:text="一本内置小说，或是你自己的故事。" android:textSize="14sp" android:textColor="#788077" />
+        <LinearLayout android:id="@+id/open_builtin" style="@style/HomeEntry"
+            android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="176dp"
+            android:background="@drawable/home_card_primary" android:padding="22dp" android:gravity="center_vertical"
+            android:contentDescription="阅读内置书籍，妖精之诗，作者尼希维尔特，离线阅读">
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:importantForAccessibility="noHideDescendants">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="内置书籍 · 离线可读" android:textSize="11sp" android:textColor="#BCCFC3" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp"
+                    android:text="妖精之诗" android:textSize="25sp" android:fontFamily="serif" android:textColor="#FFFAEB" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="5dp"
+                    android:text="尼希维尔特" android:textSize="12sp" android:textColor="#C5D3C7" />
+                <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:gravity="center_vertical">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="开始阅读" android:textSize="13sp" android:textStyle="bold" android:textColor="#F4E8C8" />
+                    <ImageView android:layout_width="18dp" android:layout_height="18dp" android:layout_marginStart="8dp" android:src="@drawable/ic_home_arrow" android:tint="#F4E8C8" />
+                </LinearLayout>
+            </LinearLayout>
+            <ImageView android:layout_width="82dp" android:layout_height="124dp" android:layout_marginStart="12dp" android:src="@drawable/home_book_cover" android:importantForAccessibility="no" />
+        </LinearLayout>
+        <TextView style="@style/HomeSectionTitle" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="28dp" android:layout_marginBottom="12dp" android:text="选择阅读方式" />
+        <LinearLayout android:id="@+id/open_local_txt" style="@style/HomeEntry" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:minHeight="92dp" android:background="@drawable/home_card" android:padding="18dp" android:gravity="center_vertical"
+            android:contentDescription="本地 TXT，选择设备上的小说文件">
+            <ImageView style="@style/HomeIcon" android:background="@drawable/home_icon_blue" android:src="@drawable/ic_home_file" android:tint="#527888" />
+            <LinearLayout style="@style/HomeEntryText" android:importantForAccessibility="noHideDescendants">
+                <TextView style="@style/HomeEntryTitle" android:text="本地 TXT" />
+                <TextView style="@style/HomeEntrySubtitle" android:text="选择设备上的小说文件" />
+            </LinearLayout>
+            <ImageView style="@style/HomeArrow" />
+        </LinearLayout>
+        <LinearLayout android:id="@+id/open_network" style="@style/HomeEntry" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="12dp" android:minHeight="92dp" android:background="@drawable/home_card" android:padding="18dp" android:gravity="center_vertical"
+            android:contentDescription="网络书源，在线读取目录与章节">
+            <ImageView style="@style/HomeIcon" android:background="@drawable/home_icon_lilac" android:src="@drawable/ic_home_cloud" android:tint="#80719B" />
+            <LinearLayout style="@style/HomeEntryText" android:importantForAccessibility="noHideDescendants">
+                <TextView style="@style/HomeEntryTitle" android:text="网络书源" />
+                <TextView style="@style/HomeEntrySubtitle" android:text="在线读取目录与章节" />
+            </LinearLayout>
+            <ImageView style="@style/HomeArrow" />
+        </LinearLayout>
+        <LinearLayout android:id="@+id/more_examples" style="@style/HomeEntry" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="24dp" android:minHeight="76dp" android:paddingTop="12dp" android:paddingBottom="12dp" android:paddingStart="4dp" android:paddingEnd="4dp"
+            android:background="@drawable/home_entry_plain" android:gravity="center_vertical" android:contentDescription="更多示例，探索翻页与自定义内容">
+            <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/ic_home_explore" android:tint="#7B8878" android:importantForAccessibility="no" />
+            <LinearLayout style="@style/HomeEntryText" android:importantForAccessibility="noHideDescendants">
+                <TextView style="@style/HomeEntryTitle" android:textSize="15sp" android:text="更多示例" />
+                <TextView style="@style/HomeEntrySubtitle" android:textSize="11sp" android:text="探索翻页、页眉页脚与自定义内容" />
+            </LinearLayout>
+            <ImageView style="@style/HomeArrow" />
+        </LinearLayout>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp"
+            android:text="iReadView  /  阅读体验，从这里开始" android:textSize="10sp" android:textColor="#9BA095" android:gravity="center" />
+    </LinearLayout>
+</ScrollView>

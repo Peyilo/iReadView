@@ -33,6 +33,7 @@ internal class ScrollingBookPresentation(context: Context, private val host: Boo
     override fun onPlaceholdersChanged() { active?.adapter?.refreshPlaceholders() }
     override val needsTimeUpdates get() = !detached && active?.takeIf { it.generation == host.generation }?.template?.needsTimeUpdates == true
     override fun onTimeChanged(timeMillis: Long) { active?.takeIf { !detached && it.generation == host.generation }?.template?.onTimeChanged(timeMillis) }
+    override fun onPageChromeChanged() { active?.takeIf { !detached && it.generation == host.generation }?.template?.refreshChrome() }
     override fun navigationAvailability(target: ReadNavigation<ReadingPosition>): NavigationAvailability {
         val candidate = active?.takeIf { it.generation == host.generation } ?: return NavigationAvailability.NotReady
         val book = host.book ?: return NavigationAvailability.NotReady
@@ -132,7 +133,7 @@ internal class ScrollingBookPresentation(context: Context, private val host: Boo
         val (x, y) = local(body, xPx, yPx)
         val anchor = body.anchorAt(x, y) ?: return false
         val content = row.chapter.layout.contentSnapshot ?: return false
-        val selection = TextSelectionResolver.wordAt(content, anchor) ?: return false
+        val selection = TextSelectionResolver.paragraphAt(content, anchor) ?: return false
         return host.reportSelection(selection, host.generation) is ReaderResult.Success
     }
     private fun stopDrag() {
@@ -287,7 +288,7 @@ internal class ScrollingBookPresentation(context: Context, private val host: Boo
             }
             cleanupList = list
             template.bodyHost.addView(list, ViewGroup.LayoutParams(-1, -1))
-            template.bind(ReaderPageContext(book.title, book.chapters[index], null, null, style, ReadingMode.CONTINUOUS_SCROLL))
+            template.bind(ReaderPageContext(book.title, book.chapters[index], null, null, style, ReadingMode.CONTINUOUS_SCROLL, chromeProvider = host.pageChromeProvider))
             currentCoroutineContext().ensureActive()
             if (detached || generation != host.generation) return ReadPreparation.Rejected(ReaderRejection.NotReady)
             require(template.root.parent == null) { "Page bind attached its root outside the presentation" }
@@ -340,7 +341,7 @@ internal class ScrollingBookPresentation(context: Context, private val host: Boo
             candidate.target = candidate.visiblePosition() ?: chapter.positionAt(offset)
             val boundPosition = candidate.target
             template.bind(ReaderPageContext(book.title, book.chapters[index], boundPosition, chapter.layout.pageCount, style, ReadingMode.CONTINUOUS_SCROLL,
-                requestReaderAction = { action -> active === candidate && host.requestReaderAction(action, boundPosition, generation) }))
+                requestReaderAction = { action -> active === candidate && host.requestReaderAction(action, boundPosition, generation) }, chromeProvider = host.pageChromeProvider))
             transferred = true
             return ReadPreparation.Ready(candidate)
         } catch (cancelled: CancellationException) { throw cancelled }
@@ -403,6 +404,7 @@ internal class ScrollingBookPresentation(context: Context, private val host: Boo
         val next = candidate as ScrollCandidate
         check(!detached && next.generation == host.generation)
         val old = active
+        next.template.refreshChrome()
         next.template.root.visibility = View.VISIBLE
         currentCoroutineContext().ensureActive()
         if (detached || next.generation != host.generation || active !== old) return next.target
@@ -697,7 +699,7 @@ internal class ScrollingBookPresentation(context: Context, private val host: Boo
                 val current = chapters.first { it.layout.chapterId == position.chapterId }
                 val style = preparedStyle.copy(highlightStyles = host.style.highlightStyles, selectionStyle = host.style.selectionStyle)
                 template.bind(ReaderPageContext(host.book!!.title, host.book!!.chapters[current.index], position, current.layout.pageCount, style, ReadingMode.CONTINUOUS_SCROLL,
-                    requestReaderAction = { action -> active === this && host.requestReaderAction(action, position, generation) }))
+                    requestReaderAction = { action -> active === this && host.requestReaderAction(action, position, generation) }, chromeProvider = host.pageChromeProvider))
             }
             if (active !== this || generation != host.generation || detached || navigationBusy) return
             host.reportNavigationCapabilitiesChanged(generation)
@@ -949,6 +951,11 @@ internal class ScrollingBookPresentation(context: Context, private val host: Boo
                 }
             }
             body.setHighlights(highlights)
+            body.setUnderlines(host.validUnderlines(row.chapter.layout.chapterId).flatMap { underline ->
+                ((row.chapter.layout.rangesForText(underline.range) as? ReaderResult.Success)?.value ?: emptyList()).map {
+                    org.peyilo.ireadview.internal.render.LineTextRange(underline.id, it, underline.style)
+                }
+            })
             val selection = host.selection?.takeIf { it.range.chapterId == row.chapter.layout.chapterId }
             body.setSelection(selection?.let { (row.chapter.layout.rangesForText(it.range) as? ReaderResult.Success)?.value } ?: emptyList(), host.style.selectionStyle)
         }

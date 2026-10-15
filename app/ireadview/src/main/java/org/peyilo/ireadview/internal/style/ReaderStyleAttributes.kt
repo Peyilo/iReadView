@@ -68,6 +68,7 @@ internal object ReaderStyleAttributes {
                 textColor = values.getColor(R.styleable.ReaderView_ireadBodyTextColor, style.body.textColor),
                 readerFont = font(R.styleable.ReaderView_ireadBodyFontFamily, style.body.readerFont),
                 letterSpacingEm = values.getFloat(R.styleable.ReaderView_ireadBodyLetterSpacing, style.body.letterSpacingEm),
+                letterSpacingDp = if (values.hasValue(R.styleable.ReaderView_ireadBodyLetterSpacingDp)) dp(R.styleable.ReaderView_ireadBodyLetterSpacingDp, 0f) else style.body.letterSpacingDp,
                 firstLineIndentEm = values.getFloat(R.styleable.ReaderView_ireadFirstLineIndent, style.body.firstLineIndentEm),
                 lineSpacingMultiplier = values.getFloat(R.styleable.ReaderView_ireadLineSpacingMultiplier, style.body.lineSpacingMultiplier),
                 lineSpacingExtraDp = dp(R.styleable.ReaderView_ireadLineSpacingExtra, style.body.lineSpacingExtraDp),
@@ -89,7 +90,10 @@ internal object ReaderStyleAttributes {
                 padding = insets(style.title.padding, R.styleable.ReaderView_ireadTitlePaddingStart,
                     R.styleable.ReaderView_ireadTitlePaddingTop, R.styleable.ReaderView_ireadTitlePaddingEnd, R.styleable.ReaderView_ireadTitlePaddingBottom),
                 letterSpacingEm = values.getFloat(R.styleable.ReaderView_ireadTitleLetterSpacing, style.title.letterSpacingEm),
-                spacingAfterDp = dp(R.styleable.ReaderView_ireadTitleSpacingAfter, style.title.spacingAfterDp)
+                letterSpacingDp = if (values.hasValue(R.styleable.ReaderView_ireadTitleLetterSpacingDp)) dp(R.styleable.ReaderView_ireadTitleLetterSpacingDp, 0f) else style.title.letterSpacingDp,
+                spacingAfterDp = dp(R.styleable.ReaderView_ireadTitleSpacingAfter, style.title.spacingAfterDp),
+                lineSpacingMultiplier = values.getFloat(R.styleable.ReaderView_ireadTitleLineSpacingMultiplier, style.title.lineSpacingMultiplier),
+                lineSpacingExtraDp = dp(R.styleable.ReaderView_ireadTitleLineSpacingExtra, style.title.lineSpacingExtraDp)
             ),
             header = chrome(style.header, R.styleable.ReaderView_ireadHeaderVisible, R.styleable.ReaderView_ireadHeaderTextSize, R.styleable.ReaderView_ireadHeaderTextColor,
                 R.styleable.ReaderView_ireadHeaderHeight, intArrayOf(R.styleable.ReaderView_ireadHeaderPaddingStart, R.styleable.ReaderView_ireadHeaderPaddingTop,

@@ -19,8 +19,19 @@ internal class PaginationEngine {
         var y = 0f
         var retainedBytes = RetainedSize.content(content, context.checkCancellation)
         fun endPage() { if (fragments.isNotEmpty()) { pages.add(immutableList(fragments)); fragments = ArrayList(); y = 0f } }
-        content.blocks.forEach { block ->
+        // Source snapshots keep blank lines/IDs. Only terminal whitespace is
+        // excluded from visual pagination; interior blank paragraphs remain real.
+        val lastVisibleBlock = content.blocks.indexOfLast { block ->
             context.checkCancellation()
+            block !is TextContentBlock || block.text.any { !it.isWhitespace() }
+        }
+        content.blocks.forEachIndexed { blockIndex, block ->
+            context.checkCancellation()
+            if (blockIndex > lastVisibleBlock && block is TextContentBlock) {
+                val lastPage = maxOf(1, pages.size + if (fragments.isNotEmpty()) 1 else 0)
+                anchorPages.getOrPut(block.blockId) { ArrayList() }.add(AnchorPage(lastPage, 0, block.text.length))
+                return@forEachIndexed
+            }
             val provider = providers.firstOrNull { context.checkCancellation(); it.supports(block) } ?: throw IllegalArgumentException("Unsupported block: ${block.javaClass.name}")
             context.checkCancellation()
             val layout = measurePaddedBlock(provider, block, context)
@@ -36,12 +47,26 @@ internal class PaginationEngine {
                 context.checkCancellation()
                 validateOffsets(unit.startOffset, unit.endOffset, textLength)
             }
+            var unitLimit = units.size
+            if (blockIndex == lastVisibleBlock && block is TextContentBlock) {
+                // StaticLayout can produce a final empty line for a terminal
+                // newline; explicit whitespace-only lines have the same issue.
+                // Unknown provider offsets are not treated as invisible content.
+                while (unitLimit > 0) {
+                    context.checkCancellation()
+                    val unit = units[unitLimit - 1]
+                    val from = unit.startOffset ?: break
+                    val to = unit.endOffset ?: break
+                    if ((from until to).any { !block.text[it].isWhitespace() }) break
+                    unitLimit--
+                }
+            }
             var first = 0
-            while (first < units.size) {
+            while (first < unitLimit) {
                 context.checkCancellation()
                 var last = first
                 var height = 0f
-                while (last < units.size && y + height + units[last].heightPx <= context.viewport.heightPx) {
+                while (last < unitLimit && y + height + units[last].heightPx <= context.viewport.heightPx) {
                     context.checkCancellation()
                     height += units[last].heightPx
                     last++
@@ -59,11 +84,11 @@ internal class PaginationEngine {
                 require(fragment.leftPx.isFinite() && fragment.topPx.isFinite()) { "Provider returned invalid fragment origin" }
                 require(fragment.heightPx.isFinite() && fragment.heightPx > 0 && fragment.heightPx <= context.viewport.heightPx - y + 1) { "Provider returned invalid fragment geometry" }
                 fragments.add(PositionedFragment(fragment, y))
-                continuous.add(ContinuousFragment(fragment, if (last == units.size) layout.spacingAfterPx else 0f))
+                continuous.add(ContinuousFragment(fragment, if (last == unitLimit) layout.spacingAfterPx else 0f))
                 anchorPages.getOrPut(block.blockId) { ArrayList() }.add(AnchorPage(pages.size + 1, start ?: 0, end ?: 0))
                 y += fragment.heightPx
                 first = last
-                if (first < units.size) endPage()
+                if (first < unitLimit) endPage()
             }
             y += layout.spacingAfterPx
         }

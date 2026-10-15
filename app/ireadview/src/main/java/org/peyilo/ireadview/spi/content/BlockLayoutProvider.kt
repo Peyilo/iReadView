@@ -38,6 +38,8 @@ interface BlockLayoutFragment {
     fun draw(canvas: Canvas)
     /** Half-open source offsets, returning geometry in fragment-local pixels; null if unsupported. */
     fun selectionPath(startOffset: Int, endExclusive: Int): Path? = null
+    /** One segment per selected visual line/run, in local pixels; empty opts out of underlines. */
+    fun underlineSegments(startOffset: Int, endExclusive: Int): List<TextLineSegment> = emptyList()
     fun anchorAt(xPx: Float, yPx: Float): ContentAnchor? = null
     /** Drag-only clamped hit testing; ordinary long-press hit testing remains strict. */
     fun nearestAnchorAt(xPx: Float, yPx: Float): ContentAnchor? = anchorAt(xPx, yPx)
@@ -49,6 +51,9 @@ interface BlockLayoutFragment {
 
 data class TextCaret(val xPx: Float, val topPx: Float, val bottomPx: Float) {
     init { require(xPx.isFinite() && topPx.isFinite() && bottomPx.isFinite() && bottomPx > topPx) }
+}
+data class TextLineSegment(val startXPx: Float, val endXPx: Float, val bottomYPx: Float) {
+    init { require(startXPx.isFinite() && endXPx.isFinite() && bottomYPx.isFinite() && endXPx > startXPx) }
 }
 
 data class BlockTextRange(val blockId: String, val startOffset: Int, val endExclusive: Int) {

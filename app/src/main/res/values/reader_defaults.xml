@@ -1,0 +1,46 @@
+<resources>
+    <!-- Reference typography; outer chrome padding excludes system bars handled by the host. -->
+    <style name="ReaderDefaultStyle" parent="Widget.IRead.ReaderView">
+        <item name="ireadPageBackground">#F6F6F6</item>
+        <item name="ireadSelectionColor">#33F66B22</item>
+        <item name="ireadSelectionHandleColor">#F66B22</item>
+        <item name="ireadSelectionHandleRadius">4dp</item>
+        <item name="ireadBodyTextSize">20sp</item>
+        <item name="ireadBodyTextColor">#1E1A1A</item>
+        <item name="ireadBodyFontFamily">@font/linja_waso</item>
+        <item name="ireadBodyLetterSpacingDp">0dp</item>
+        <item name="ireadFirstLineIndent">2</item>
+        <item name="ireadLineSpacingMultiplier">1</item>
+        <item name="ireadLineSpacingExtra">10dp</item>
+        <item name="ireadParagraphSpacing">18dp</item>
+        <item name="ireadPagePaddingStart">20dp</item>
+        <item name="ireadPagePaddingTop">0dp</item>
+        <item name="ireadPagePaddingEnd">20dp</item>
+        <item name="ireadPagePaddingBottom">0dp</item>
+        <item name="ireadBodyContainerPaddingTop">10dp</item>
+        <item name="ireadBodyContainerPaddingBottom">10dp</item>
+        <item name="ireadTitleTextSize">28sp</item>
+        <item name="ireadTitleTextColor">#000000</item>
+        <item name="ireadTitleFontFamily">@font/linja_waso_bold</item>
+        <item name="ireadTitleAlignment">start</item>
+        <item name="ireadTitleLetterSpacingDp">0dp</item>
+        <item name="ireadTitleLineSpacingMultiplier">1</item>
+        <item name="ireadTitleLineSpacingExtra">10dp</item>
+        <item name="ireadTitlePaddingBottom">72dp</item>
+        <item name="ireadTitleSpacingAfter">0dp</item>
+        <item name="ireadHeaderTextSize">11sp</item>
+        <item name="ireadHeaderTextColor">#000000</item>
+        <item name="ireadHeaderFontFamily">sans-serif</item>
+        <item name="ireadHeaderContent">default_content</item>
+        <item name="ireadHeaderAlignment">start</item>
+        <item name="ireadHeaderPaddingTop">8dp</item>
+        <item name="ireadHeaderPaddingBottom">20dp</item>
+        <item name="ireadFooterTextSize">11sp</item>
+        <item name="ireadFooterTextColor">#000000</item>
+        <item name="ireadFooterFontFamily">sans-serif</item>
+        <item name="ireadFooterContent">page_progress_and_time</item>
+        <item name="ireadFooterAlignment">end</item>
+        <item name="ireadFooterPaddingTop">20dp</item>
+        <item name="ireadFooterPaddingBottom">8dp</item>
+    </style>
+</resources>

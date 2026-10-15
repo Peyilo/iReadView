@@ -18,8 +18,12 @@ data class ReaderPageContext(
     val readingMode: ReadingMode = ReadingMode.PAGED,
     /** Bound to this page's position/generation; stale or uncommitted pages return false. */
     val requestReaderAction: (ReaderAction) -> Boolean = { false },
-    val timeMillis: Long = System.currentTimeMillis()
-)
+    val timeMillis: Long = System.currentTimeMillis(),
+    /** Live host bridge; prepared and visible pages always read the latest provider. */
+    val chromeProvider: ReaderPageChromeProvider? = null
+) {
+    val chrome: ReaderPageChrome get() = chromeProvider?.provide(this) ?: ReaderPageChrome()
+}
 
 /**
  * Each create returns an independent unowned template/root; preparation may overlap across Widgets.
@@ -42,6 +46,10 @@ interface ReaderPageTemplate {
     val bodyHost: ViewGroup
     fun bind(context: ReaderPageContext)
     fun unbind()
+    /** Refresh chrome content/actions only, retaining body and measured slot geometry.
+     * Custom templates may override; custom multiline/height changes require setPageFactory.
+     */
+    fun refreshChrome() {}
     /** Opt in to minute updates for the active visible page; hidden candidates receive only bind time. */
     val needsTimeUpdates: Boolean get() = false
     fun onTimeChanged(timeMillis: Long) {}

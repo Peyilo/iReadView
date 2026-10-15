@@ -42,9 +42,10 @@ data class CurlOptions @JvmOverloads constructor(
     /** 阴影峰值强度上限，默认0.25，建议0.15–0.30；iBook再按卷起高度和可见边长衰减。
      * 0关闭阴影，允许0–1。 */
     val shadowAlpha: Float = 0.25f,
-    /** Apple reverse face RGB tint; its alpha channel is ignored, snapshot alpha is preserved.
+    /** Null follows the turning sheet's background, sampled once per turn. An explicit ARGB value
+     * fixes the reverse-face RGB tint; tint alpha is ignored and snapshot alpha preserved.
      * Google renders a travelling front face and does not use reverse-face controls. */
-    val backTintColor: Int = 0xffeee9df.toInt(),
+    val backTintColor: Int? = null,
     /** Apple reverse-face content/tint mix, not whole-sheet opacity. */
     val backContentAlpha: Float = 0.3f,
     /** Angular segments per Apple visible curved face on API29+, horizontal cells on

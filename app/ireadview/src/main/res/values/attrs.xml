@@ -20,6 +20,7 @@
         <attr name="ireadBodyPaddingBottom" format="dimension" />
         <attr name="ireadBodyFontFamily" format="string|reference" />
         <attr name="ireadBodyLetterSpacing" format="float" />
+        <attr name="ireadBodyLetterSpacingDp" format="dimension" />
         <attr name="ireadFirstLineIndent" format="float" />
         <attr name="ireadLineSpacingMultiplier" format="float" />
         <attr name="ireadLineSpacingExtra" format="dimension" />
@@ -28,6 +29,8 @@
         <attr name="ireadTitleTextColor" format="color" />
         <attr name="ireadTitleFontFamily" format="string|reference" />
         <attr name="ireadTitleSpacingAfter" format="dimension" />
+        <attr name="ireadTitleLineSpacingMultiplier" format="float" />
+        <attr name="ireadTitleLineSpacingExtra" format="dimension" />
         <attr name="ireadHeaderTextSize" format="dimension" />
         <attr name="ireadHeaderTextColor" format="color" />
         <attr name="ireadFooterTextSize" format="dimension" />
@@ -98,5 +101,6 @@
         <attr name="ireadTitlePaddingEnd" format="dimension" />
         <attr name="ireadTitlePaddingBottom" format="dimension" />
         <attr name="ireadTitleLetterSpacing" format="float" />
+        <attr name="ireadTitleLetterSpacingDp" format="dimension" />
     </declare-styleable>
 </resources>

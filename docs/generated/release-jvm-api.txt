@@ -1,7 +1,7 @@
 iReadView Release JVM signature inventory
-Generated: 2026-10-13
-AAR SHA-256: 3a5a16c0a6f684fd0c56079bfe0778a031a81d3f28d59903ad61a0bdacd05019
-classes.jar SHA-256: 886a8784435b1a7a98ea1e58064925662883b1f843acb7535b5306aa6f81ec2b
+Generated: 2026-10-15
+AAR SHA-256: 5d2d5cebc7d3812aca6909e5eee9c781b7408740f02219c14344b17e669154af
+classes.jar SHA-256: 6f74cb8238000bb93101df295fefb1d414f091b21a1b338db046b70f9036f81a
 Tool: JDK 17 javap -protected -s
 Scope: public bytecode declarations under api/spi/widget/source, public/protected members; file helpers and lambda classes excluded.
 Includes compiler generated/Kotlin internal JVM members; not a supported API allowlist.
@@ -80,11 +80,11 @@ public interface org.peyilo.ireadview.api.effect.CurlControlPointPolicy {
 
 Compiled from "CurlOptions.kt"
 public final class org.peyilo.ireadview.api.effect.CurlOptions {
-  public org.peyilo.ireadview.api.effect.CurlOptions(float, float, float, int, float, int, int, org.peyilo.ireadview.api.effect.CurlControlPointPolicy);
-    descriptor: (FFFIFIILorg/peyilo/ireadview/api/effect/CurlControlPointPolicy;)V
+  public org.peyilo.ireadview.api.effect.CurlOptions(float, float, float, java.lang.Integer, float, int, int, org.peyilo.ireadview.api.effect.CurlControlPointPolicy);
+    descriptor: (FFFLjava/lang/Integer;FIILorg/peyilo/ireadview/api/effect/CurlControlPointPolicy;)V
 
-  public org.peyilo.ireadview.api.effect.CurlOptions(float, float, float, int, float, int, int, org.peyilo.ireadview.api.effect.CurlControlPointPolicy, int, kotlin.jvm.internal.DefaultConstructorMarker);
-    descriptor: (FFFIFIILorg/peyilo/ireadview/api/effect/CurlControlPointPolicy;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+  public org.peyilo.ireadview.api.effect.CurlOptions(float, float, float, java.lang.Integer, float, int, int, org.peyilo.ireadview.api.effect.CurlControlPointPolicy, int, kotlin.jvm.internal.DefaultConstructorMarker);
+    descriptor: (FFFLjava/lang/Integer;FIILorg/peyilo/ireadview/api/effect/CurlControlPointPolicy;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 
   public final float getRadiusFraction();
     descriptor: ()F
@@ -95,8 +95,8 @@ public final class org.peyilo.ireadview.api.effect.CurlOptions {
   public final float getShadowAlpha();
     descriptor: ()F
 
-  public final int getBackTintColor();
-    descriptor: ()I
+  public final java.lang.Integer getBackTintColor();
+    descriptor: ()Ljava/lang/Integer;
 
   public final float getBackContentAlpha();
     descriptor: ()F
@@ -119,8 +119,8 @@ public final class org.peyilo.ireadview.api.effect.CurlOptions {
   public final float component3();
     descriptor: ()F
 
-  public final int component4();
-    descriptor: ()I
+  public final java.lang.Integer component4();
+    descriptor: ()Ljava/lang/Integer;
 
   public final float component5();
     descriptor: ()F
@@ -134,11 +134,11 @@ public final class org.peyilo.ireadview.api.effect.CurlOptions {
   public final org.peyilo.ireadview.api.effect.CurlControlPointPolicy component8();
     descriptor: ()Lorg/peyilo/ireadview/api/effect/CurlControlPointPolicy;
 
-  public final org.peyilo.ireadview.api.effect.CurlOptions copy(float, float, float, int, float, int, int, org.peyilo.ireadview.api.effect.CurlControlPointPolicy);
-    descriptor: (FFFIFIILorg/peyilo/ireadview/api/effect/CurlControlPointPolicy;)Lorg/peyilo/ireadview/api/effect/CurlOptions;
+  public final org.peyilo.ireadview.api.effect.CurlOptions copy(float, float, float, java.lang.Integer, float, int, int, org.peyilo.ireadview.api.effect.CurlControlPointPolicy);
+    descriptor: (FFFLjava/lang/Integer;FIILorg/peyilo/ireadview/api/effect/CurlControlPointPolicy;)Lorg/peyilo/ireadview/api/effect/CurlOptions;
 
-  public static org.peyilo.ireadview.api.effect.CurlOptions copy$default(org.peyilo.ireadview.api.effect.CurlOptions, float, float, float, int, float, int, int, org.peyilo.ireadview.api.effect.CurlControlPointPolicy, int, java.lang.Object);
-    descriptor: (Lorg/peyilo/ireadview/api/effect/CurlOptions;FFFIFIILorg/peyilo/ireadview/api/effect/CurlControlPointPolicy;ILjava/lang/Object;)Lorg/peyilo/ireadview/api/effect/CurlOptions;
+  public static org.peyilo.ireadview.api.effect.CurlOptions copy$default(org.peyilo.ireadview.api.effect.CurlOptions, float, float, float, java.lang.Integer, float, int, int, org.peyilo.ireadview.api.effect.CurlControlPointPolicy, int, java.lang.Object);
+    descriptor: (Lorg/peyilo/ireadview/api/effect/CurlOptions;FFFLjava/lang/Integer;FIILorg/peyilo/ireadview/api/effect/CurlControlPointPolicy;ILjava/lang/Object;)Lorg/peyilo/ireadview/api/effect/CurlOptions;
 
   public java.lang.String toString();
     descriptor: ()Ljava/lang/String;
@@ -149,17 +149,17 @@ public final class org.peyilo.ireadview.api.effect.CurlOptions {
   public boolean equals(java.lang.Object);
     descriptor: (Ljava/lang/Object;)Z
 
-  public org.peyilo.ireadview.api.effect.CurlOptions(float, float, float, int, float, int, int);
-    descriptor: (FFFIFII)V
+  public org.peyilo.ireadview.api.effect.CurlOptions(float, float, float, java.lang.Integer, float, int, int);
+    descriptor: (FFFLjava/lang/Integer;FII)V
 
-  public org.peyilo.ireadview.api.effect.CurlOptions(float, float, float, int, float, int);
-    descriptor: (FFFIFI)V
+  public org.peyilo.ireadview.api.effect.CurlOptions(float, float, float, java.lang.Integer, float, int);
+    descriptor: (FFFLjava/lang/Integer;FI)V
 
-  public org.peyilo.ireadview.api.effect.CurlOptions(float, float, float, int, float);
-    descriptor: (FFFIF)V
+  public org.peyilo.ireadview.api.effect.CurlOptions(float, float, float, java.lang.Integer, float);
+    descriptor: (FFFLjava/lang/Integer;F)V
 
-  public org.peyilo.ireadview.api.effect.CurlOptions(float, float, float, int);
-    descriptor: (FFFI)V
+  public org.peyilo.ireadview.api.effect.CurlOptions(float, float, float, java.lang.Integer);
+    descriptor: (FFFLjava/lang/Integer;)V
 
   public org.peyilo.ireadview.api.effect.CurlOptions(float, float, float);
     descriptor: (FFF)V
@@ -295,13 +295,19 @@ public final class org.peyilo.ireadview.api.effect.EffectSelection$Fallback impl
     descriptor: (Ljava/lang/Object;)Z
 }
 
+Compiled from "PageTurnEffect.kt"
+public interface org.peyilo.ireadview.api.effect.PageBackgroundSurface extends org.peyilo.ireadview.api.effect.PageSurface {
+  public abstract java.lang.Integer getBackgroundColor();
+    descriptor: ()Ljava/lang/Integer;
+}
+
 Compiled from "PageCurlOptions.kt"
 public final class org.peyilo.ireadview.api.effect.PageCurlOptions {
-  public org.peyilo.ireadview.api.effect.PageCurlOptions(float, float, float, float);
-    descriptor: (FFFF)V
+  public org.peyilo.ireadview.api.effect.PageCurlOptions(float, float, float, float, java.lang.Integer, float);
+    descriptor: (FFFFLjava/lang/Integer;F)V
 
-  public org.peyilo.ireadview.api.effect.PageCurlOptions(float, float, float, float, int, kotlin.jvm.internal.DefaultConstructorMarker);
-    descriptor: (FFFFILkotlin/jvm/internal/DefaultConstructorMarker;)V
+  public org.peyilo.ireadview.api.effect.PageCurlOptions(float, float, float, float, java.lang.Integer, float, int, kotlin.jvm.internal.DefaultConstructorMarker);
+    descriptor: (FFFFLjava/lang/Integer;FILkotlin/jvm/internal/DefaultConstructorMarker;)V
 
   public final float getRadiusFraction();
     descriptor: ()F
@@ -313,6 +319,12 @@ public final class org.peyilo.ireadview.api.effect.PageCurlOptions {
     descriptor: ()F
 
   public final float getTilt();
+    descriptor: ()F
+
+  public final java.lang.Integer getBackTintColor();
+    descriptor: ()Ljava/lang/Integer;
+
+  public final float getBackContentAlpha();
     descriptor: ()F
 
   public final org.peyilo.ireadview.api.effect.PageCurlOptions withRadiusFraction(float);
@@ -339,11 +351,17 @@ public final class org.peyilo.ireadview.api.effect.PageCurlOptions {
   public final float component4();
     descriptor: ()F
 
-  public final org.peyilo.ireadview.api.effect.PageCurlOptions copy(float, float, float, float);
-    descriptor: (FFFF)Lorg/peyilo/ireadview/api/effect/PageCurlOptions;
+  public final java.lang.Integer component5();
+    descriptor: ()Ljava/lang/Integer;
 
-  public static org.peyilo.ireadview.api.effect.PageCurlOptions copy$default(org.peyilo.ireadview.api.effect.PageCurlOptions, float, float, float, float, int, java.lang.Object);
-    descriptor: (Lorg/peyilo/ireadview/api/effect/PageCurlOptions;FFFFILjava/lang/Object;)Lorg/peyilo/ireadview/api/effect/PageCurlOptions;
+  public final float component6();
+    descriptor: ()F
+
+  public final org.peyilo.ireadview.api.effect.PageCurlOptions copy(float, float, float, float, java.lang.Integer, float);
+    descriptor: (FFFFLjava/lang/Integer;F)Lorg/peyilo/ireadview/api/effect/PageCurlOptions;
+
+  public static org.peyilo.ireadview.api.effect.PageCurlOptions copy$default(org.peyilo.ireadview.api.effect.PageCurlOptions, float, float, float, float, java.lang.Integer, float, int, java.lang.Object);
+    descriptor: (Lorg/peyilo/ireadview/api/effect/PageCurlOptions;FFFFLjava/lang/Integer;FILjava/lang/Object;)Lorg/peyilo/ireadview/api/effect/PageCurlOptions;
 
   public java.lang.String toString();
     descriptor: ()Ljava/lang/String;
@@ -353,6 +371,12 @@ public final class org.peyilo.ireadview.api.effect.PageCurlOptions {
 
   public boolean equals(java.lang.Object);
     descriptor: (Ljava/lang/Object;)Z
+
+  public org.peyilo.ireadview.api.effect.PageCurlOptions(float, float, float, float, java.lang.Integer);
+    descriptor: (FFFFLjava/lang/Integer;)V
+
+  public org.peyilo.ireadview.api.effect.PageCurlOptions(float, float, float, float);
+    descriptor: (FFFF)V
 
   public org.peyilo.ireadview.api.effect.PageCurlOptions(float, float, float);
     descriptor: (FFF)V
@@ -1201,20 +1225,52 @@ public final class org.peyilo.ireadview.api.model.AnnotationInvalidReason extend
 
 Compiled from "Annotations.kt"
 public final class org.peyilo.ireadview.api.model.AnnotationSnapshot {
-  public org.peyilo.ireadview.api.model.AnnotationSnapshot(java.lang.String, java.util.List<org.peyilo.ireadview.api.model.Bookmark>, java.util.List<org.peyilo.ireadview.api.model.Highlight>);
-    descriptor: (Ljava/lang/String;Ljava/util/List;Ljava/util/List;)V
-
-  public org.peyilo.ireadview.api.model.AnnotationSnapshot(java.lang.String, java.util.List, java.util.List, int, kotlin.jvm.internal.DefaultConstructorMarker);
-    descriptor: (Ljava/lang/String;Ljava/util/List;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-
+  public static final org.peyilo.ireadview.api.model.AnnotationSnapshot$Companion Companion;
+    descriptor: Lorg/peyilo/ireadview/api/model/AnnotationSnapshot$Companion;
   public final java.lang.String getBookId();
     descriptor: ()Ljava/lang/String;
+
+  public final java.util.List<org.peyilo.ireadview.api.model.ReaderAnnotation> getItems();
+    descriptor: ()Ljava/util/List;
 
   public final java.util.List<org.peyilo.ireadview.api.model.Bookmark> getBookmarks();
     descriptor: ()Ljava/util/List;
 
   public final java.util.List<org.peyilo.ireadview.api.model.Highlight> getHighlights();
     descriptor: ()Ljava/util/List;
+
+  public final java.util.List<org.peyilo.ireadview.api.model.Underline> getUnderlines();
+    descriptor: ()Ljava/util/List;
+
+  public org.peyilo.ireadview.api.model.AnnotationSnapshot(java.lang.String, java.util.List<org.peyilo.ireadview.api.model.Bookmark>, java.util.List<org.peyilo.ireadview.api.model.Highlight>, java.util.List<org.peyilo.ireadview.api.model.Underline>);
+    descriptor: (Ljava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/util/List;)V
+
+  public org.peyilo.ireadview.api.model.AnnotationSnapshot(java.lang.String, java.util.List, java.util.List, java.util.List, int, kotlin.jvm.internal.DefaultConstructorMarker);
+    descriptor: (Ljava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+
+  public org.peyilo.ireadview.api.model.AnnotationSnapshot(java.lang.String, java.util.List<org.peyilo.ireadview.api.model.Bookmark>, java.util.List<org.peyilo.ireadview.api.model.Highlight>);
+    descriptor: (Ljava/lang/String;Ljava/util/List;Ljava/util/List;)V
+
+  public org.peyilo.ireadview.api.model.AnnotationSnapshot(java.lang.String, java.util.List<org.peyilo.ireadview.api.model.Bookmark>);
+    descriptor: (Ljava/lang/String;Ljava/util/List;)V
+
+  public org.peyilo.ireadview.api.model.AnnotationSnapshot(java.lang.String);
+    descriptor: (Ljava/lang/String;)V
+
+  public static final org.peyilo.ireadview.api.model.AnnotationSnapshot fromItems(java.lang.String, java.util.List<? extends org.peyilo.ireadview.api.model.ReaderAnnotation>);
+    descriptor: (Ljava/lang/String;Ljava/util/List;)Lorg/peyilo/ireadview/api/model/AnnotationSnapshot;
+
+  public org.peyilo.ireadview.api.model.AnnotationSnapshot(java.lang.String, java.util.List, kotlin.Unit, kotlin.jvm.internal.DefaultConstructorMarker);
+    descriptor: (Ljava/lang/String;Ljava/util/List;Lkotlin/Unit;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+}
+
+Compiled from "Annotations.kt"
+public final class org.peyilo.ireadview.api.model.AnnotationSnapshot$Companion {
+  public final org.peyilo.ireadview.api.model.AnnotationSnapshot fromItems(java.lang.String, java.util.List<? extends org.peyilo.ireadview.api.model.ReaderAnnotation>);
+    descriptor: (Ljava/lang/String;Ljava/util/List;)Lorg/peyilo/ireadview/api/model/AnnotationSnapshot;
+
+  public org.peyilo.ireadview.api.model.AnnotationSnapshot$Companion(kotlin.jvm.internal.DefaultConstructorMarker);
+    descriptor: (Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 }
 
 Compiled from "Annotations.kt"
@@ -1304,20 +1360,23 @@ public final class org.peyilo.ireadview.api.model.BookDescriptor {
 }
 
 Compiled from "Annotations.kt"
-public final class org.peyilo.ireadview.api.model.Bookmark {
+public final class org.peyilo.ireadview.api.model.Bookmark implements org.peyilo.ireadview.api.model.ReaderAnnotation {
   public org.peyilo.ireadview.api.model.Bookmark(java.lang.String, org.peyilo.ireadview.api.model.ReadingPosition, java.lang.String);
     descriptor: (Ljava/lang/String;Lorg/peyilo/ireadview/api/model/ReadingPosition;Ljava/lang/String;)V
 
   public org.peyilo.ireadview.api.model.Bookmark(java.lang.String, org.peyilo.ireadview.api.model.ReadingPosition, java.lang.String, int, kotlin.jvm.internal.DefaultConstructorMarker);
     descriptor: (Ljava/lang/String;Lorg/peyilo/ireadview/api/model/ReadingPosition;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 
-  public final java.lang.String getId();
+  public java.lang.String getId();
     descriptor: ()Ljava/lang/String;
 
   public final org.peyilo.ireadview.api.model.ReadingPosition getPosition();
     descriptor: ()Lorg/peyilo/ireadview/api/model/ReadingPosition;
 
   public final java.lang.String getLabel();
+    descriptor: ()Ljava/lang/String;
+
+  public java.lang.String getBookId();
     descriptor: ()Ljava/lang/String;
 
   public final java.lang.String component1();
@@ -1604,20 +1663,20 @@ public final class org.peyilo.ireadview.api.model.HeadingBlock implements org.pe
 }
 
 Compiled from "Annotations.kt"
-public final class org.peyilo.ireadview.api.model.Highlight {
+public final class org.peyilo.ireadview.api.model.Highlight implements org.peyilo.ireadview.api.model.RangedAnnotation {
   public org.peyilo.ireadview.api.model.Highlight(java.lang.String, org.peyilo.ireadview.api.model.TextRange, java.lang.String, java.lang.String);
     descriptor: (Ljava/lang/String;Lorg/peyilo/ireadview/api/model/TextRange;Ljava/lang/String;Ljava/lang/String;)V
 
   public org.peyilo.ireadview.api.model.Highlight(java.lang.String, org.peyilo.ireadview.api.model.TextRange, java.lang.String, java.lang.String, int, kotlin.jvm.internal.DefaultConstructorMarker);
     descriptor: (Ljava/lang/String;Lorg/peyilo/ireadview/api/model/TextRange;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 
-  public final java.lang.String getId();
+  public java.lang.String getId();
     descriptor: ()Ljava/lang/String;
 
-  public final org.peyilo.ireadview.api.model.TextRange getRange();
+  public org.peyilo.ireadview.api.model.TextRange getRange();
     descriptor: ()Lorg/peyilo/ireadview/api/model/TextRange;
 
-  public final java.lang.String getQuote();
+  public java.lang.String getQuote();
     descriptor: ()Ljava/lang/String;
 
   public final java.lang.String getStyleId();
@@ -1649,6 +1708,9 @@ public final class org.peyilo.ireadview.api.model.Highlight {
 
   public boolean equals(java.lang.Object);
     descriptor: (Ljava/lang/Object;)Z
+
+  public java.lang.String getBookId();
+    descriptor: ()Ljava/lang/String;
 }
 
 Compiled from "BookPageIndex.kt"
@@ -1700,6 +1762,33 @@ public final class org.peyilo.ireadview.api.model.IndexedChapter {
 
   public boolean equals(java.lang.Object);
     descriptor: (Ljava/lang/Object;)Z
+}
+
+Compiled from "Annotations.kt"
+public interface org.peyilo.ireadview.api.model.RangedAnnotation extends org.peyilo.ireadview.api.model.ReaderAnnotation {
+  public abstract org.peyilo.ireadview.api.model.TextRange getRange();
+    descriptor: ()Lorg/peyilo/ireadview/api/model/TextRange;
+
+  public abstract java.lang.String getQuote();
+    descriptor: ()Ljava/lang/String;
+
+  public abstract java.lang.String getBookId();
+    descriptor: ()Ljava/lang/String;
+}
+
+Compiled from "Annotations.kt"
+public final class org.peyilo.ireadview.api.model.RangedAnnotation$DefaultImpls {
+  public static java.lang.String getBookId(org.peyilo.ireadview.api.model.RangedAnnotation);
+    descriptor: (Lorg/peyilo/ireadview/api/model/RangedAnnotation;)Ljava/lang/String;
+}
+
+Compiled from "Annotations.kt"
+public interface org.peyilo.ireadview.api.model.ReaderAnnotation {
+  public abstract java.lang.String getId();
+    descriptor: ()Ljava/lang/String;
+
+  public abstract java.lang.String getBookId();
+    descriptor: ()Ljava/lang/String;
 }
 
 Compiled from "ReadingPosition.kt"
@@ -2031,6 +2120,57 @@ public final class org.peyilo.ireadview.api.model.TocEntry$Group implements org.
 
   public final java.util.List<org.peyilo.ireadview.api.model.TocEntry> getChildren();
     descriptor: ()Ljava/util/List;
+}
+
+Compiled from "Annotations.kt"
+public final class org.peyilo.ireadview.api.model.Underline implements org.peyilo.ireadview.api.model.RangedAnnotation {
+  public org.peyilo.ireadview.api.model.Underline(java.lang.String, org.peyilo.ireadview.api.model.TextRange, java.lang.String, org.peyilo.ireadview.api.style.TextLineStyle);
+    descriptor: (Ljava/lang/String;Lorg/peyilo/ireadview/api/model/TextRange;Ljava/lang/String;Lorg/peyilo/ireadview/api/style/TextLineStyle;)V
+
+  public org.peyilo.ireadview.api.model.Underline(java.lang.String, org.peyilo.ireadview.api.model.TextRange, java.lang.String, org.peyilo.ireadview.api.style.TextLineStyle, int, kotlin.jvm.internal.DefaultConstructorMarker);
+    descriptor: (Ljava/lang/String;Lorg/peyilo/ireadview/api/model/TextRange;Ljava/lang/String;Lorg/peyilo/ireadview/api/style/TextLineStyle;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+
+  public java.lang.String getId();
+    descriptor: ()Ljava/lang/String;
+
+  public org.peyilo.ireadview.api.model.TextRange getRange();
+    descriptor: ()Lorg/peyilo/ireadview/api/model/TextRange;
+
+  public java.lang.String getQuote();
+    descriptor: ()Ljava/lang/String;
+
+  public final org.peyilo.ireadview.api.style.TextLineStyle getStyle();
+    descriptor: ()Lorg/peyilo/ireadview/api/style/TextLineStyle;
+
+  public final java.lang.String component1();
+    descriptor: ()Ljava/lang/String;
+
+  public final org.peyilo.ireadview.api.model.TextRange component2();
+    descriptor: ()Lorg/peyilo/ireadview/api/model/TextRange;
+
+  public final java.lang.String component3();
+    descriptor: ()Ljava/lang/String;
+
+  public final org.peyilo.ireadview.api.style.TextLineStyle component4();
+    descriptor: ()Lorg/peyilo/ireadview/api/style/TextLineStyle;
+
+  public final org.peyilo.ireadview.api.model.Underline copy(java.lang.String, org.peyilo.ireadview.api.model.TextRange, java.lang.String, org.peyilo.ireadview.api.style.TextLineStyle);
+    descriptor: (Ljava/lang/String;Lorg/peyilo/ireadview/api/model/TextRange;Ljava/lang/String;Lorg/peyilo/ireadview/api/style/TextLineStyle;)Lorg/peyilo/ireadview/api/model/Underline;
+
+  public static org.peyilo.ireadview.api.model.Underline copy$default(org.peyilo.ireadview.api.model.Underline, java.lang.String, org.peyilo.ireadview.api.model.TextRange, java.lang.String, org.peyilo.ireadview.api.style.TextLineStyle, int, java.lang.Object);
+    descriptor: (Lorg/peyilo/ireadview/api/model/Underline;Ljava/lang/String;Lorg/peyilo/ireadview/api/model/TextRange;Ljava/lang/String;Lorg/peyilo/ireadview/api/style/TextLineStyle;ILjava/lang/Object;)Lorg/peyilo/ireadview/api/model/Underline;
+
+  public java.lang.String toString();
+    descriptor: ()Ljava/lang/String;
+
+  public int hashCode();
+    descriptor: ()I
+
+  public boolean equals(java.lang.Object);
+    descriptor: (Ljava/lang/Object;)Z
+
+  public java.lang.String getBookId();
+    descriptor: ()Ljava/lang/String;
 }
 
 Compiled from "BookSource.kt"
@@ -3558,11 +3698,11 @@ public final class org.peyilo.ireadview.api.state.StyleApplication {
 
 Compiled from "ReaderStyle.kt"
 public final class org.peyilo.ireadview.api.style.BodyStyle {
-  public org.peyilo.ireadview.api.style.BodyStyle(float, int, android.graphics.Typeface, float, float, float, float, float, org.peyilo.ireadview.api.style.EdgeInsets, org.peyilo.ireadview.api.style.ReaderFont, org.peyilo.ireadview.api.style.EdgeInsets, org.peyilo.ireadview.api.style.EdgeInsets);
-    descriptor: (FILandroid/graphics/Typeface;FFFFFLorg/peyilo/ireadview/api/style/EdgeInsets;Lorg/peyilo/ireadview/api/style/ReaderFont;Lorg/peyilo/ireadview/api/style/EdgeInsets;Lorg/peyilo/ireadview/api/style/EdgeInsets;)V
+  public org.peyilo.ireadview.api.style.BodyStyle(float, int, android.graphics.Typeface, float, float, float, float, float, org.peyilo.ireadview.api.style.EdgeInsets, org.peyilo.ireadview.api.style.ReaderFont, org.peyilo.ireadview.api.style.EdgeInsets, org.peyilo.ireadview.api.style.EdgeInsets, java.lang.Float);
+    descriptor: (FILandroid/graphics/Typeface;FFFFFLorg/peyilo/ireadview/api/style/EdgeInsets;Lorg/peyilo/ireadview/api/style/ReaderFont;Lorg/peyilo/ireadview/api/style/EdgeInsets;Lorg/peyilo/ireadview/api/style/EdgeInsets;Ljava/lang/Float;)V
 
-  public org.peyilo.ireadview.api.style.BodyStyle(float, int, android.graphics.Typeface, float, float, float, float, float, org.peyilo.ireadview.api.style.EdgeInsets, org.peyilo.ireadview.api.style.ReaderFont, org.peyilo.ireadview.api.style.EdgeInsets, org.peyilo.ireadview.api.style.EdgeInsets, int, kotlin.jvm.internal.DefaultConstructorMarker);
-    descriptor: (FILandroid/graphics/Typeface;FFFFFLorg/peyilo/ireadview/api/style/EdgeInsets;Lorg/peyilo/ireadview/api/style/ReaderFont;Lorg/peyilo/ireadview/api/style/EdgeInsets;Lorg/peyilo/ireadview/api/style/EdgeInsets;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+  public org.peyilo.ireadview.api.style.BodyStyle(float, int, android.graphics.Typeface, float, float, float, float, float, org.peyilo.ireadview.api.style.EdgeInsets, org.peyilo.ireadview.api.style.ReaderFont, org.peyilo.ireadview.api.style.EdgeInsets, org.peyilo.ireadview.api.style.EdgeInsets, java.lang.Float, int, kotlin.jvm.internal.DefaultConstructorMarker);
+    descriptor: (FILandroid/graphics/Typeface;FFFFFLorg/peyilo/ireadview/api/style/EdgeInsets;Lorg/peyilo/ireadview/api/style/ReaderFont;Lorg/peyilo/ireadview/api/style/EdgeInsets;Lorg/peyilo/ireadview/api/style/EdgeInsets;Ljava/lang/Float;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 
   public final float getTextSizeSp();
     descriptor: ()F
@@ -3600,6 +3740,9 @@ public final class org.peyilo.ireadview.api.style.BodyStyle {
   public final org.peyilo.ireadview.api.style.EdgeInsets getBlockPadding();
     descriptor: ()Lorg/peyilo/ireadview/api/style/EdgeInsets;
 
+  public final java.lang.Float getLetterSpacingDp();
+    descriptor: ()Ljava/lang/Float;
+
   public final float component1();
     descriptor: ()F
 
@@ -3636,11 +3779,14 @@ public final class org.peyilo.ireadview.api.style.BodyStyle {
   public final org.peyilo.ireadview.api.style.EdgeInsets component12();
     descriptor: ()Lorg/peyilo/ireadview/api/style/EdgeInsets;
 
-  public final org.peyilo.ireadview.api.style.BodyStyle copy(float, int, android.graphics.Typeface, float, float, float, float, float, org.peyilo.ireadview.api.style.EdgeInsets, org.peyilo.ireadview.api.style.ReaderFont, org.peyilo.ireadview.api.style.EdgeInsets, org.peyilo.ireadview.api.style.EdgeInsets);
-    descriptor: (FILandroid/graphics/Typeface;FFFFFLorg/peyilo/ireadview/api/style/EdgeInsets;Lorg/peyilo/ireadview/api/style/ReaderFont;Lorg/peyilo/ireadview/api/style/EdgeInsets;Lorg/peyilo/ireadview/api/style/EdgeInsets;)Lorg/peyilo/ireadview/api/style/BodyStyle;
+  public final java.lang.Float component13();
+    descriptor: ()Ljava/lang/Float;
 
-  public static org.peyilo.ireadview.api.style.BodyStyle copy$default(org.peyilo.ireadview.api.style.BodyStyle, float, int, android.graphics.Typeface, float, float, float, float, float, org.peyilo.ireadview.api.style.EdgeInsets, org.peyilo.ireadview.api.style.ReaderFont, org.peyilo.ireadview.api.style.EdgeInsets, org.peyilo.ireadview.api.style.EdgeInsets, int, java.lang.Object);
-    descriptor: (Lorg/peyilo/ireadview/api/style/BodyStyle;FILandroid/graphics/Typeface;FFFFFLorg/peyilo/ireadview/api/style/EdgeInsets;Lorg/peyilo/ireadview/api/style/ReaderFont;Lorg/peyilo/ireadview/api/style/EdgeInsets;Lorg/peyilo/ireadview/api/style/EdgeInsets;ILjava/lang/Object;)Lorg/peyilo/ireadview/api/style/BodyStyle;
+  public final org.peyilo.ireadview.api.style.BodyStyle copy(float, int, android.graphics.Typeface, float, float, float, float, float, org.peyilo.ireadview.api.style.EdgeInsets, org.peyilo.ireadview.api.style.ReaderFont, org.peyilo.ireadview.api.style.EdgeInsets, org.peyilo.ireadview.api.style.EdgeInsets, java.lang.Float);
+    descriptor: (FILandroid/graphics/Typeface;FFFFFLorg/peyilo/ireadview/api/style/EdgeInsets;Lorg/peyilo/ireadview/api/style/ReaderFont;Lorg/peyilo/ireadview/api/style/EdgeInsets;Lorg/peyilo/ireadview/api/style/EdgeInsets;Ljava/lang/Float;)Lorg/peyilo/ireadview/api/style/BodyStyle;
+
+  public static org.peyilo.ireadview.api.style.BodyStyle copy$default(org.peyilo.ireadview.api.style.BodyStyle, float, int, android.graphics.Typeface, float, float, float, float, float, org.peyilo.ireadview.api.style.EdgeInsets, org.peyilo.ireadview.api.style.ReaderFont, org.peyilo.ireadview.api.style.EdgeInsets, org.peyilo.ireadview.api.style.EdgeInsets, java.lang.Float, int, java.lang.Object);
+    descriptor: (Lorg/peyilo/ireadview/api/style/BodyStyle;FILandroid/graphics/Typeface;FFFFFLorg/peyilo/ireadview/api/style/EdgeInsets;Lorg/peyilo/ireadview/api/style/ReaderFont;Lorg/peyilo/ireadview/api/style/EdgeInsets;Lorg/peyilo/ireadview/api/style/EdgeInsets;Ljava/lang/Float;ILjava/lang/Object;)Lorg/peyilo/ireadview/api/style/BodyStyle;
 
   public java.lang.String toString();
     descriptor: ()Ljava/lang/String;
@@ -3902,6 +4048,34 @@ public final class org.peyilo.ireadview.api.style.HighlightStyles {
 
   public org.peyilo.ireadview.api.style.HighlightStyles();
     descriptor: ()V
+}
+
+Compiled from "ReaderStyles.kt"
+public final class org.peyilo.ireadview.api.style.PaddingRegion extends java.lang.Enum<org.peyilo.ireadview.api.style.PaddingRegion> {
+  public static final org.peyilo.ireadview.api.style.PaddingRegion PAGE;
+    descriptor: Lorg/peyilo/ireadview/api/style/PaddingRegion;
+  public static final org.peyilo.ireadview.api.style.PaddingRegion HEADER;
+    descriptor: Lorg/peyilo/ireadview/api/style/PaddingRegion;
+  public static final org.peyilo.ireadview.api.style.PaddingRegion FOOTER;
+    descriptor: Lorg/peyilo/ireadview/api/style/PaddingRegion;
+  public static final org.peyilo.ireadview.api.style.PaddingRegion BODY;
+    descriptor: Lorg/peyilo/ireadview/api/style/PaddingRegion;
+  public static final org.peyilo.ireadview.api.style.PaddingRegion TITLE;
+    descriptor: Lorg/peyilo/ireadview/api/style/PaddingRegion;
+  public static final org.peyilo.ireadview.api.style.PaddingRegion CONTENT;
+    descriptor: Lorg/peyilo/ireadview/api/style/PaddingRegion;
+  public static final org.peyilo.ireadview.api.style.PaddingRegion BODY_VIEWPORT;
+    descriptor: Lorg/peyilo/ireadview/api/style/PaddingRegion;
+  public static final org.peyilo.ireadview.api.style.PaddingRegion PARAGRAPH;
+    descriptor: Lorg/peyilo/ireadview/api/style/PaddingRegion;
+  public static org.peyilo.ireadview.api.style.PaddingRegion[] values();
+    descriptor: ()[Lorg/peyilo/ireadview/api/style/PaddingRegion;
+
+  public static org.peyilo.ireadview.api.style.PaddingRegion valueOf(java.lang.String);
+    descriptor: (Ljava/lang/String;)Lorg/peyilo/ireadview/api/style/PaddingRegion;
+
+  public static kotlin.enums.EnumEntries<org.peyilo.ireadview.api.style.PaddingRegion> getEntries();
+    descriptor: ()Lkotlin/enums/EnumEntries;
 }
 
 Compiled from "ReaderStyle.kt"
@@ -4217,6 +4391,91 @@ public final class org.peyilo.ireadview.api.style.ReaderStyle$Companion {
     descriptor: (Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 }
 
+Compiled from "ReaderStyles.kt"
+public final class org.peyilo.ireadview.api.style.ReaderStyles {
+  public static final org.peyilo.ireadview.api.style.ReaderStyles INSTANCE;
+    descriptor: Lorg/peyilo/ireadview/api/style/ReaderStyles;
+  public static final org.peyilo.ireadview.api.style.ReaderStyle withSelectionBackgroundColor(org.peyilo.ireadview.api.style.ReaderStyle, int);
+    descriptor: (Lorg/peyilo/ireadview/api/style/ReaderStyle;I)Lorg/peyilo/ireadview/api/style/ReaderStyle;
+
+  public static final org.peyilo.ireadview.api.style.ReaderStyle withSelectionHandleColor(org.peyilo.ireadview.api.style.ReaderStyle, int);
+    descriptor: (Lorg/peyilo/ireadview/api/style/ReaderStyle;I)Lorg/peyilo/ireadview/api/style/ReaderStyle;
+
+  public static final org.peyilo.ireadview.api.style.EdgeInsets padding(org.peyilo.ireadview.api.style.ReaderStyle, org.peyilo.ireadview.api.style.PaddingRegion);
+    descriptor: (Lorg/peyilo/ireadview/api/style/ReaderStyle;Lorg/peyilo/ireadview/api/style/PaddingRegion;)Lorg/peyilo/ireadview/api/style/EdgeInsets;
+
+  public static final org.peyilo.ireadview.api.style.ReaderStyle withPadding(org.peyilo.ireadview.api.style.ReaderStyle, org.peyilo.ireadview.api.style.PaddingRegion, org.peyilo.ireadview.api.style.EdgeInsets);
+    descriptor: (Lorg/peyilo/ireadview/api/style/ReaderStyle;Lorg/peyilo/ireadview/api/style/PaddingRegion;Lorg/peyilo/ireadview/api/style/EdgeInsets;)Lorg/peyilo/ireadview/api/style/ReaderStyle;
+
+  public static final float textSizeSp(org.peyilo.ireadview.api.style.ReaderStyle, org.peyilo.ireadview.api.style.TextRole);
+    descriptor: (Lorg/peyilo/ireadview/api/style/ReaderStyle;Lorg/peyilo/ireadview/api/style/TextRole;)F
+
+  public static final org.peyilo.ireadview.api.style.ReaderStyle withTextSizeSp(org.peyilo.ireadview.api.style.ReaderStyle, org.peyilo.ireadview.api.style.TextRole, float);
+    descriptor: (Lorg/peyilo/ireadview/api/style/ReaderStyle;Lorg/peyilo/ireadview/api/style/TextRole;F)Lorg/peyilo/ireadview/api/style/ReaderStyle;
+
+  public static final java.lang.Float letterSpacingDp(org.peyilo.ireadview.api.style.ReaderStyle, org.peyilo.ireadview.api.style.TextRole);
+    descriptor: (Lorg/peyilo/ireadview/api/style/ReaderStyle;Lorg/peyilo/ireadview/api/style/TextRole;)Ljava/lang/Float;
+
+  public static final org.peyilo.ireadview.api.style.ReaderStyle withLetterSpacingDp(org.peyilo.ireadview.api.style.ReaderStyle, org.peyilo.ireadview.api.style.TextRole, java.lang.Float);
+    descriptor: (Lorg/peyilo/ireadview/api/style/ReaderStyle;Lorg/peyilo/ireadview/api/style/TextRole;Ljava/lang/Float;)Lorg/peyilo/ireadview/api/style/ReaderStyle;
+
+  public static final org.peyilo.ireadview.api.style.ReaderStyle withLetterSpacingEm(org.peyilo.ireadview.api.style.ReaderStyle, org.peyilo.ireadview.api.style.TextRole, float);
+    descriptor: (Lorg/peyilo/ireadview/api/style/ReaderStyle;Lorg/peyilo/ireadview/api/style/TextRole;F)Lorg/peyilo/ireadview/api/style/ReaderStyle;
+
+  public static final org.peyilo.ireadview.api.style.ReaderStyle withLineSpacing(org.peyilo.ireadview.api.style.ReaderStyle, float, float);
+    descriptor: (Lorg/peyilo/ireadview/api/style/ReaderStyle;FF)Lorg/peyilo/ireadview/api/style/ReaderStyle;
+
+  public static final org.peyilo.ireadview.api.style.ReaderStyle withTitleLineSpacing(org.peyilo.ireadview.api.style.ReaderStyle, float, float);
+    descriptor: (Lorg/peyilo/ireadview/api/style/ReaderStyle;FF)Lorg/peyilo/ireadview/api/style/ReaderStyle;
+
+  public static final org.peyilo.ireadview.api.style.ReaderStyle withParagraphSpacingDp(org.peyilo.ireadview.api.style.ReaderStyle, float);
+    descriptor: (Lorg/peyilo/ireadview/api/style/ReaderStyle;F)Lorg/peyilo/ireadview/api/style/ReaderStyle;
+
+  public static final org.peyilo.ireadview.api.style.ReaderStyle withFirstLineIndentEm(org.peyilo.ireadview.api.style.ReaderStyle, float);
+    descriptor: (Lorg/peyilo/ireadview/api/style/ReaderStyle;F)Lorg/peyilo/ireadview/api/style/ReaderStyle;
+
+  public static final org.peyilo.ireadview.api.style.ReaderStyle withTitleAlignment(org.peyilo.ireadview.api.style.ReaderStyle, org.peyilo.ireadview.api.style.TitleAlignment);
+    descriptor: (Lorg/peyilo/ireadview/api/style/ReaderStyle;Lorg/peyilo/ireadview/api/style/TitleAlignment;)Lorg/peyilo/ireadview/api/style/ReaderStyle;
+
+  public static final org.peyilo.ireadview.api.style.ReaderStyle withTitleSpacingAfterDp(org.peyilo.ireadview.api.style.ReaderStyle, float);
+    descriptor: (Lorg/peyilo/ireadview/api/style/ReaderStyle;F)Lorg/peyilo/ireadview/api/style/ReaderStyle;
+
+  public static final org.peyilo.ireadview.api.style.ReaderFont readerFont(org.peyilo.ireadview.api.style.ReaderStyle, org.peyilo.ireadview.api.style.TextRole);
+    descriptor: (Lorg/peyilo/ireadview/api/style/ReaderStyle;Lorg/peyilo/ireadview/api/style/TextRole;)Lorg/peyilo/ireadview/api/style/ReaderFont;
+
+  public static final int textColor(org.peyilo.ireadview.api.style.ReaderStyle, org.peyilo.ireadview.api.style.TextRole);
+    descriptor: (Lorg/peyilo/ireadview/api/style/ReaderStyle;Lorg/peyilo/ireadview/api/style/TextRole;)I
+
+  public static final org.peyilo.ireadview.api.style.ChromeStyle chrome(org.peyilo.ireadview.api.style.ReaderStyle, org.peyilo.ireadview.api.style.TextRole);
+    descriptor: (Lorg/peyilo/ireadview/api/style/ReaderStyle;Lorg/peyilo/ireadview/api/style/TextRole;)Lorg/peyilo/ireadview/api/style/ChromeStyle;
+
+  public static final org.peyilo.ireadview.api.style.ReaderStyle withChromeHeightDp(org.peyilo.ireadview.api.style.ReaderStyle, org.peyilo.ireadview.api.style.TextRole, java.lang.Float);
+    descriptor: (Lorg/peyilo/ireadview/api/style/ReaderStyle;Lorg/peyilo/ireadview/api/style/TextRole;Ljava/lang/Float;)Lorg/peyilo/ireadview/api/style/ReaderStyle;
+
+  public static final org.peyilo.ireadview.api.style.ReaderStyle withChromeVisibility(org.peyilo.ireadview.api.style.ReaderStyle, org.peyilo.ireadview.api.style.TextRole, boolean);
+    descriptor: (Lorg/peyilo/ireadview/api/style/ReaderStyle;Lorg/peyilo/ireadview/api/style/TextRole;Z)Lorg/peyilo/ireadview/api/style/ReaderStyle;
+
+  public static final org.peyilo.ireadview.api.style.ReaderStyle withChromeAlignment(org.peyilo.ireadview.api.style.ReaderStyle, org.peyilo.ireadview.api.style.TextRole, org.peyilo.ireadview.api.style.ChromeAlignment);
+    descriptor: (Lorg/peyilo/ireadview/api/style/ReaderStyle;Lorg/peyilo/ireadview/api/style/TextRole;Lorg/peyilo/ireadview/api/style/ChromeAlignment;)Lorg/peyilo/ireadview/api/style/ReaderStyle;
+
+  public static final org.peyilo.ireadview.api.style.ReaderStyle withChromeContent(org.peyilo.ireadview.api.style.ReaderStyle, org.peyilo.ireadview.api.style.TextRole, org.peyilo.ireadview.api.style.ChromeContent);
+    descriptor: (Lorg/peyilo/ireadview/api/style/ReaderStyle;Lorg/peyilo/ireadview/api/style/TextRole;Lorg/peyilo/ireadview/api/style/ChromeContent;)Lorg/peyilo/ireadview/api/style/ReaderStyle;
+
+  public static final org.peyilo.ireadview.api.style.ReaderStyle withFont(org.peyilo.ireadview.api.style.ReaderStyle, org.peyilo.ireadview.api.style.TextRole, org.peyilo.ireadview.api.style.ReaderFont);
+    descriptor: (Lorg/peyilo/ireadview/api/style/ReaderStyle;Lorg/peyilo/ireadview/api/style/TextRole;Lorg/peyilo/ireadview/api/style/ReaderFont;)Lorg/peyilo/ireadview/api/style/ReaderStyle;
+
+  public static final org.peyilo.ireadview.api.style.ReaderStyle withTextColor(org.peyilo.ireadview.api.style.ReaderStyle, org.peyilo.ireadview.api.style.TextRole, int);
+    descriptor: (Lorg/peyilo/ireadview/api/style/ReaderStyle;Lorg/peyilo/ireadview/api/style/TextRole;I)Lorg/peyilo/ireadview/api/style/ReaderStyle;
+}
+
+Compiled from "ReaderStyles.kt"
+public final class org.peyilo.ireadview.api.style.ReaderStyles$WhenMappings {
+  public static final int[] $EnumSwitchMapping$0;
+    descriptor: [I
+  public static final int[] $EnumSwitchMapping$1;
+    descriptor: [I
+}
+
 Compiled from "ReaderStyle.kt"
 public final class org.peyilo.ireadview.api.style.SelectionStyle {
   public org.peyilo.ireadview.api.style.SelectionStyle(int, int, float);
@@ -4262,6 +4521,218 @@ public final class org.peyilo.ireadview.api.style.SelectionStyle {
     descriptor: ()V
 }
 
+Compiled from "TextLineStyle.kt"
+public final class org.peyilo.ireadview.api.style.TextLinePattern extends java.lang.Enum<org.peyilo.ireadview.api.style.TextLinePattern> {
+  public static final org.peyilo.ireadview.api.style.TextLinePattern STRAIGHT;
+    descriptor: Lorg/peyilo/ireadview/api/style/TextLinePattern;
+  public static final org.peyilo.ireadview.api.style.TextLinePattern WAVY;
+    descriptor: Lorg/peyilo/ireadview/api/style/TextLinePattern;
+  public static final org.peyilo.ireadview.api.style.TextLinePattern DASHED;
+    descriptor: Lorg/peyilo/ireadview/api/style/TextLinePattern;
+  public static final org.peyilo.ireadview.api.style.TextLinePattern DOTTED;
+    descriptor: Lorg/peyilo/ireadview/api/style/TextLinePattern;
+  public static final org.peyilo.ireadview.api.style.TextLinePattern DOUBLE;
+    descriptor: Lorg/peyilo/ireadview/api/style/TextLinePattern;
+  public static org.peyilo.ireadview.api.style.TextLinePattern[] values();
+    descriptor: ()[Lorg/peyilo/ireadview/api/style/TextLinePattern;
+
+  public static org.peyilo.ireadview.api.style.TextLinePattern valueOf(java.lang.String);
+    descriptor: (Ljava/lang/String;)Lorg/peyilo/ireadview/api/style/TextLinePattern;
+
+  public static kotlin.enums.EnumEntries<org.peyilo.ireadview.api.style.TextLinePattern> getEntries();
+    descriptor: ()Lkotlin/enums/EnumEntries;
+}
+
+Compiled from "TextLineStyle.kt"
+public final class org.peyilo.ireadview.api.style.TextLineStyle {
+  public org.peyilo.ireadview.api.style.TextLineStyle(org.peyilo.ireadview.api.style.TextLinePattern, int, float, float, float, float, float);
+    descriptor: (Lorg/peyilo/ireadview/api/style/TextLinePattern;IFFFFF)V
+
+  public org.peyilo.ireadview.api.style.TextLineStyle(org.peyilo.ireadview.api.style.TextLinePattern, int, float, float, float, float, float, int, kotlin.jvm.internal.DefaultConstructorMarker);
+    descriptor: (Lorg/peyilo/ireadview/api/style/TextLinePattern;IFFFFFILkotlin/jvm/internal/DefaultConstructorMarker;)V
+
+  public final org.peyilo.ireadview.api.style.TextLinePattern getPattern();
+    descriptor: ()Lorg/peyilo/ireadview/api/style/TextLinePattern;
+
+  public final int getColor();
+    descriptor: ()I
+
+  public final float getThicknessDp();
+    descriptor: ()F
+
+  public final float getWaveAmplitudeDp();
+    descriptor: ()F
+
+  public final float getWaveLengthDp();
+    descriptor: ()F
+
+  public final float getDashLengthDp();
+    descriptor: ()F
+
+  public final float getGapDp();
+    descriptor: ()F
+
+  public final org.peyilo.ireadview.api.style.TextLinePattern component1();
+    descriptor: ()Lorg/peyilo/ireadview/api/style/TextLinePattern;
+
+  public final int component2();
+    descriptor: ()I
+
+  public final float component3();
+    descriptor: ()F
+
+  public final float component4();
+    descriptor: ()F
+
+  public final float component5();
+    descriptor: ()F
+
+  public final float component6();
+    descriptor: ()F
+
+  public final float component7();
+    descriptor: ()F
+
+  public final org.peyilo.ireadview.api.style.TextLineStyle copy(org.peyilo.ireadview.api.style.TextLinePattern, int, float, float, float, float, float);
+    descriptor: (Lorg/peyilo/ireadview/api/style/TextLinePattern;IFFFFF)Lorg/peyilo/ireadview/api/style/TextLineStyle;
+
+  public static org.peyilo.ireadview.api.style.TextLineStyle copy$default(org.peyilo.ireadview.api.style.TextLineStyle, org.peyilo.ireadview.api.style.TextLinePattern, int, float, float, float, float, float, int, java.lang.Object);
+    descriptor: (Lorg/peyilo/ireadview/api/style/TextLineStyle;Lorg/peyilo/ireadview/api/style/TextLinePattern;IFFFFFILjava/lang/Object;)Lorg/peyilo/ireadview/api/style/TextLineStyle;
+
+  public java.lang.String toString();
+    descriptor: ()Ljava/lang/String;
+
+  public int hashCode();
+    descriptor: ()I
+
+  public boolean equals(java.lang.Object);
+    descriptor: (Ljava/lang/Object;)Z
+
+  public org.peyilo.ireadview.api.style.TextLineStyle(org.peyilo.ireadview.api.style.TextLinePattern, int, float, float, float, float);
+    descriptor: (Lorg/peyilo/ireadview/api/style/TextLinePattern;IFFFF)V
+
+  public org.peyilo.ireadview.api.style.TextLineStyle(org.peyilo.ireadview.api.style.TextLinePattern, int, float, float, float);
+    descriptor: (Lorg/peyilo/ireadview/api/style/TextLinePattern;IFFF)V
+
+  public org.peyilo.ireadview.api.style.TextLineStyle(org.peyilo.ireadview.api.style.TextLinePattern, int, float, float);
+    descriptor: (Lorg/peyilo/ireadview/api/style/TextLinePattern;IFF)V
+
+  public org.peyilo.ireadview.api.style.TextLineStyle(org.peyilo.ireadview.api.style.TextLinePattern, int, float);
+    descriptor: (Lorg/peyilo/ireadview/api/style/TextLinePattern;IF)V
+
+  public org.peyilo.ireadview.api.style.TextLineStyle(org.peyilo.ireadview.api.style.TextLinePattern, int);
+    descriptor: (Lorg/peyilo/ireadview/api/style/TextLinePattern;I)V
+
+  public org.peyilo.ireadview.api.style.TextLineStyle(org.peyilo.ireadview.api.style.TextLinePattern);
+    descriptor: (Lorg/peyilo/ireadview/api/style/TextLinePattern;)V
+
+  public org.peyilo.ireadview.api.style.TextLineStyle();
+    descriptor: ()V
+}
+
+Compiled from "TextLineStyles.kt"
+public final class org.peyilo.ireadview.api.style.TextLineStyles {
+  public static final org.peyilo.ireadview.api.style.TextLineStyles INSTANCE;
+    descriptor: Lorg/peyilo/ireadview/api/style/TextLineStyles;
+  public static final org.peyilo.ireadview.api.style.TextLineStyle straight(int, float);
+    descriptor: (IF)Lorg/peyilo/ireadview/api/style/TextLineStyle;
+
+  public static org.peyilo.ireadview.api.style.TextLineStyle straight$default(int, float, int, java.lang.Object);
+    descriptor: (IFILjava/lang/Object;)Lorg/peyilo/ireadview/api/style/TextLineStyle;
+
+  public static final org.peyilo.ireadview.api.style.TextLineStyle wavy(int, float, float, float);
+    descriptor: (IFFF)Lorg/peyilo/ireadview/api/style/TextLineStyle;
+
+  public static org.peyilo.ireadview.api.style.TextLineStyle wavy$default(int, float, float, float, int, java.lang.Object);
+    descriptor: (IFFFILjava/lang/Object;)Lorg/peyilo/ireadview/api/style/TextLineStyle;
+
+  public static final org.peyilo.ireadview.api.style.TextLineStyle dashed(int, float, float, float);
+    descriptor: (IFFF)Lorg/peyilo/ireadview/api/style/TextLineStyle;
+
+  public static org.peyilo.ireadview.api.style.TextLineStyle dashed$default(int, float, float, float, int, java.lang.Object);
+    descriptor: (IFFFILjava/lang/Object;)Lorg/peyilo/ireadview/api/style/TextLineStyle;
+
+  public static final org.peyilo.ireadview.api.style.TextLineStyle dotted(int, float, float);
+    descriptor: (IFF)Lorg/peyilo/ireadview/api/style/TextLineStyle;
+
+  public static org.peyilo.ireadview.api.style.TextLineStyle dotted$default(int, float, float, int, java.lang.Object);
+    descriptor: (IFFILjava/lang/Object;)Lorg/peyilo/ireadview/api/style/TextLineStyle;
+
+  public static final org.peyilo.ireadview.api.style.TextLineStyle doubleLine(int, float, float);
+    descriptor: (IFF)Lorg/peyilo/ireadview/api/style/TextLineStyle;
+
+  public static org.peyilo.ireadview.api.style.TextLineStyle doubleLine$default(int, float, float, int, java.lang.Object);
+    descriptor: (IFFILjava/lang/Object;)Lorg/peyilo/ireadview/api/style/TextLineStyle;
+
+  public static final org.peyilo.ireadview.api.style.TextLineStyle straight(int);
+    descriptor: (I)Lorg/peyilo/ireadview/api/style/TextLineStyle;
+
+  public static final org.peyilo.ireadview.api.style.TextLineStyle straight();
+    descriptor: ()Lorg/peyilo/ireadview/api/style/TextLineStyle;
+
+  public static final org.peyilo.ireadview.api.style.TextLineStyle wavy(int, float, float);
+    descriptor: (IFF)Lorg/peyilo/ireadview/api/style/TextLineStyle;
+
+  public static final org.peyilo.ireadview.api.style.TextLineStyle wavy(int, float);
+    descriptor: (IF)Lorg/peyilo/ireadview/api/style/TextLineStyle;
+
+  public static final org.peyilo.ireadview.api.style.TextLineStyle wavy(int);
+    descriptor: (I)Lorg/peyilo/ireadview/api/style/TextLineStyle;
+
+  public static final org.peyilo.ireadview.api.style.TextLineStyle wavy();
+    descriptor: ()Lorg/peyilo/ireadview/api/style/TextLineStyle;
+
+  public static final org.peyilo.ireadview.api.style.TextLineStyle dashed(int, float, float);
+    descriptor: (IFF)Lorg/peyilo/ireadview/api/style/TextLineStyle;
+
+  public static final org.peyilo.ireadview.api.style.TextLineStyle dashed(int, float);
+    descriptor: (IF)Lorg/peyilo/ireadview/api/style/TextLineStyle;
+
+  public static final org.peyilo.ireadview.api.style.TextLineStyle dashed(int);
+    descriptor: (I)Lorg/peyilo/ireadview/api/style/TextLineStyle;
+
+  public static final org.peyilo.ireadview.api.style.TextLineStyle dashed();
+    descriptor: ()Lorg/peyilo/ireadview/api/style/TextLineStyle;
+
+  public static final org.peyilo.ireadview.api.style.TextLineStyle dotted(int, float);
+    descriptor: (IF)Lorg/peyilo/ireadview/api/style/TextLineStyle;
+
+  public static final org.peyilo.ireadview.api.style.TextLineStyle dotted(int);
+    descriptor: (I)Lorg/peyilo/ireadview/api/style/TextLineStyle;
+
+  public static final org.peyilo.ireadview.api.style.TextLineStyle dotted();
+    descriptor: ()Lorg/peyilo/ireadview/api/style/TextLineStyle;
+
+  public static final org.peyilo.ireadview.api.style.TextLineStyle doubleLine(int, float);
+    descriptor: (IF)Lorg/peyilo/ireadview/api/style/TextLineStyle;
+
+  public static final org.peyilo.ireadview.api.style.TextLineStyle doubleLine(int);
+    descriptor: (I)Lorg/peyilo/ireadview/api/style/TextLineStyle;
+
+  public static final org.peyilo.ireadview.api.style.TextLineStyle doubleLine();
+    descriptor: ()Lorg/peyilo/ireadview/api/style/TextLineStyle;
+}
+
+Compiled from "ReaderStyles.kt"
+public final class org.peyilo.ireadview.api.style.TextRole extends java.lang.Enum<org.peyilo.ireadview.api.style.TextRole> {
+  public static final org.peyilo.ireadview.api.style.TextRole BODY;
+    descriptor: Lorg/peyilo/ireadview/api/style/TextRole;
+  public static final org.peyilo.ireadview.api.style.TextRole TITLE;
+    descriptor: Lorg/peyilo/ireadview/api/style/TextRole;
+  public static final org.peyilo.ireadview.api.style.TextRole HEADER;
+    descriptor: Lorg/peyilo/ireadview/api/style/TextRole;
+  public static final org.peyilo.ireadview.api.style.TextRole FOOTER;
+    descriptor: Lorg/peyilo/ireadview/api/style/TextRole;
+  public static org.peyilo.ireadview.api.style.TextRole[] values();
+    descriptor: ()[Lorg/peyilo/ireadview/api/style/TextRole;
+
+  public static org.peyilo.ireadview.api.style.TextRole valueOf(java.lang.String);
+    descriptor: (Ljava/lang/String;)Lorg/peyilo/ireadview/api/style/TextRole;
+
+  public static kotlin.enums.EnumEntries<org.peyilo.ireadview.api.style.TextRole> getEntries();
+    descriptor: ()Lkotlin/enums/EnumEntries;
+}
+
 Compiled from "ReaderStyle.kt"
 public final class org.peyilo.ireadview.api.style.TitleAlignment extends java.lang.Enum<org.peyilo.ireadview.api.style.TitleAlignment> {
   public static final org.peyilo.ireadview.api.style.TitleAlignment START;
@@ -4282,11 +4753,11 @@ public final class org.peyilo.ireadview.api.style.TitleAlignment extends java.la
 
 Compiled from "ReaderStyle.kt"
 public final class org.peyilo.ireadview.api.style.TitleStyle {
-  public org.peyilo.ireadview.api.style.TitleStyle(float, int, android.graphics.Typeface, org.peyilo.ireadview.api.style.TitleAlignment, float, org.peyilo.ireadview.api.style.ReaderFont, org.peyilo.ireadview.api.style.EdgeInsets, float);
-    descriptor: (FILandroid/graphics/Typeface;Lorg/peyilo/ireadview/api/style/TitleAlignment;FLorg/peyilo/ireadview/api/style/ReaderFont;Lorg/peyilo/ireadview/api/style/EdgeInsets;F)V
+  public org.peyilo.ireadview.api.style.TitleStyle(float, int, android.graphics.Typeface, org.peyilo.ireadview.api.style.TitleAlignment, float, org.peyilo.ireadview.api.style.ReaderFont, org.peyilo.ireadview.api.style.EdgeInsets, float, java.lang.Float, float, float);
+    descriptor: (FILandroid/graphics/Typeface;Lorg/peyilo/ireadview/api/style/TitleAlignment;FLorg/peyilo/ireadview/api/style/ReaderFont;Lorg/peyilo/ireadview/api/style/EdgeInsets;FLjava/lang/Float;FF)V
 
-  public org.peyilo.ireadview.api.style.TitleStyle(float, int, android.graphics.Typeface, org.peyilo.ireadview.api.style.TitleAlignment, float, org.peyilo.ireadview.api.style.ReaderFont, org.peyilo.ireadview.api.style.EdgeInsets, float, int, kotlin.jvm.internal.DefaultConstructorMarker);
-    descriptor: (FILandroid/graphics/Typeface;Lorg/peyilo/ireadview/api/style/TitleAlignment;FLorg/peyilo/ireadview/api/style/ReaderFont;Lorg/peyilo/ireadview/api/style/EdgeInsets;FILkotlin/jvm/internal/DefaultConstructorMarker;)V
+  public org.peyilo.ireadview.api.style.TitleStyle(float, int, android.graphics.Typeface, org.peyilo.ireadview.api.style.TitleAlignment, float, org.peyilo.ireadview.api.style.ReaderFont, org.peyilo.ireadview.api.style.EdgeInsets, float, java.lang.Float, float, float, int, kotlin.jvm.internal.DefaultConstructorMarker);
+    descriptor: (FILandroid/graphics/Typeface;Lorg/peyilo/ireadview/api/style/TitleAlignment;FLorg/peyilo/ireadview/api/style/ReaderFont;Lorg/peyilo/ireadview/api/style/EdgeInsets;FLjava/lang/Float;FFILkotlin/jvm/internal/DefaultConstructorMarker;)V
 
   public final float getTextSizeSp();
     descriptor: ()F
@@ -4310,6 +4781,15 @@ public final class org.peyilo.ireadview.api.style.TitleStyle {
     descriptor: ()Lorg/peyilo/ireadview/api/style/EdgeInsets;
 
   public final float getLetterSpacingEm();
+    descriptor: ()F
+
+  public final java.lang.Float getLetterSpacingDp();
+    descriptor: ()Ljava/lang/Float;
+
+  public final float getLineSpacingMultiplier();
+    descriptor: ()F
+
+  public final float getLineSpacingExtraDp();
     descriptor: ()F
 
   public final float component1();
@@ -4336,11 +4816,20 @@ public final class org.peyilo.ireadview.api.style.TitleStyle {
   public final float component8();
     descriptor: ()F
 
-  public final org.peyilo.ireadview.api.style.TitleStyle copy(float, int, android.graphics.Typeface, org.peyilo.ireadview.api.style.TitleAlignment, float, org.peyilo.ireadview.api.style.ReaderFont, org.peyilo.ireadview.api.style.EdgeInsets, float);
-    descriptor: (FILandroid/graphics/Typeface;Lorg/peyilo/ireadview/api/style/TitleAlignment;FLorg/peyilo/ireadview/api/style/ReaderFont;Lorg/peyilo/ireadview/api/style/EdgeInsets;F)Lorg/peyilo/ireadview/api/style/TitleStyle;
+  public final java.lang.Float component9();
+    descriptor: ()Ljava/lang/Float;
 
-  public static org.peyilo.ireadview.api.style.TitleStyle copy$default(org.peyilo.ireadview.api.style.TitleStyle, float, int, android.graphics.Typeface, org.peyilo.ireadview.api.style.TitleAlignment, float, org.peyilo.ireadview.api.style.ReaderFont, org.peyilo.ireadview.api.style.EdgeInsets, float, int, java.lang.Object);
-    descriptor: (Lorg/peyilo/ireadview/api/style/TitleStyle;FILandroid/graphics/Typeface;Lorg/peyilo/ireadview/api/style/TitleAlignment;FLorg/peyilo/ireadview/api/style/ReaderFont;Lorg/peyilo/ireadview/api/style/EdgeInsets;FILjava/lang/Object;)Lorg/peyilo/ireadview/api/style/TitleStyle;
+  public final float component10();
+    descriptor: ()F
+
+  public final float component11();
+    descriptor: ()F
+
+  public final org.peyilo.ireadview.api.style.TitleStyle copy(float, int, android.graphics.Typeface, org.peyilo.ireadview.api.style.TitleAlignment, float, org.peyilo.ireadview.api.style.ReaderFont, org.peyilo.ireadview.api.style.EdgeInsets, float, java.lang.Float, float, float);
+    descriptor: (FILandroid/graphics/Typeface;Lorg/peyilo/ireadview/api/style/TitleAlignment;FLorg/peyilo/ireadview/api/style/ReaderFont;Lorg/peyilo/ireadview/api/style/EdgeInsets;FLjava/lang/Float;FF)Lorg/peyilo/ireadview/api/style/TitleStyle;
+
+  public static org.peyilo.ireadview.api.style.TitleStyle copy$default(org.peyilo.ireadview.api.style.TitleStyle, float, int, android.graphics.Typeface, org.peyilo.ireadview.api.style.TitleAlignment, float, org.peyilo.ireadview.api.style.ReaderFont, org.peyilo.ireadview.api.style.EdgeInsets, float, java.lang.Float, float, float, int, java.lang.Object);
+    descriptor: (Lorg/peyilo/ireadview/api/style/TitleStyle;FILandroid/graphics/Typeface;Lorg/peyilo/ireadview/api/style/TitleAlignment;FLorg/peyilo/ireadview/api/style/ReaderFont;Lorg/peyilo/ireadview/api/style/EdgeInsets;FLjava/lang/Float;FFILjava/lang/Object;)Lorg/peyilo/ireadview/api/style/TitleStyle;
 
   public java.lang.String toString();
     descriptor: ()Ljava/lang/String;
@@ -4825,6 +5314,9 @@ public interface org.peyilo.ireadview.spi.content.BlockLayoutFragment {
   public abstract android.graphics.Path selectionPath(int, int);
     descriptor: (II)Landroid/graphics/Path;
 
+  public abstract java.util.List<org.peyilo.ireadview.spi.content.TextLineSegment> underlineSegments(int, int);
+    descriptor: (II)Ljava/util/List;
+
   public abstract org.peyilo.ireadview.api.model.ContentAnchor anchorAt(float, float);
     descriptor: (FF)Lorg/peyilo/ireadview/api/model/ContentAnchor;
 
@@ -4863,6 +5355,9 @@ public final class org.peyilo.ireadview.spi.content.BlockLayoutFragment$DefaultI
 
   public static android.graphics.Path selectionPath(org.peyilo.ireadview.spi.content.BlockLayoutFragment, int, int);
     descriptor: (Lorg/peyilo/ireadview/spi/content/BlockLayoutFragment;II)Landroid/graphics/Path;
+
+  public static java.util.List<org.peyilo.ireadview.spi.content.TextLineSegment> underlineSegments(org.peyilo.ireadview.spi.content.BlockLayoutFragment, int, int);
+    descriptor: (Lorg/peyilo/ireadview/spi/content/BlockLayoutFragment;II)Ljava/util/List;
 
   public static org.peyilo.ireadview.api.model.ContentAnchor anchorAt(org.peyilo.ireadview.spi.content.BlockLayoutFragment, float, float);
     descriptor: (Lorg/peyilo/ireadview/spi/content/BlockLayoutFragment;FF)Lorg/peyilo/ireadview/api/model/ContentAnchor;
@@ -5009,6 +5504,45 @@ public final class org.peyilo.ireadview.spi.content.TextCaret {
     descriptor: (Ljava/lang/Object;)Z
 }
 
+Compiled from "BlockLayoutProvider.kt"
+public final class org.peyilo.ireadview.spi.content.TextLineSegment {
+  public org.peyilo.ireadview.spi.content.TextLineSegment(float, float, float);
+    descriptor: (FFF)V
+
+  public final float getStartXPx();
+    descriptor: ()F
+
+  public final float getEndXPx();
+    descriptor: ()F
+
+  public final float getBottomYPx();
+    descriptor: ()F
+
+  public final float component1();
+    descriptor: ()F
+
+  public final float component2();
+    descriptor: ()F
+
+  public final float component3();
+    descriptor: ()F
+
+  public final org.peyilo.ireadview.spi.content.TextLineSegment copy(float, float, float);
+    descriptor: (FFF)Lorg/peyilo/ireadview/spi/content/TextLineSegment;
+
+  public static org.peyilo.ireadview.spi.content.TextLineSegment copy$default(org.peyilo.ireadview.spi.content.TextLineSegment, float, float, float, int, java.lang.Object);
+    descriptor: (Lorg/peyilo/ireadview/spi/content/TextLineSegment;FFFILjava/lang/Object;)Lorg/peyilo/ireadview/spi/content/TextLineSegment;
+
+  public java.lang.String toString();
+    descriptor: ()Ljava/lang/String;
+
+  public int hashCode();
+    descriptor: ()I
+
+  public boolean equals(java.lang.Object);
+    descriptor: (Ljava/lang/Object;)Z
+}
+
 Compiled from "ReaderPlaceholderFactory.kt"
 public interface org.peyilo.ireadview.spi.page.PlaceholderActions {
   public abstract boolean getCanRetry();
@@ -5097,13 +5631,121 @@ public final class org.peyilo.ireadview.spi.page.PlaceholderState {
     descriptor: (Ljava/lang/Object;)Z
 }
 
+Compiled from "ReaderPageChrome.kt"
+public final class org.peyilo.ireadview.spi.page.ReaderPageChrome {
+  public org.peyilo.ireadview.spi.page.ReaderPageChrome(java.lang.String, java.lang.String, java.lang.String, boolean, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction);
+    descriptor: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;)V
+
+  public org.peyilo.ireadview.spi.page.ReaderPageChrome(java.lang.String, java.lang.String, java.lang.String, boolean, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, int, kotlin.jvm.internal.DefaultConstructorMarker);
+    descriptor: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+
+  public final java.lang.String getHeaderText();
+    descriptor: ()Ljava/lang/String;
+
+  public final java.lang.String getFooterStartText();
+    descriptor: ()Ljava/lang/String;
+
+  public final java.lang.String getFooterEndText();
+    descriptor: ()Ljava/lang/String;
+
+  public final boolean getShowBackButton();
+    descriptor: ()Z
+
+  public final org.peyilo.ireadview.spi.page.ReaderPageChromeAction getBackAction();
+    descriptor: ()Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;
+
+  public final org.peyilo.ireadview.spi.page.ReaderPageChromeAction getHeaderAction();
+    descriptor: ()Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;
+
+  public final org.peyilo.ireadview.spi.page.ReaderPageChromeAction getFooterStartAction();
+    descriptor: ()Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;
+
+  public final org.peyilo.ireadview.spi.page.ReaderPageChromeAction getFooterEndAction();
+    descriptor: ()Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;
+
+  public final java.lang.String component1();
+    descriptor: ()Ljava/lang/String;
+
+  public final java.lang.String component2();
+    descriptor: ()Ljava/lang/String;
+
+  public final java.lang.String component3();
+    descriptor: ()Ljava/lang/String;
+
+  public final boolean component4();
+    descriptor: ()Z
+
+  public final org.peyilo.ireadview.spi.page.ReaderPageChromeAction component5();
+    descriptor: ()Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;
+
+  public final org.peyilo.ireadview.spi.page.ReaderPageChromeAction component6();
+    descriptor: ()Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;
+
+  public final org.peyilo.ireadview.spi.page.ReaderPageChromeAction component7();
+    descriptor: ()Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;
+
+  public final org.peyilo.ireadview.spi.page.ReaderPageChromeAction component8();
+    descriptor: ()Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;
+
+  public final org.peyilo.ireadview.spi.page.ReaderPageChrome copy(java.lang.String, java.lang.String, java.lang.String, boolean, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction);
+    descriptor: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;)Lorg/peyilo/ireadview/spi/page/ReaderPageChrome;
+
+  public static org.peyilo.ireadview.spi.page.ReaderPageChrome copy$default(org.peyilo.ireadview.spi.page.ReaderPageChrome, java.lang.String, java.lang.String, java.lang.String, boolean, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, int, java.lang.Object);
+    descriptor: (Lorg/peyilo/ireadview/spi/page/ReaderPageChrome;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;ILjava/lang/Object;)Lorg/peyilo/ireadview/spi/page/ReaderPageChrome;
+
+  public java.lang.String toString();
+    descriptor: ()Ljava/lang/String;
+
+  public int hashCode();
+    descriptor: ()I
+
+  public boolean equals(java.lang.Object);
+    descriptor: (Ljava/lang/Object;)Z
+
+  public org.peyilo.ireadview.spi.page.ReaderPageChrome(java.lang.String, java.lang.String, java.lang.String, boolean, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction);
+    descriptor: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;)V
+
+  public org.peyilo.ireadview.spi.page.ReaderPageChrome(java.lang.String, java.lang.String, java.lang.String, boolean, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction);
+    descriptor: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;)V
+
+  public org.peyilo.ireadview.spi.page.ReaderPageChrome(java.lang.String, java.lang.String, java.lang.String, boolean, org.peyilo.ireadview.spi.page.ReaderPageChromeAction);
+    descriptor: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;)V
+
+  public org.peyilo.ireadview.spi.page.ReaderPageChrome(java.lang.String, java.lang.String, java.lang.String, boolean);
+    descriptor: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Z)V
+
+  public org.peyilo.ireadview.spi.page.ReaderPageChrome(java.lang.String, java.lang.String, java.lang.String);
+    descriptor: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+
+  public org.peyilo.ireadview.spi.page.ReaderPageChrome(java.lang.String, java.lang.String);
+    descriptor: (Ljava/lang/String;Ljava/lang/String;)V
+
+  public org.peyilo.ireadview.spi.page.ReaderPageChrome(java.lang.String);
+    descriptor: (Ljava/lang/String;)V
+
+  public org.peyilo.ireadview.spi.page.ReaderPageChrome();
+    descriptor: ()V
+}
+
+Compiled from "ReaderPageChrome.kt"
+public interface org.peyilo.ireadview.spi.page.ReaderPageChromeAction {
+  public abstract void onClick(org.peyilo.ireadview.spi.page.ReaderPageContext);
+    descriptor: (Lorg/peyilo/ireadview/spi/page/ReaderPageContext;)V
+}
+
+Compiled from "ReaderPageChrome.kt"
+public interface org.peyilo.ireadview.spi.page.ReaderPageChromeProvider {
+  public abstract org.peyilo.ireadview.spi.page.ReaderPageChrome provide(org.peyilo.ireadview.spi.page.ReaderPageContext);
+    descriptor: (Lorg/peyilo/ireadview/spi/page/ReaderPageContext;)Lorg/peyilo/ireadview/spi/page/ReaderPageChrome;
+}
+
 Compiled from "ReaderPageFactory.kt"
 public final class org.peyilo.ireadview.spi.page.ReaderPageContext {
-  public org.peyilo.ireadview.spi.page.ReaderPageContext(java.lang.String, org.peyilo.ireadview.api.model.ChapterDescriptor, org.peyilo.ireadview.api.model.ReadingPosition, java.lang.Integer, org.peyilo.ireadview.api.style.ReaderStyle, org.peyilo.ireadview.api.model.ReadingMode, kotlin.jvm.functions.Function1<? super org.peyilo.ireadview.api.event.ReaderAction, java.lang.Boolean>, long);
-    descriptor: (Ljava/lang/String;Lorg/peyilo/ireadview/api/model/ChapterDescriptor;Lorg/peyilo/ireadview/api/model/ReadingPosition;Ljava/lang/Integer;Lorg/peyilo/ireadview/api/style/ReaderStyle;Lorg/peyilo/ireadview/api/model/ReadingMode;Lkotlin/jvm/functions/Function1;J)V
+  public org.peyilo.ireadview.spi.page.ReaderPageContext(java.lang.String, org.peyilo.ireadview.api.model.ChapterDescriptor, org.peyilo.ireadview.api.model.ReadingPosition, java.lang.Integer, org.peyilo.ireadview.api.style.ReaderStyle, org.peyilo.ireadview.api.model.ReadingMode, kotlin.jvm.functions.Function1<? super org.peyilo.ireadview.api.event.ReaderAction, java.lang.Boolean>, long, org.peyilo.ireadview.spi.page.ReaderPageChromeProvider);
+    descriptor: (Ljava/lang/String;Lorg/peyilo/ireadview/api/model/ChapterDescriptor;Lorg/peyilo/ireadview/api/model/ReadingPosition;Ljava/lang/Integer;Lorg/peyilo/ireadview/api/style/ReaderStyle;Lorg/peyilo/ireadview/api/model/ReadingMode;Lkotlin/jvm/functions/Function1;JLorg/peyilo/ireadview/spi/page/ReaderPageChromeProvider;)V
 
-  public org.peyilo.ireadview.spi.page.ReaderPageContext(java.lang.String, org.peyilo.ireadview.api.model.ChapterDescriptor, org.peyilo.ireadview.api.model.ReadingPosition, java.lang.Integer, org.peyilo.ireadview.api.style.ReaderStyle, org.peyilo.ireadview.api.model.ReadingMode, kotlin.jvm.functions.Function1, long, int, kotlin.jvm.internal.DefaultConstructorMarker);
-    descriptor: (Ljava/lang/String;Lorg/peyilo/ireadview/api/model/ChapterDescriptor;Lorg/peyilo/ireadview/api/model/ReadingPosition;Ljava/lang/Integer;Lorg/peyilo/ireadview/api/style/ReaderStyle;Lorg/peyilo/ireadview/api/model/ReadingMode;Lkotlin/jvm/functions/Function1;JILkotlin/jvm/internal/DefaultConstructorMarker;)V
+  public org.peyilo.ireadview.spi.page.ReaderPageContext(java.lang.String, org.peyilo.ireadview.api.model.ChapterDescriptor, org.peyilo.ireadview.api.model.ReadingPosition, java.lang.Integer, org.peyilo.ireadview.api.style.ReaderStyle, org.peyilo.ireadview.api.model.ReadingMode, kotlin.jvm.functions.Function1, long, org.peyilo.ireadview.spi.page.ReaderPageChromeProvider, int, kotlin.jvm.internal.DefaultConstructorMarker);
+    descriptor: (Ljava/lang/String;Lorg/peyilo/ireadview/api/model/ChapterDescriptor;Lorg/peyilo/ireadview/api/model/ReadingPosition;Ljava/lang/Integer;Lorg/peyilo/ireadview/api/style/ReaderStyle;Lorg/peyilo/ireadview/api/model/ReadingMode;Lkotlin/jvm/functions/Function1;JLorg/peyilo/ireadview/spi/page/ReaderPageChromeProvider;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 
   public final java.lang.String getBookTitle();
     descriptor: ()Ljava/lang/String;
@@ -5129,6 +5771,12 @@ public final class org.peyilo.ireadview.spi.page.ReaderPageContext {
   public final long getTimeMillis();
     descriptor: ()J
 
+  public final org.peyilo.ireadview.spi.page.ReaderPageChromeProvider getChromeProvider();
+    descriptor: ()Lorg/peyilo/ireadview/spi/page/ReaderPageChromeProvider;
+
+  public final org.peyilo.ireadview.spi.page.ReaderPageChrome getChrome();
+    descriptor: ()Lorg/peyilo/ireadview/spi/page/ReaderPageChrome;
+
   public final java.lang.String component1();
     descriptor: ()Ljava/lang/String;
 
@@ -5153,11 +5801,14 @@ public final class org.peyilo.ireadview.spi.page.ReaderPageContext {
   public final long component8();
     descriptor: ()J
 
-  public final org.peyilo.ireadview.spi.page.ReaderPageContext copy(java.lang.String, org.peyilo.ireadview.api.model.ChapterDescriptor, org.peyilo.ireadview.api.model.ReadingPosition, java.lang.Integer, org.peyilo.ireadview.api.style.ReaderStyle, org.peyilo.ireadview.api.model.ReadingMode, kotlin.jvm.functions.Function1<? super org.peyilo.ireadview.api.event.ReaderAction, java.lang.Boolean>, long);
-    descriptor: (Ljava/lang/String;Lorg/peyilo/ireadview/api/model/ChapterDescriptor;Lorg/peyilo/ireadview/api/model/ReadingPosition;Ljava/lang/Integer;Lorg/peyilo/ireadview/api/style/ReaderStyle;Lorg/peyilo/ireadview/api/model/ReadingMode;Lkotlin/jvm/functions/Function1;J)Lorg/peyilo/ireadview/spi/page/ReaderPageContext;
+  public final org.peyilo.ireadview.spi.page.ReaderPageChromeProvider component9();
+    descriptor: ()Lorg/peyilo/ireadview/spi/page/ReaderPageChromeProvider;
 
-  public static org.peyilo.ireadview.spi.page.ReaderPageContext copy$default(org.peyilo.ireadview.spi.page.ReaderPageContext, java.lang.String, org.peyilo.ireadview.api.model.ChapterDescriptor, org.peyilo.ireadview.api.model.ReadingPosition, java.lang.Integer, org.peyilo.ireadview.api.style.ReaderStyle, org.peyilo.ireadview.api.model.ReadingMode, kotlin.jvm.functions.Function1, long, int, java.lang.Object);
-    descriptor: (Lorg/peyilo/ireadview/spi/page/ReaderPageContext;Ljava/lang/String;Lorg/peyilo/ireadview/api/model/ChapterDescriptor;Lorg/peyilo/ireadview/api/model/ReadingPosition;Ljava/lang/Integer;Lorg/peyilo/ireadview/api/style/ReaderStyle;Lorg/peyilo/ireadview/api/model/ReadingMode;Lkotlin/jvm/functions/Function1;JILjava/lang/Object;)Lorg/peyilo/ireadview/spi/page/ReaderPageContext;
+  public final org.peyilo.ireadview.spi.page.ReaderPageContext copy(java.lang.String, org.peyilo.ireadview.api.model.ChapterDescriptor, org.peyilo.ireadview.api.model.ReadingPosition, java.lang.Integer, org.peyilo.ireadview.api.style.ReaderStyle, org.peyilo.ireadview.api.model.ReadingMode, kotlin.jvm.functions.Function1<? super org.peyilo.ireadview.api.event.ReaderAction, java.lang.Boolean>, long, org.peyilo.ireadview.spi.page.ReaderPageChromeProvider);
+    descriptor: (Ljava/lang/String;Lorg/peyilo/ireadview/api/model/ChapterDescriptor;Lorg/peyilo/ireadview/api/model/ReadingPosition;Ljava/lang/Integer;Lorg/peyilo/ireadview/api/style/ReaderStyle;Lorg/peyilo/ireadview/api/model/ReadingMode;Lkotlin/jvm/functions/Function1;JLorg/peyilo/ireadview/spi/page/ReaderPageChromeProvider;)Lorg/peyilo/ireadview/spi/page/ReaderPageContext;
+
+  public static org.peyilo.ireadview.spi.page.ReaderPageContext copy$default(org.peyilo.ireadview.spi.page.ReaderPageContext, java.lang.String, org.peyilo.ireadview.api.model.ChapterDescriptor, org.peyilo.ireadview.api.model.ReadingPosition, java.lang.Integer, org.peyilo.ireadview.api.style.ReaderStyle, org.peyilo.ireadview.api.model.ReadingMode, kotlin.jvm.functions.Function1, long, org.peyilo.ireadview.spi.page.ReaderPageChromeProvider, int, java.lang.Object);
+    descriptor: (Lorg/peyilo/ireadview/spi/page/ReaderPageContext;Ljava/lang/String;Lorg/peyilo/ireadview/api/model/ChapterDescriptor;Lorg/peyilo/ireadview/api/model/ReadingPosition;Ljava/lang/Integer;Lorg/peyilo/ireadview/api/style/ReaderStyle;Lorg/peyilo/ireadview/api/model/ReadingMode;Lkotlin/jvm/functions/Function1;JLorg/peyilo/ireadview/spi/page/ReaderPageChromeProvider;ILjava/lang/Object;)Lorg/peyilo/ireadview/spi/page/ReaderPageContext;
 
   public java.lang.String toString();
     descriptor: ()Ljava/lang/String;
@@ -5260,6 +5911,9 @@ public interface org.peyilo.ireadview.spi.page.ReaderPageTemplate {
   public abstract void unbind();
     descriptor: ()V
 
+  public abstract void refreshChrome();
+    descriptor: ()V
+
   public abstract boolean getNeedsTimeUpdates();
     descriptor: ()Z
 
@@ -5269,6 +5923,9 @@ public interface org.peyilo.ireadview.spi.page.ReaderPageTemplate {
 
 Compiled from "ReaderPageFactory.kt"
 public final class org.peyilo.ireadview.spi.page.ReaderPageTemplate$DefaultImpls {
+  public static void refreshChrome(org.peyilo.ireadview.spi.page.ReaderPageTemplate);
+    descriptor: (Lorg/peyilo/ireadview/spi/page/ReaderPageTemplate;)V
+
   public static boolean getNeedsTimeUpdates(org.peyilo.ireadview.spi.page.ReaderPageTemplate);
     descriptor: (Lorg/peyilo/ireadview/spi/page/ReaderPageTemplate;)Z
 
@@ -5306,6 +5963,9 @@ public abstract class org.peyilo.ireadview.spi.presentation.BookPresentation imp
 
   public void onTimeChanged(long);
     descriptor: (J)V
+
+  public void onPageChromeChanged();
+    descriptor: ()V
 
   public void onNavigationStateChanged(org.peyilo.ireadview.api.state.ReadNavigationState);
     descriptor: (Lorg/peyilo/ireadview/api/state/ReadNavigationState;)V
@@ -5352,6 +6012,9 @@ public interface org.peyilo.ireadview.spi.presentation.BookPresentationHost exte
   public abstract org.peyilo.ireadview.api.style.ReaderStyle getStyle();
     descriptor: ()Lorg/peyilo/ireadview/api/style/ReaderStyle;
 
+  public abstract org.peyilo.ireadview.spi.page.ReaderPageChromeProvider getPageChromeProvider();
+    descriptor: ()Lorg/peyilo/ireadview/spi/page/ReaderPageChromeProvider;
+
   public abstract org.peyilo.ireadview.spi.page.ReaderPageFactory getPageFactory();
     descriptor: ()Lorg/peyilo/ireadview/spi/page/ReaderPageFactory;
 
@@ -5391,6 +6054,9 @@ public interface org.peyilo.ireadview.spi.presentation.BookPresentationHost exte
   public abstract java.util.List<org.peyilo.ireadview.api.model.Highlight> validHighlights(java.lang.String);
     descriptor: (Ljava/lang/String;)Ljava/util/List;
 
+  public abstract java.util.List<org.peyilo.ireadview.api.model.Underline> validUnderlines(java.lang.String);
+    descriptor: (Ljava/lang/String;)Ljava/util/List;
+
   public abstract void reportHighlightStyleFallback(java.lang.String, java.lang.String);
     descriptor: (Ljava/lang/String;Ljava/lang/String;)V
 
@@ -5412,6 +6078,9 @@ public interface org.peyilo.ireadview.spi.presentation.BookPresentationHost exte
 
 Compiled from "BookPresentation.kt"
 public final class org.peyilo.ireadview.spi.presentation.BookPresentationHost$DefaultImpls {
+  public static org.peyilo.ireadview.spi.page.ReaderPageChromeProvider getPageChromeProvider(org.peyilo.ireadview.spi.presentation.BookPresentationHost);
+    descriptor: (Lorg/peyilo/ireadview/spi/presentation/BookPresentationHost;)Lorg/peyilo/ireadview/spi/page/ReaderPageChromeProvider;
+
   public static org.peyilo.ireadview.spi.page.ReaderPlaceholderFactory getPlaceholderFactory(org.peyilo.ireadview.spi.presentation.BookPresentationHost);
     descriptor: (Lorg/peyilo/ireadview/spi/presentation/BookPresentationHost;)Lorg/peyilo/ireadview/spi/page/ReaderPlaceholderFactory;
 
@@ -5446,6 +6115,9 @@ public final class org.peyilo.ireadview.spi.presentation.BookPresentationHost$De
     descriptor: (Lorg/peyilo/ireadview/spi/presentation/BookPresentationHost;Lorg/peyilo/ireadview/spi/presentation/ReadNavigation;JLkotlin/jvm/functions/Function0;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 
   public static java.util.List<org.peyilo.ireadview.api.model.Highlight> validHighlights(org.peyilo.ireadview.spi.presentation.BookPresentationHost, java.lang.String);
+    descriptor: (Lorg/peyilo/ireadview/spi/presentation/BookPresentationHost;Ljava/lang/String;)Ljava/util/List;
+
+  public static java.util.List<org.peyilo.ireadview.api.model.Underline> validUnderlines(org.peyilo.ireadview.spi.presentation.BookPresentationHost, java.lang.String);
     descriptor: (Lorg/peyilo/ireadview/spi/presentation/BookPresentationHost;Ljava/lang/String;)Ljava/util/List;
 
   public static void reportHighlightStyleFallback(org.peyilo.ireadview.spi.presentation.BookPresentationHost, java.lang.String, java.lang.String);
@@ -5899,11 +6571,29 @@ public final class org.peyilo.ireadview.spi.presentation.ReadViewport {
 
 Compiled from "SelectionToolbarFactory.kt"
 public interface org.peyilo.ireadview.spi.selection.SelectionActions {
+  public abstract boolean isValid();
+    descriptor: ()Z
+
+  public abstract boolean hasHighlight();
+    descriptor: ()Z
+
+  public abstract boolean hasUnderline();
+    descriptor: ()Z
+
+  public abstract org.peyilo.ireadview.api.state.ReaderResult<kotlin.Unit> toggleHighlight(java.lang.String);
+    descriptor: (Ljava/lang/String;)Lorg/peyilo/ireadview/api/state/ReaderResult;
+
+  public abstract org.peyilo.ireadview.api.state.ReaderResult<kotlin.Unit> toggleUnderline(org.peyilo.ireadview.api.style.TextLineStyle);
+    descriptor: (Lorg/peyilo/ireadview/api/style/TextLineStyle;)Lorg/peyilo/ireadview/api/state/ReaderResult;
+
   public abstract org.peyilo.ireadview.api.state.ReaderResult<kotlin.Unit> copyText();
     descriptor: ()Lorg/peyilo/ireadview/api/state/ReaderResult;
 
   public abstract org.peyilo.ireadview.api.state.ReaderResult<org.peyilo.ireadview.api.model.Highlight> highlight(java.lang.String);
     descriptor: (Ljava/lang/String;)Lorg/peyilo/ireadview/api/state/ReaderResult;
+
+  public abstract org.peyilo.ireadview.api.state.ReaderResult<org.peyilo.ireadview.api.model.Underline> underline(org.peyilo.ireadview.api.style.TextLineStyle);
+    descriptor: (Lorg/peyilo/ireadview/api/style/TextLineStyle;)Lorg/peyilo/ireadview/api/state/ReaderResult;
 
   public abstract void clearSelection();
     descriptor: ()V
@@ -5911,8 +6601,152 @@ public interface org.peyilo.ireadview.spi.selection.SelectionActions {
 
 Compiled from "SelectionToolbarFactory.kt"
 public final class org.peyilo.ireadview.spi.selection.SelectionActions$DefaultImpls {
+  public static org.peyilo.ireadview.api.state.ReaderResult toggleHighlight$default(org.peyilo.ireadview.spi.selection.SelectionActions, java.lang.String, int, java.lang.Object);
+    descriptor: (Lorg/peyilo/ireadview/spi/selection/SelectionActions;Ljava/lang/String;ILjava/lang/Object;)Lorg/peyilo/ireadview/api/state/ReaderResult;
+
+  public static org.peyilo.ireadview.api.state.ReaderResult toggleUnderline$default(org.peyilo.ireadview.spi.selection.SelectionActions, org.peyilo.ireadview.api.style.TextLineStyle, int, java.lang.Object);
+    descriptor: (Lorg/peyilo/ireadview/spi/selection/SelectionActions;Lorg/peyilo/ireadview/api/style/TextLineStyle;ILjava/lang/Object;)Lorg/peyilo/ireadview/api/state/ReaderResult;
+
   public static org.peyilo.ireadview.api.state.ReaderResult highlight$default(org.peyilo.ireadview.spi.selection.SelectionActions, java.lang.String, int, java.lang.Object);
     descriptor: (Lorg/peyilo/ireadview/spi/selection/SelectionActions;Ljava/lang/String;ILjava/lang/Object;)Lorg/peyilo/ireadview/api/state/ReaderResult;
+
+  public static org.peyilo.ireadview.api.state.ReaderResult underline$default(org.peyilo.ireadview.spi.selection.SelectionActions, org.peyilo.ireadview.api.style.TextLineStyle, int, java.lang.Object);
+    descriptor: (Lorg/peyilo/ireadview/spi/selection/SelectionActions;Lorg/peyilo/ireadview/api/style/TextLineStyle;ILjava/lang/Object;)Lorg/peyilo/ireadview/api/state/ReaderResult;
+}
+
+Compiled from "SelectionMenu.kt"
+public interface org.peyilo.ireadview.spi.selection.SelectionMenuAction {
+  public abstract void onClick(org.peyilo.ireadview.api.model.TextSelection, org.peyilo.ireadview.spi.selection.SelectionActions);
+    descriptor: (Lorg/peyilo/ireadview/api/model/TextSelection;Lorg/peyilo/ireadview/spi/selection/SelectionActions;)V
+}
+
+Compiled from "SelectionMenu.kt"
+public final class org.peyilo.ireadview.spi.selection.SelectionMenuItem {
+  public org.peyilo.ireadview.spi.selection.SelectionMenuItem(java.lang.String, java.lang.String, int, org.peyilo.ireadview.spi.selection.SelectionMenuAction, java.lang.String, org.peyilo.ireadview.spi.selection.SelectionMenuState);
+    descriptor: (Ljava/lang/String;Ljava/lang/String;ILorg/peyilo/ireadview/spi/selection/SelectionMenuAction;Ljava/lang/String;Lorg/peyilo/ireadview/spi/selection/SelectionMenuState;)V
+
+  public org.peyilo.ireadview.spi.selection.SelectionMenuItem(java.lang.String, java.lang.String, int, org.peyilo.ireadview.spi.selection.SelectionMenuAction, java.lang.String, org.peyilo.ireadview.spi.selection.SelectionMenuState, int, kotlin.jvm.internal.DefaultConstructorMarker);
+    descriptor: (Ljava/lang/String;Ljava/lang/String;ILorg/peyilo/ireadview/spi/selection/SelectionMenuAction;Ljava/lang/String;Lorg/peyilo/ireadview/spi/selection/SelectionMenuState;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+
+  public final java.lang.String getId();
+    descriptor: ()Ljava/lang/String;
+
+  public final java.lang.String getTitle();
+    descriptor: ()Ljava/lang/String;
+
+  public final int getIconResource();
+    descriptor: ()I
+
+  public final org.peyilo.ireadview.spi.selection.SelectionMenuAction getAction();
+    descriptor: ()Lorg/peyilo/ireadview/spi/selection/SelectionMenuAction;
+
+  public final java.lang.String getActiveTitle();
+    descriptor: ()Ljava/lang/String;
+
+  public final org.peyilo.ireadview.spi.selection.SelectionMenuState getState();
+    descriptor: ()Lorg/peyilo/ireadview/spi/selection/SelectionMenuState;
+
+  public org.peyilo.ireadview.spi.selection.SelectionMenuItem(java.lang.String, java.lang.String, int, org.peyilo.ireadview.spi.selection.SelectionMenuAction);
+    descriptor: (Ljava/lang/String;Ljava/lang/String;ILorg/peyilo/ireadview/spi/selection/SelectionMenuAction;)V
+
+  public final java.lang.String component1();
+    descriptor: ()Ljava/lang/String;
+
+  public final java.lang.String component2();
+    descriptor: ()Ljava/lang/String;
+
+  public final int component3();
+    descriptor: ()I
+
+  public final org.peyilo.ireadview.spi.selection.SelectionMenuAction component4();
+    descriptor: ()Lorg/peyilo/ireadview/spi/selection/SelectionMenuAction;
+
+  public final java.lang.String component5();
+    descriptor: ()Ljava/lang/String;
+
+  public final org.peyilo.ireadview.spi.selection.SelectionMenuState component6();
+    descriptor: ()Lorg/peyilo/ireadview/spi/selection/SelectionMenuState;
+
+  public final org.peyilo.ireadview.spi.selection.SelectionMenuItem copy(java.lang.String, java.lang.String, int, org.peyilo.ireadview.spi.selection.SelectionMenuAction, java.lang.String, org.peyilo.ireadview.spi.selection.SelectionMenuState);
+    descriptor: (Ljava/lang/String;Ljava/lang/String;ILorg/peyilo/ireadview/spi/selection/SelectionMenuAction;Ljava/lang/String;Lorg/peyilo/ireadview/spi/selection/SelectionMenuState;)Lorg/peyilo/ireadview/spi/selection/SelectionMenuItem;
+
+  public static org.peyilo.ireadview.spi.selection.SelectionMenuItem copy$default(org.peyilo.ireadview.spi.selection.SelectionMenuItem, java.lang.String, java.lang.String, int, org.peyilo.ireadview.spi.selection.SelectionMenuAction, java.lang.String, org.peyilo.ireadview.spi.selection.SelectionMenuState, int, java.lang.Object);
+    descriptor: (Lorg/peyilo/ireadview/spi/selection/SelectionMenuItem;Ljava/lang/String;Ljava/lang/String;ILorg/peyilo/ireadview/spi/selection/SelectionMenuAction;Ljava/lang/String;Lorg/peyilo/ireadview/spi/selection/SelectionMenuState;ILjava/lang/Object;)Lorg/peyilo/ireadview/spi/selection/SelectionMenuItem;
+
+  public java.lang.String toString();
+    descriptor: ()Ljava/lang/String;
+
+  public int hashCode();
+    descriptor: ()I
+
+  public boolean equals(java.lang.Object);
+    descriptor: (Ljava/lang/Object;)Z
+}
+
+Compiled from "SelectionMenu.kt"
+public final class org.peyilo.ireadview.spi.selection.SelectionMenuOptions {
+  public org.peyilo.ireadview.spi.selection.SelectionMenuOptions(float, float, int, int);
+    descriptor: (FFII)V
+
+  public org.peyilo.ireadview.spi.selection.SelectionMenuOptions(float, float, int, int, int, kotlin.jvm.internal.DefaultConstructorMarker);
+    descriptor: (FFIIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+
+  public final float getMaxWidthDp();
+    descriptor: ()F
+
+  public final float getItemWidthDp();
+    descriptor: ()F
+
+  public final int getBackgroundColor();
+    descriptor: ()I
+
+  public final int getTextColor();
+    descriptor: ()I
+
+  public final float component1();
+    descriptor: ()F
+
+  public final float component2();
+    descriptor: ()F
+
+  public final int component3();
+    descriptor: ()I
+
+  public final int component4();
+    descriptor: ()I
+
+  public final org.peyilo.ireadview.spi.selection.SelectionMenuOptions copy(float, float, int, int);
+    descriptor: (FFII)Lorg/peyilo/ireadview/spi/selection/SelectionMenuOptions;
+
+  public static org.peyilo.ireadview.spi.selection.SelectionMenuOptions copy$default(org.peyilo.ireadview.spi.selection.SelectionMenuOptions, float, float, int, int, int, java.lang.Object);
+    descriptor: (Lorg/peyilo/ireadview/spi/selection/SelectionMenuOptions;FFIIILjava/lang/Object;)Lorg/peyilo/ireadview/spi/selection/SelectionMenuOptions;
+
+  public java.lang.String toString();
+    descriptor: ()Ljava/lang/String;
+
+  public int hashCode();
+    descriptor: ()I
+
+  public boolean equals(java.lang.Object);
+    descriptor: (Ljava/lang/Object;)Z
+
+  public org.peyilo.ireadview.spi.selection.SelectionMenuOptions(float, float, int);
+    descriptor: (FFI)V
+
+  public org.peyilo.ireadview.spi.selection.SelectionMenuOptions(float, float);
+    descriptor: (FF)V
+
+  public org.peyilo.ireadview.spi.selection.SelectionMenuOptions(float);
+    descriptor: (F)V
+
+  public org.peyilo.ireadview.spi.selection.SelectionMenuOptions();
+    descriptor: ()V
+}
+
+Compiled from "SelectionMenu.kt"
+public interface org.peyilo.ireadview.spi.selection.SelectionMenuState {
+  public abstract boolean isActive(org.peyilo.ireadview.api.model.TextSelection, org.peyilo.ireadview.spi.selection.SelectionActions);
+    descriptor: (Lorg/peyilo/ireadview/api/model/TextSelection;Lorg/peyilo/ireadview/spi/selection/SelectionActions;)Z
 }
 
 Compiled from "SelectionToolbarFactory.kt"
@@ -5928,6 +6762,23 @@ Compiled from "SelectionToolbarFactory.kt"
 public final class org.peyilo.ireadview.spi.selection.SelectionToolbarFactory$DefaultImpls {
   public static void unbind(org.peyilo.ireadview.spi.selection.SelectionToolbarFactory, android.view.View);
     descriptor: (Lorg/peyilo/ireadview/spi/selection/SelectionToolbarFactory;Landroid/view/View;)V
+}
+
+Compiled from "SelectionMenu.kt"
+public final class org.peyilo.ireadview.spi.selection.SelectionToolbars {
+  public static final org.peyilo.ireadview.spi.selection.SelectionToolbars INSTANCE;
+    descriptor: Lorg/peyilo/ireadview/spi/selection/SelectionToolbars;
+  public static final java.util.List<org.peyilo.ireadview.spi.selection.SelectionMenuItem> defaultItems();
+    descriptor: ()Ljava/util/List;
+
+  public static final org.peyilo.ireadview.spi.selection.SelectionToolbarFactory menu(java.util.List<org.peyilo.ireadview.spi.selection.SelectionMenuItem>, org.peyilo.ireadview.spi.selection.SelectionMenuOptions);
+    descriptor: (Ljava/util/List;Lorg/peyilo/ireadview/spi/selection/SelectionMenuOptions;)Lorg/peyilo/ireadview/spi/selection/SelectionToolbarFactory;
+
+  public static org.peyilo.ireadview.spi.selection.SelectionToolbarFactory menu$default(java.util.List, org.peyilo.ireadview.spi.selection.SelectionMenuOptions, int, java.lang.Object);
+    descriptor: (Ljava/util/List;Lorg/peyilo/ireadview/spi/selection/SelectionMenuOptions;ILjava/lang/Object;)Lorg/peyilo/ireadview/spi/selection/SelectionToolbarFactory;
+
+  public static final org.peyilo.ireadview.spi.selection.SelectionToolbarFactory menu(java.util.List<org.peyilo.ireadview.spi.selection.SelectionMenuItem>);
+    descriptor: (Ljava/util/List;)Lorg/peyilo/ireadview/spi/selection/SelectionToolbarFactory;
 }
 
 Compiled from "BaseReadView.kt"
@@ -6443,6 +7294,12 @@ public abstract class org.peyilo.ireadview.widget.BookReadView extends org.peyil
   protected final void setInitialReadingMode(org.peyilo.ireadview.api.model.ReadingMode);
     descriptor: (Lorg/peyilo/ireadview/api/model/ReadingMode;)V
 
+  public final void setPageChromeProvider(org.peyilo.ireadview.spi.page.ReaderPageChromeProvider);
+    descriptor: (Lorg/peyilo/ireadview/spi/page/ReaderPageChromeProvider;)V
+
+  public final void refreshPageChrome();
+    descriptor: ()V
+
   public final void setPageFactory(org.peyilo.ireadview.spi.page.ReaderPageFactory);
     descriptor: (Lorg/peyilo/ireadview/spi/page/ReaderPageFactory;)V
 
@@ -6491,8 +7348,20 @@ public abstract class org.peyilo.ireadview.widget.BookReadView extends org.peyil
   public final void setSelectionToolbarFactory(org.peyilo.ireadview.spi.selection.SelectionToolbarFactory);
     descriptor: (Lorg/peyilo/ireadview/spi/selection/SelectionToolbarFactory;)V
 
+  public final void setSelectionMenuItems(java.util.List<org.peyilo.ireadview.spi.selection.SelectionMenuItem>, org.peyilo.ireadview.spi.selection.SelectionMenuOptions);
+    descriptor: (Ljava/util/List;Lorg/peyilo/ireadview/spi/selection/SelectionMenuOptions;)V
+
+  public static void setSelectionMenuItems$default(org.peyilo.ireadview.widget.BookReadView, java.util.List, org.peyilo.ireadview.spi.selection.SelectionMenuOptions, int, java.lang.Object);
+    descriptor: (Lorg/peyilo/ireadview/widget/BookReadView;Ljava/util/List;Lorg/peyilo/ireadview/spi/selection/SelectionMenuOptions;ILjava/lang/Object;)V
+
   public final org.peyilo.ireadview.api.state.ReaderResult<org.peyilo.ireadview.api.model.Highlight> highlightSelection(java.lang.String, java.lang.String);
     descriptor: (Ljava/lang/String;Ljava/lang/String;)Lorg/peyilo/ireadview/api/state/ReaderResult;
+
+  public final org.peyilo.ireadview.api.state.ReaderResult<org.peyilo.ireadview.api.model.Underline> underlineSelection(java.lang.String, org.peyilo.ireadview.api.style.TextLineStyle);
+    descriptor: (Ljava/lang/String;Lorg/peyilo/ireadview/api/style/TextLineStyle;)Lorg/peyilo/ireadview/api/state/ReaderResult;
+
+  public static org.peyilo.ireadview.api.state.ReaderResult underlineSelection$default(org.peyilo.ireadview.widget.BookReadView, java.lang.String, org.peyilo.ireadview.api.style.TextLineStyle, int, java.lang.Object);
+    descriptor: (Lorg/peyilo/ireadview/widget/BookReadView;Ljava/lang/String;Lorg/peyilo/ireadview/api/style/TextLineStyle;ILjava/lang/Object;)Lorg/peyilo/ireadview/api/state/ReaderResult;
 
   public final org.peyilo.ireadview.api.model.AnnotationSnapshot getAnnotations();
     descriptor: ()Lorg/peyilo/ireadview/api/model/AnnotationSnapshot;
@@ -6509,11 +7378,29 @@ public abstract class org.peyilo.ireadview.widget.BookReadView extends org.peyil
   public final org.peyilo.ireadview.api.state.ReaderResult<org.peyilo.ireadview.api.model.Bookmark> addBookmark(org.peyilo.ireadview.api.model.Bookmark);
     descriptor: (Lorg/peyilo/ireadview/api/model/Bookmark;)Lorg/peyilo/ireadview/api/state/ReaderResult;
 
+  public final org.peyilo.ireadview.api.state.ReaderResult<org.peyilo.ireadview.api.model.ReaderAnnotation> addAnnotation(org.peyilo.ireadview.api.model.ReaderAnnotation);
+    descriptor: (Lorg/peyilo/ireadview/api/model/ReaderAnnotation;)Lorg/peyilo/ireadview/api/state/ReaderResult;
+
+  public final org.peyilo.ireadview.api.state.ReaderResult<org.peyilo.ireadview.api.model.ReaderAnnotation> updateAnnotation(org.peyilo.ireadview.api.model.ReaderAnnotation);
+    descriptor: (Lorg/peyilo/ireadview/api/model/ReaderAnnotation;)Lorg/peyilo/ireadview/api/state/ReaderResult;
+
+  public final org.peyilo.ireadview.api.state.ReaderResult<kotlin.Unit> removeAnnotation(java.lang.String);
+    descriptor: (Ljava/lang/String;)Lorg/peyilo/ireadview/api/state/ReaderResult;
+
   public final org.peyilo.ireadview.api.state.ReaderResult<org.peyilo.ireadview.api.model.Highlight> addHighlight(org.peyilo.ireadview.api.model.Highlight);
     descriptor: (Lorg/peyilo/ireadview/api/model/Highlight;)Lorg/peyilo/ireadview/api/state/ReaderResult;
 
   public final org.peyilo.ireadview.api.state.ReaderResult<org.peyilo.ireadview.api.model.Highlight> updateHighlight(org.peyilo.ireadview.api.model.Highlight);
     descriptor: (Lorg/peyilo/ireadview/api/model/Highlight;)Lorg/peyilo/ireadview/api/state/ReaderResult;
+
+  public final org.peyilo.ireadview.api.state.ReaderResult<org.peyilo.ireadview.api.model.Underline> addUnderline(org.peyilo.ireadview.api.model.Underline);
+    descriptor: (Lorg/peyilo/ireadview/api/model/Underline;)Lorg/peyilo/ireadview/api/state/ReaderResult;
+
+  public final org.peyilo.ireadview.api.state.ReaderResult<org.peyilo.ireadview.api.model.Underline> updateUnderline(org.peyilo.ireadview.api.model.Underline);
+    descriptor: (Lorg/peyilo/ireadview/api/model/Underline;)Lorg/peyilo/ireadview/api/state/ReaderResult;
+
+  public final org.peyilo.ireadview.api.state.ReaderResult<kotlin.Unit> removeUnderline(java.lang.String);
+    descriptor: (Ljava/lang/String;)Lorg/peyilo/ireadview/api/state/ReaderResult;
 
   public final org.peyilo.ireadview.api.state.ReaderResult<kotlin.Unit> removeBookmark(java.lang.String);
     descriptor: (Ljava/lang/String;)Lorg/peyilo/ireadview/api/state/ReaderResult;
@@ -6602,6 +7489,12 @@ public abstract class org.peyilo.ireadview.widget.BookReadView extends org.peyil
   public final org.peyilo.ireadview.api.state.ReaderRequest goToChapterNumber(int, org.peyilo.ireadview.api.state.ReaderCallback<org.peyilo.ireadview.api.state.NavigationResult<org.peyilo.ireadview.api.model.ReadingPosition>>);
     descriptor: (ILorg/peyilo/ireadview/api/state/ReaderCallback;)Lorg/peyilo/ireadview/api/state/ReaderRequest;
 
+  public final void setSelectionMenuItems(java.util.List<org.peyilo.ireadview.spi.selection.SelectionMenuItem>);
+    descriptor: (Ljava/util/List;)V
+
+  public final org.peyilo.ireadview.api.state.ReaderResult<org.peyilo.ireadview.api.model.Underline> underlineSelection(java.lang.String);
+    descriptor: (Ljava/lang/String;)Lorg/peyilo/ireadview/api/state/ReaderResult;
+
   public org.peyilo.ireadview.api.effect.TurnDirection turnDirection(org.peyilo.ireadview.spi.presentation.ReadNavigation, java.lang.Object, java.lang.Object);
     descriptor: (Lorg/peyilo/ireadview/spi/presentation/ReadNavigation;Ljava/lang/Object;Ljava/lang/Object;)Lorg/peyilo/ireadview/api/effect/TurnDirection;
 
@@ -6616,6 +7509,9 @@ public abstract class org.peyilo.ireadview.widget.BookReadView extends org.peyil
 
   public static final org.peyilo.ireadview.spi.page.ReaderPageFactory access$getPageFactory$p(org.peyilo.ireadview.widget.BookReadView);
     descriptor: (Lorg/peyilo/ireadview/widget/BookReadView;)Lorg/peyilo/ireadview/spi/page/ReaderPageFactory;
+
+  public static final org.peyilo.ireadview.spi.page.ReaderPageChromeProvider access$getPageChromeBridge$p(org.peyilo.ireadview.widget.BookReadView);
+    descriptor: (Lorg/peyilo/ireadview/widget/BookReadView;)Lorg/peyilo/ireadview/spi/page/ReaderPageChromeProvider;
 
   public static final org.peyilo.ireadview.spi.page.ReaderPlaceholderFactory access$getPlaceholderFactory$p(org.peyilo.ireadview.widget.BookReadView);
     descriptor: (Lorg/peyilo/ireadview/widget/BookReadView;)Lorg/peyilo/ireadview/spi/page/ReaderPlaceholderFactory;
@@ -6695,16 +7591,25 @@ public abstract class org.peyilo.ireadview.widget.BookReadView extends org.peyil
   public static final boolean access$createSelectionActions$valid(long, org.peyilo.ireadview.widget.BookReadView, org.peyilo.ireadview.api.model.TextSelection, long);
     descriptor: (JLorg/peyilo/ireadview/widget/BookReadView;Lorg/peyilo/ireadview/api/model/TextSelection;J)Z
 
+  public static final java.util.List access$createSelectionActions$highlighted(org.peyilo.ireadview.widget.BookReadView, org.peyilo.ireadview.api.model.TextSelection);
+    descriptor: (Lorg/peyilo/ireadview/widget/BookReadView;Lorg/peyilo/ireadview/api/model/TextSelection;)Ljava/util/List;
+
+  public static final java.util.List access$createSelectionActions$underlined(org.peyilo.ireadview.widget.BookReadView, org.peyilo.ireadview.api.model.TextSelection);
+    descriptor: (Lorg/peyilo/ireadview/widget/BookReadView;Lorg/peyilo/ireadview/api/model/TextSelection;)Ljava/util/List;
+
+  public static final org.peyilo.ireadview.api.state.ReaderResult access$mapToUnit(org.peyilo.ireadview.widget.BookReadView, org.peyilo.ireadview.api.state.ReaderResult);
+    descriptor: (Lorg/peyilo/ireadview/widget/BookReadView;Lorg/peyilo/ireadview/api/state/ReaderResult;)Lorg/peyilo/ireadview/api/state/ReaderResult;
+
   public static final org.peyilo.ireadview.api.model.AnnotationIdFactory access$getAnnotationIds$p(org.peyilo.ireadview.widget.BookReadView);
     descriptor: (Lorg/peyilo/ireadview/widget/BookReadView;)Lorg/peyilo/ireadview/api/model/AnnotationIdFactory;
 
   public static final boolean access$onCommittedLocationChanged$current(long, org.peyilo.ireadview.widget.BookReadView, long, org.peyilo.ireadview.api.model.BookDescriptor, org.peyilo.ireadview.api.event.ReadLocationChange);
     descriptor: (JLorg/peyilo/ireadview/widget/BookReadView;JLorg/peyilo/ireadview/api/model/BookDescriptor;Lorg/peyilo/ireadview/api/event/ReadLocationChange;)Z
 
-  public static final boolean access$publishReaderError$current$70(long, org.peyilo.ireadview.widget.BookReadView, long, org.peyilo.ireadview.api.state.ReaderError, kotlin.jvm.functions.Function0);
+  public static final boolean access$publishReaderError$current$82(long, org.peyilo.ireadview.widget.BookReadView, long, org.peyilo.ireadview.api.state.ReaderError, kotlin.jvm.functions.Function0);
     descriptor: (JLorg/peyilo/ireadview/widget/BookReadView;JLorg/peyilo/ireadview/api/state/ReaderError;Lkotlin/jvm/functions/Function0;)Z
 
-  public static final boolean access$publishState$current$72(long, org.peyilo.ireadview.widget.BookReadView, long, long);
+  public static final boolean access$publishState$current$84(long, org.peyilo.ireadview.widget.BookReadView, long, long);
     descriptor: (JLorg/peyilo/ireadview/widget/BookReadView;JJ)Z
 
   public static final java.lang.Object access$goToBookmark$move(org.peyilo.ireadview.widget.BookReadView, org.peyilo.ireadview.api.model.ReadingPosition, kotlin.coroutines.Continuation);

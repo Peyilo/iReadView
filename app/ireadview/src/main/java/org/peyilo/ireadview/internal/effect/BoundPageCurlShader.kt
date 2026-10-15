@@ -16,6 +16,8 @@ uniform float shadowStrength;
 uniform float lightSize;
 uniform float lighting;
 uniform float rightToLeft;
+uniform vec3 backTint;
+uniform float backContentAlpha;
 vec2 pageUv(){return vec2(rightToLeft>.5?1.-screenUv.x:screenUv.x,screenUv.y);}
 #define uv pageUv()
 vec4 samplePage(sampler2D page,vec2 q){
@@ -99,7 +101,7 @@ float paperLight(vec2 n,float normalZ,bool back){
 }
 vec4 verso(vec2 q,vec2 n,float normalZ){
   vec4 ink=front(q);
-  ink.rgb=mix(vec3(.98,.965,.92),ink.rgb,.15);
+  ink.rgb=mix(backTint,ink.rgb,backContentAlpha);
   ink.rgb*=paperLight(n,normalZ,true);
   return ink;
 }

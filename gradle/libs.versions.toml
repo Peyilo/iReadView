@@ -9,6 +9,9 @@ espresso = "3.5.1"
 coroutines = "1.9.0"
 recyclerview = "1.4.0"
 customview = "1.2.0"
+jsoup = "1.23.2"
+desugar = "2.1.5"
+material = "1.10.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -20,6 +23,9 @@ androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "j
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espresso" }
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
+jsoup = { group = "org.jsoup", name = "jsoup", version.ref = "jsoup" }
+material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+desugar-jdk-nio = { group = "com.android.tools", name = "desugar_jdk_libs_nio", version.ref = "desugar" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

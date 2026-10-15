@@ -4,16 +4,23 @@ import kotlin.math.*
 
 /** One face: a tangent plane and a clipped developable band, in a single indexed mesh. */
 internal class IBookCurlMesh(private val segments: Int) {
+    // Angular sampling alone leaves page-height triangles at the tapered rim.
+    // A small generator subdivision bounds texture interpolation error there.
+    private val generatorSegments = 4
+    private val sectionValues = (generatorSegments + 1) * 2
     private val cuts = DoubleArray(segments + 7)
-    val vertices = FloatArray(cuts.size * 4 + 16)
+    val vertices = FloatArray(cuts.size * sectionValues * 2 + 16)
     val texture = FloatArray(vertices.size)
     // Older software Canvas JNI validates colors against the float count, before
     // converting to vertex count. Pad the array; only one color per vertex is used.
     val colors = IntArray(vertices.size)
-    val indices = ShortArray(cuts.size * 6 + 48)
+    val occlusion = IntArray(vertices.size)
+    val indices = ShortArray(cuts.size * generatorSegments * 12 + 48)
     private val polygon = FloatArray(16)
     private val plane = DoubleArray(3)
     private val line = DoubleArray(4)
+    private var stripValueCount = 0
+    private var flatValueCount = 0
     var valueCount = 0
         private set
     var indexCount = 0
@@ -23,19 +30,17 @@ internal class IBookCurlMesh(private val segments: Int) {
         textureWidth: Int, textureHeight: Int, back: Boolean) {
         valueCount = 0
         indexCount = 0
+        if (!back) updateFrontShoulder(g, width, height, textureWidth, textureHeight)
+        connectBand(0, valueCount)
+        val arcStart = valueCount
         if (g.conical) updateConicalArc(g, width, height, textureWidth, textureHeight, back)
         else updateArc(g, width, height, textureWidth, textureHeight, back)
-        for (section in 0 until valueCount / 4 - 1) {
-            val base = section * 2
-            indices[indexCount++] = base.toShort()
-            indices[indexCount++] = (base + 1).toShort()
-            indices[indexCount++] = (base + 2).toShort()
-            indices[indexCount++] = (base + 1).toShort()
-            indices[indexCount++] = (base + 3).toShort()
-            indices[indexCount++] = (base + 2).toShort()
-        }
-        g.cutPlane(if (back) g.arcEnd else 0.0, plane)
+        connectBand(arcStart, valueCount)
+        if (back) g.cutPlane(g.arcEnd, plane)
+        else { plane[0] = g.nx; plane[1] = g.ny; plane[2] = g.axis - g.frontBandWidth }
         val size = clipIBookPlane(plane[0], plane[1], width, height, plane[2], !back, polygon)
+        stripValueCount = valueCount
+        flatValueCount = size
         val base = valueCount / 2
         for (i in 0 until size step 2) {
             val x = polygon[i].toDouble(); val y = polygon[i + 1].toDouble()
@@ -43,19 +48,92 @@ internal class IBookCurlMesh(private val segments: Int) {
                 val brightness = g.projectMaterial(x, y, vertices, valueCount)
                 colors[valueCount / 2] = (0xff shl 24) or (brightness shl 16) or (brightness shl 8) or brightness
             } else {
-                val shift = if (back) 2.0 * g.axis + PI * g.radius - 2.0 * (g.nx * x + g.ny * y) else 0.0
+                val shift = if (back) 2.0 * g.axis + PI * g.radius - 2.0 * (g.nx * x + g.ny * y) + g.frontShift else 0.0
                 vertices[valueCount] = (x + g.nx * shift).toFloat()
                 vertices[valueCount + 1] = (y + g.ny * shift).toFloat()
                 colors[valueCount / 2] = -1
             }
+            occlusion[valueCount / 2] = (255 * g.surfaceOcclusion(x, y)).roundToInt().coerceIn(0, 255) shl 24
             texture[valueCount] = (x * textureWidth / width).toFloat()
             texture[valueCount + 1] = (y * textureHeight / height).toFloat()
             valueCount += 2
         }
         for (i in 1 until size / 2 - 1) {
-            indices[indexCount++] = base.toShort()
-            indices[indexCount++] = (base + i).toShort()
-            indices[indexCount++] = (base + i + 1).toShort()
+            triangle(base, base + i, base + i + 1)
+        }
+    }
+    private fun appendSection(g: IBookCurlGeometry, width: Float, height: Float, textureWidth: Int, textureHeight: Int) {
+        for (sample in 0..generatorSegments) {
+            val fraction = sample.toDouble() / generatorSegments
+            val x = line[0] + (line[2] - line[0]) * fraction
+            val y = line[1] + (line[3] - line[1]) * fraction
+            val brightness = g.projectMaterial(x, y, vertices, valueCount)
+            occlusion[valueCount / 2] = (255 * g.surfaceOcclusion(x, y)).roundToInt().coerceIn(0, 255) shl 24
+            texture[valueCount] = (x.coerceIn(0.0, width.toDouble()) * textureWidth / width).toFloat()
+            texture[valueCount + 1] = (y.coerceIn(0.0, height.toDouble()) * textureHeight / height).toFloat()
+            colors[valueCount / 2] = (0xff shl 24) or (brightness shl 16) or (brightness shl 8) or brightness
+            valueCount += 2
+        }
+    }
+
+    private fun connectBand(start: Int, end: Int) {
+        val stride = generatorSegments + 1
+        for (section in start / 2 until end / 2 - stride step stride) {
+            for (sample in 0 until generatorSegments) {
+                val a = section + sample
+                val b = a + stride
+                triangle(a, a + 1, b)
+                triangle(a + 1, b + 1, b)
+            }
+        }
+    }
+
+    private fun triangle(a: Int, b: Int, c: Int) {
+        // At an exact page corner a whole generator can collapse. Such
+        // triangles carry no visible area and have an unstable texture inverse.
+        val ax = vertices[a * 2]; val ay = vertices[a * 2 + 1]
+        val area = (vertices[b * 2] - ax).toDouble() * (vertices[c * 2 + 1] - ay) -
+            (vertices[b * 2 + 1] - ay).toDouble() * (vertices[c * 2] - ax)
+        if (!area.isFinite() || abs(area) <= 1e-6) return
+        indices[indexCount++] = a.toShort()
+        indices[indexCount++] = b.toShort()
+        indices[indexCount++] = c.toShort()
+    }
+
+    private fun updateFrontShoulder(g: IBookCurlGeometry, width: Float, height: Float, textureWidth: Int, textureHeight: Int) {
+        if (g.frontBandWidth <= 0.0) return
+        var count = 0
+        for (i in 0..segments) cuts[count++] = g.axis - g.frontBandWidth + g.frontBandWidth * i / segments
+        for (corner in 0..3) {
+            val x = if (corner == 1 || corner == 2) width.toDouble() else 0.0
+            val y = if (corner >= 2) height.toDouble() else 0.0
+            val dot = g.nx * x + g.ny * y
+            if (dot > g.axis - g.frontBandWidth && dot < g.axis) cuts[count++] = dot
+        }
+        java.util.Arrays.sort(cuts, 0, count)
+        var previous = Double.NaN
+        for (i in 0 until count) {
+            if (cuts[i] == previous) continue
+            previous = cuts[i]
+            if (!intersectIBookPlane(g.nx, g.ny, cuts[i], width, height, line)) continue
+            appendSection(g, width, height, textureWidth, textureHeight)
+
+        }
+    }
+    fun outline(path: android.graphics.Path) {
+        path.reset()
+        // The two disjoint face regions need only their perimeter, not one
+        // clip contour per triangle. Both use the material rectangle's winding.
+        if (stripValueCount >= sectionValues) {
+            path.moveTo(vertices[0], vertices[1])
+            for (i in sectionValues until stripValueCount step sectionValues) path.lineTo(vertices[i], vertices[i + 1])
+            for (i in stripValueCount - 2 downTo sectionValues - 2 step sectionValues) path.lineTo(vertices[i], vertices[i + 1])
+            path.close()
+        }
+        if (flatValueCount >= 6) {
+            path.moveTo(vertices[stripValueCount], vertices[stripValueCount + 1])
+            for (i in stripValueCount + 2 until valueCount step 2) path.lineTo(vertices[i], vertices[i + 1])
+            path.close()
         }
     }
 
@@ -92,14 +170,8 @@ internal class IBookCurlMesh(private val segments: Int) {
             previous = cuts[i]
             g.cutPlane(cuts[i], plane)
             if (!intersectIBookPlane(plane[0], plane[1], plane[2], width, height, line)) continue
-            for (endpoint in 0..1) {
-                val x = line[endpoint * 2]; val y = line[endpoint * 2 + 1]
-                val brightness = g.projectMaterial(x, y, vertices, valueCount)
-                texture[valueCount] = (x * textureWidth / width).toFloat()
-                texture[valueCount + 1] = (y * textureHeight / height).toFloat()
-                colors[valueCount / 2] = (0xff shl 24) or (brightness shl 16) or (brightness shl 8) or brightness
-                valueCount += 2
-            }
+            appendSection(g, width, height, textureWidth, textureHeight)
+
         }
     }
 
@@ -147,20 +219,12 @@ internal class IBookCurlMesh(private val segments: Int) {
             }
             // A corner can differ by one floating-point ulp; collapse that endpoint.
             high = maxOf(low, high)
-            val angle = distance / g.radius
-            val projectedDot = g.axis + g.radius * sin(angle)
-            val brightness = (195 + 60 * abs(cos(angle))).toInt().coerceIn(0, 255)
-            val color = (0xff shl 24) or (brightness shl 16) or (brightness shl 8) or brightness
-            fun endpoint(tangent: Double) {
-                val index = valueCount
-                vertices[index] = (g.nx * projectedDot - g.ny * tangent).toFloat()
-                vertices[index + 1] = (g.ny * projectedDot + g.nx * tangent).toFloat()
-                texture[index] = ((g.nx * dot - g.ny * tangent).coerceIn(0.0, width.toDouble()) * textureWidth / width).toFloat()
-                texture[index + 1] = ((g.ny * dot + g.nx * tangent).coerceIn(0.0, height.toDouble()) * textureHeight / height).toFloat()
-                colors[index / 2] = color
-                valueCount += 2
-            }
-            endpoint(low); endpoint(high)
+            line[0] = g.nx * dot - g.ny * low
+            line[1] = g.ny * dot + g.nx * low
+            line[2] = g.nx * dot - g.ny * high
+            line[3] = g.ny * dot + g.nx * high
+            appendSection(g, width, height, textureWidth, textureHeight)
+
         }
     }
 }
@@ -170,7 +234,7 @@ internal fun clipIBookMaterial(g: IBookCurlGeometry, width: Float, height: Float
     threshold: Double, less: Boolean, out: FloatArray): Int =
     clipIBookPlane(g.nx, g.ny, width, height, threshold, less, out)
 
-private fun clipIBookPlane(nx: Double, ny: Double, width: Float, height: Float,
+internal fun clipIBookPlane(nx: Double, ny: Double, width: Float, height: Float,
     threshold: Double, less: Boolean, out: FloatArray): Int {
     var count = 0
     var previousX = 0.0

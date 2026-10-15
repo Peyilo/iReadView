@@ -21,6 +21,12 @@ Use the [host integration guide](docs/08_HOST_INTEGRATION_GUIDE.md) for current 
 - `:app` — demo host application. It should exercise the library only through its public API.
 - `:app:ireadview` — Android library containing the reusable reading component.
 
+Demo 的源码按界面、来源/存储、阅读器配置和自定义正文划分包，类名直接描述职责。目录及命名约定见 [Demo 工程结构](app/README.md)。
+
+目录、排版、设置采用旧示例风格的底部面板。排版通过公开 ReaderStyles API 编辑区域边距、字号、字体、固定字距、行距、段距、缩进与页眉页脚；参见 [排版 API](docs/26_READER_PANELS_AND_TYPOGRAPHY_API.md)。
+
+启动后首先展示入口菜单：“阅读内置书籍”“选择本地 TXT”“网络书源加载”。网络示例直接沿用旧项目 BiqugeBookLoader 的书源，默认打开书籍 185030，在线获取目录并按需读取章节；更多 Widget 示例另设入口。具体来源与错误处理见 [Demo 阅读流程](app/README.md#启动菜单与阅读流程)。
+
 ## Documentation
 
 - [Product requirements](docs/01_PRODUCT_REQUIREMENTS.md)
@@ -59,11 +65,11 @@ The effect menu includes a host-owned wipe example implemented solely with PageT
 
 ## Selection toolbar example
 
-The Demo's input settings include a selection toolbar toggle. `DemoSelectionToolbarFactory` demonstrates the public SPI with copy, highlight and clear actions, and releases listeners in `unbind`. Call `reader.setSelectionToolbarFactory(null)` to restore the native toolbar. The host saves a choice flag and recreates the factory; Widget snapshots do not serialize factory objects. Interaction, recreation and accessibility behavior still require device validation.
+The Demo's input settings include a selection toolbar toggle. `CustomSelectionToolbarFactory` demonstrates the public SPI with copy, highlight and clear actions, and releases listeners in `unbind`. Call `reader.setSelectionToolbarFactory(null)` to restore the native toolbar. The host saves a choice flag and recreates the factory; Widget snapshots do not serialize factory objects. Interaction, recreation and accessibility behavior still require device validation.
 
 ## Custom content example
 
-Open the Demo's book menu and choose the custom content block demonstration. `DemoDividerBlock` and `DemoDividerLayoutProvider` use only the public content SPI: immutable host data, worker measurement, stable anchors, retained-size estimates and shared paged/scroll drawing. The graphic exposes an accessibility description and does not pretend to be selectable source text. The separate host Activity demonstrates mode changes, navigation, retries and lifecycle cleanup. Device behavior remains unverified.
+Open the Demo's book menu and choose the custom content block demonstration. `DividerBlock` and `DividerLayoutProvider` use only the public content SPI: immutable host data, worker measurement, stable anchors, retained-size estimates and shared paged/scroll drawing. The graphic exposes an accessibility description and does not pretend to be selectable source text. The separate host Activity demonstrates mode changes, navigation, retries and lifecycle cleanup. Device behavior remains unverified.
 
 Accessibility text movement and same-chapter selection extension have an asynchronous offscreen path in both presentations. Built-in targets are resolved from source anchors on a worker; the virtual-node cursor continues after a normal navigation commit. Ordinary movement can search across empty chapters, while extension stops at chapter or unsupported-content boundaries. Whole-block custom descriptions can opt in to skip repeated fragments. Source focus remains while preparation runs. Complex local custom semantics remain incomplete; TalkBack/SwitchAccess behavior is not device-verified.
 
@@ -75,15 +81,19 @@ TextBookOptions.normalization defaults to TextNormalization.PRESERVE. TRIM_LINE_
 
 ## TXT configuration demo
 
+主 Demo 默认通过 `ReaderInput.fromAsset` / `TextBookSource` 打开旧参考 Demo 提供的《妖精之诗》（尼希维尔特）完整 TXT；小说仅位于 Demo 的 `app/src/main/assets/txts`，不进入 Library AAR。已有最近 TXT/EPUB 文件时仍恢复文件阅读记录。“示例书籍”可选择真实小说或 Widget API 演示短文；Apple/Google/卷页效果观察页也使用该小说，并提供章节目录。
+
+“打开文件 → TXT”使用系统文档选择器，后台读取文件名并采样最多 64 KiB 判断编码：先识别 BOM，再检查 UTF-8/UTF-16 特征，否则尝试 GB18030。启发式检测不保证全部文件正确；“目录 → TXT 信息 → 更换编码”以及打开失败对话框提供手动纠正。状态区显示实际读取字节、章节索引整理及页面准备；文件提供大小时进度条表示字节读取比例，不表示全书排版完成比例。解析沿用库内磁盘索引和章节规则，Demo 选择去除行两端空白，目录跳转和阅读位置保存复用现有公开接口。
+
 Open “打开书籍与演示 → TXT 来源配置演示” to switch memory/disk storage, line whitespace normalization and sequential/content IDs. The isolated sample includes BOM, CRLF, padded text and blank lines. Its host closes sources in the background, recreates them on resume and supplies its saved lightweight snapshot. Nonblank sample lines use content hashes; repeated blank lines use ordinal IDs. This illustrates host policy and does not guarantee identities for arbitrary duplicate text. Configuration changes can trigger the Widget's normal restoration fallback. Recreation, cancellation and resource behavior remain device-unverified.
 
-The default footer now shows chapter page progress together with the current local time, as required by FR-VIEW-01. ChromeContent.PAGE_PROGRESS_AND_TIME (XML page_progress_and_time) selects that combination explicitly; TIME and PAGE_PROGRESS retain their separate meanings. Minute updates keep the progress prefix. Runtime, font-scale and narrow-window layout checks remain outstanding. See [the requirement audit](docs/07_REQUIREMENT_IMPLEMENTATION_AUDIT.md) for current evidence and remaining scope.
+The default page template follows the reference layout: back icon and title in the header, chapter progress at footer start and local time at footer end (11sp). ChromeContent.PAGE_PROGRESS_AND_TIME selects the split footer; TIME and PAGE_PROGRESS retain their separate meanings. Hosts can register ReaderPageChromeProvider and call refreshPageChrome() after business-state changes, without repagination. See [default chrome and state APIs](docs/39_DEFAULT_PAGE_CHROME_AND_STATE_API.md). Runtime, font-scale and narrow-window layout checks remain outstanding. See [the requirement audit](docs/07_REQUIREMENT_IMPLEMENTATION_AUDIT.md) for current evidence and remaining scope.
 
 TXT snapshot revision v2 combines the original byte digest with emitted chapter/block identities, types, titles and text, plus normalization and book title. Different parsing results no longer share a revision merely because their input bytes match. Memory and disk use the same incremental parser digest. This deliberately changes older raw-byte revisions; saved positions and annotations follow the existing mismatch/fallback rules. Runtime equivalence, update behavior and old-data restoration remain unverified.
 
 ### Java 宿主示例
 
-首页“打开书籍与演示 → Java 宿主接入演示”打开 `DemoJavaActivity.java`。示例直接使用公开 Widget、内容模型、内存来源和回调接口，展示取消请求、保存位置与重建恢复；无需在 Java Activity 中使用协程。`ReaderListenerAdapter` 和 `ReadViewListenerAdapter<L>` 提供空回调实现，Java 子类只覆盖需要的事件。
+首页“打开书籍与演示 → Java 宿主接入演示”打开 `JavaReaderActivity.java`。示例直接使用公开 Widget、内容模型、内存来源和回调接口，展示取消请求、保存位置与重建恢复；无需在 Java Activity 中使用协程。`ReaderListenerAdapter` 和 `ReadViewListenerAdapter<L>` 提供空回调实现，Java 子类只覆盖需要的事件。
 
 示例已通过 Java 编译；运行时取消/恢复与恰好一次回调尚未据此验证。默认参数不保证全部具有 Java 重载，请参考示例中完整模型构造与实际 callback 重载。
 ### Library AAR
@@ -95,4 +105,16 @@ Prefer the project dependency while developing: `implementation(project(":app:ir
 The Widget's coroutine scope is internal. Host subclasses use public navigation/request interfaces and lifecycle hooks; Java module-suffixed synthetic accessors and internal packages are not supported API.
 Java input factories now support `ReaderInput.fromFile/fromAsset/fromResource/fromUri/fromStream`; `openStream` declares `IOException`. TXT/EPUB provide default-option constructors for Java. The Java demo can switch between in-memory content models and a TXT stream source, retiring the previous source and restoring its chosen source type on recreation. Compilation has passed; lifecycle/source behavior remains unverified.
 
+
+# 段落选择与菜单
+
+长按选择完整源段落，支持同章节跨页拖动；宿主可为浮动菜单添加图标、文字和回调，溢出时分页显示。详见[段落选择与图文菜单 API](docs/27_PARAGRAPH_SELECTION_AND_MENU.md)。
+
+## 高亮与划线
+
+高亮填充背景，划线为独立 Underline 注解，库支持五种线型及颜色/粗细配置。Demo 使用直接添加/取消菜单，移除了样式调节 UI。所有类型采用统一注解管理和保存结构，详见[统一注解与切换](docs/29_UNIFIED_ANNOTATIONS_AND_TOGGLES.md)及[划线 API](docs/28_UNDERLINE_ANNOTATIONS.md)。
+
+## 翻页背面颜色
+
+iBook 与卷页效果默认根据真正翻起页面的背景计算背面底色，适配浅色、夜间和资源主题；显式背面颜色仍可配置。详见[背面颜色设计](docs/30_CURL_BACKFACE_THEME_COLOR.md)。
 

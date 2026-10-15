@@ -18,6 +18,7 @@ android {
     }
 
     compileOptions {
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
@@ -28,6 +29,10 @@ android {
 }
 
 dependencies {
+    implementation(libs.androidx.appcompat)
+    implementation(libs.material)
+    implementation(libs.jsoup)
+    coreLibraryDesugaring(libs.desugar.jdk.nio)
     implementation(project(":app:ireadview"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.kotlinx.coroutines.android)

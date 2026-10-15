@@ -13,13 +13,18 @@ data class PageCurlOptions @JvmOverloads constructor(
     val lightSize: Float = .43f,
     /** 初始卷边倾斜，默认0.55。建议-0.60–0.60；0为水平卷轴，正负改变倾斜方向。
      * 拖动的纵向偏移叠加到此值；接近装订时自动淡出倾斜。允许-0.80–0.80。 */
-    val tilt: Float = .55f
+    val tilt: Float = .55f,
+    /** Null follows the actual turning page background; explicit RGB fixes the backside tint. */
+    val backTintColor: Int? = null,
+    /** Reverse-face content contribution, not paper opacity. Suggested0.15..0.30; default0.15. */
+    val backContentAlpha: Float = .15f
 ) {
     init {
         require(radiusFraction.isFinite() && radiusFraction in .04f.. .20f)
         require(shadowStrength.isFinite() && shadowStrength in 0f.. .75f)
         require(lightSize.isFinite() && lightSize in .02f.. .65f)
         require(tilt.isFinite() && tilt in -.8f.. .8f)
+        require(backContentAlpha.isFinite() && backContentAlpha in 0f..1f)
     }
     /** 返回卷边宽度修改后的配置；建议0.08–0.14，默认0.10。 */
     fun withRadiusFraction(value: Float) = copy(radiusFraction = value)

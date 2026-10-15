@@ -18,7 +18,7 @@ TextBookSource 已增加可选磁盘章节索引、按章读取、独立输入/�
 
 可见正文虚拟节点已支持选择整段可见文本及指定 UTF-16 范围，根节点支持复制/默认高亮/清除选区；与工具栏共用修订号和代次绑定动作。节点内字符/词/段落移动及扩展已接入，跨节点无障碍扩展仍待实现。
 
-宿主 DemoReadingStorage 已保存逐书阅读快照和最近 URI/编码；冷启动/再次打开按身份恢复，Activity 重建沿用 View 状态。记录列表与授权淘汰尚未实现。
+宿主 ReadingStorage 已保存逐书阅读快照和最近 URI/编码；冷启动/再次打开按身份恢复，Activity 重建沿用 View 状态。记录列表与授权淘汰尚未实现。
 
 已写入 Widget 基础、默认分页与连续滚动链路：
 
@@ -151,7 +151,7 @@ TextBookSource 已增加可选磁盘章节索引、按章读取、独立输入/�
 
 Demo 新增 TXT 系统文件选择、五种编码确认、取消保持阅读、可用时申请持久读授权、打开失败重试和切回示例。URI+编码稳定身份隔离不同解析，成功选择保存 Activity Bundle 后重建来源；初始化/重试请求序号和销毁检查避免旧请求覆盖。示例专用目录修改/高亮造数不用于 TXT，真实来源使用目录重读及正文选词。修正 README 文档链接并更新接入说明。Debug 构建通过，未新增或运行测试；设备文件选择/取消、异常 MIME/授权、编码错误、重试替代、旋转/进程重建和输入/位置恢复仍待验证。持久最近阅读/进度、授权淘汰及 EPUB 选择仍未实现。
 
-本轮新增 DemoReadingStorage 与宿主快照保存/恢复：版本 JSON、逐书快照、最近成功 URI/编码、600ms 状态合并、切书/停止/状态保存补存、冷启动恢复和失败从头打开。Activity 重建优先 View 状态，准备期与错误打开不覆盖旧成功记录，预校验保留旧书时继续保存旧会话。Debug 构建通过，未新增或运行测试；冷启动/旋转/进程重建、记录损坏、未知模式/效果、内容变化回退、URI 授权撤销、异步落盘和快速切书仍待运行验证。当前不含书架列表、记录清理及持久授权淘汰，来源磁盘索引/EPUB 与剩余 Widget 定制继续保留在范围内。
+本轮新增 ReadingStorage 与宿主快照保存/恢复：版本 JSON、逐书快照、最近成功 URI/编码、600ms 状态合并、切书/停止/状态保存补存、冷启动恢复和失败从头打开。Activity 重建优先 View 状态，准备期与错误打开不覆盖旧成功记录，预校验保留旧书时继续保存旧会话。Debug 构建通过，未新增或运行测试；冷启动/旋转/进程重建、记录损坏、未知模式/效果、内容变化回退、URI 授权撤销、异步落盘和快速切书仍待运行验证。当前不含书架列表、记录清理及持久授权淘汰，来源磁盘索引/EPUB 与剩余 Widget 定制继续保留在范围内。
 
 本轮新增 getSelectionActions 与工具栏共用动作、根节点复制/默认高亮/清除、虚拟正文可见文本长点击/指定范围选择、原文范围 SPI/StaticLayout 映射、相对选区报告和回收清理。修订号/代次检查拒绝旧动作，复制重验原文并返回剪贴板失败，高亮 ID factory 回调后再验证重入。Debug 构建通过，未新增或运行测试；TalkBack/Switch Access、子节点到根选区动作发现、服务动作缓存、Unicode 字符边界、滚动切片/回收、隐藏候选、忙碌拒绝、剪贴板异常与工厂重入仍待设备验证。字符/词粒度移动和跨节点无障碍扩展尚未实现。
 
@@ -193,31 +193,31 @@ Demo 文件接入扩展为 TXT/EPUB 格式选择：系统文档选择器、可�
 
 本轮 BookPresentationHost 接入 placeholderFactory/retryChapter，分页空章节 overlay 控制器及候选全路径清理，滚动空章/边界 holder 共用控制器，recycle/detach 清除。边界保存 ReaderError、类型分流、按钮状态去重/空闲刷新、活动代次/row/holder守卫；retry先调用章节服务清失败缓存，再加载，加载占位与可见锚点恢复。空章虚拟/实际高度同步128dp，三章窗口不变。Debug 构建通过，未新增或运行测试；空章节/邻章失败、旧按钮/工厂切换、缓存重试、窗口追加/淘汰/偏移、忙碌与回收生命周期、辅助技术均待设备验证。
 
-本轮新增 ReaderPageFactories/ReaderPlaceholderFactories.default() 公共默认工厂入口，DemoReaderPageFactory 与 DemoReaderPlaceholderFactory 使用公开 SPI 的独立 root/bodyHost、受控宿主动作、时间刷新和重试；解绑清监听/文字/进度。设置页可独立切换模板与占位，Activity Bundle 保存宿主选择并重建对象，页面字号/字体与可见性继续来自 ReaderStyle。Debug 构建通过，未新增或运行测试；实际工具栏测量/body viewport、动作过期、按钮与翻页触摸、时间/占位生命周期、Activity/进程恢复和无障碍仍待验证。原完整目标中的分层样式、书架/授权清理、无障碍跨节点和性能验收继续实施。
+本轮新增 ReaderPageFactories/ReaderPlaceholderFactories.default() 公共默认工厂入口，CustomPageFactory 与 CustomPlaceholderFactory 使用公开 SPI 的独立 root/bodyHost、受控宿主动作、时间刷新和重试；解绑清监听/文字/进度。设置页可独立切换模板与占位，Activity Bundle 保存宿主选择并重建对象，页面字号/字体与可见性继续来自 ReaderStyle。Debug 构建通过，未新增或运行测试；实际工具栏测量/body viewport、动作过期、按钮与翻页触摸、时间/占位生命周期、Activity/进程恢复和无障碍仍待验证。原完整目标中的分层样式、书架/授权清理、无障碍跨节点和性能验收继续实施。
 
-本轮 DemoReadingStorage 扩展有界不可变history、旧recent v1/v2迁移、最近身份排序/去重、书名规范化、同edit进度+metadata、32项淘汰与forget。MainActivity提供最近阅读入口、身份校验复用来源/快照恢复、移除当前书籍保护；文件/标注保留，授权尚未回收。Debug 构建通过，未新增或运行测试；旧存储/损坏项、TXT不同编码、EPUB URI、最近排序/上限、冷启动/授权丢失、记录移除与自动保存竞态仍待验证。授权追踪/清理与完整剩余范围继续推进。
+本轮 ReadingStorage 扩展有界不可变history、旧recent v1/v2迁移、最近身份排序/去重、书名规范化、同edit进度+metadata、32项淘汰与forget。MainActivity提供最近阅读入口、身份校验复用来源/快照恢复、移除当前书籍保护；文件/标注保留，授权尚未回收。Debug 构建通过，未新增或运行测试；旧存储/损坏项、TXT不同编码、EPUB URI、最近排序/上限、冷启动/授权丢失、记录移除与自动保存竞态仍待验证。授权追踪/清理与完整剩余范围继续推进。
 
-本轮新增 DemoUriGrantStore 与文件选择异步保留：application IO队列串行操作、只追踪新取得持久读授权、取得前提交账本、Activity取消独立、选择序号防旧结果覆盖。历史保存/移除及停止补存触发引用核对，保护当前/请求/待选择/重试输入与同URI多记录；清理前确认进度落盘，失败保留账本重试，已失效授权清陈旧项，不清扫未知应用授权或释放写权限。README/API设计/计划同步。Debug构建通过，未新增或运行测试；真实提供器、授权撤销、进程死亡、快速切书及同URI不同编码仍待设备验证。分层样式、宿主偏好和无障碍等剩余范围继续保留。
+本轮新增 UriGrantStore 与文件选择异步保留：application IO队列串行操作、只追踪新取得持久读授权、取得前提交账本、Activity取消独立、选择序号防旧结果覆盖。历史保存/移除及停止补存触发引用核对，保护当前/请求/待选择/重试输入与同URI多记录；清理前确认进度落盘，失败保留账本重试，已失效授权清陈旧项，不清扫未知应用授权或释放写权限。README/API设计/计划同步。Debug构建通过，未新增或运行测试；真实提供器、授权撤销、进程死亡、快速切书及同URI不同编码仍待设备验证。分层样式、宿主偏好和无障碍等剩余范围继续保留。
 
 本轮落地分层边距与标题字距：追加Page.viewportPadding、Body.containerPadding/blockPadding、Title.padding/letterSpacingEm，XML新属性与style SavedState兼容可选字段。ReaderBodyInsets统一正文区域层求和/像素校验；PaginationEngine统一减宽和PaddedBlockLayout包装单位首尾/片段，分页与滚动共享绘制、选区路径、手柄、命中、拖动及纵向可见文本几何，标题独立边距和TextPaint字距。Demo增加四边dp编辑和标题em字距输入，复用applyStyle回滚。Debug构建通过（3秒），未新增或运行测试；实际跨页首尾、RTL/长段落/custom provider、选区/辅助技术和旧状态/旋转仍待设备验证。API设计/计划已同步，完整剩余范围不收缩。
 
-本轮新增DemoReaderPreferences与DemoReaderThemes：宿主独立JSON版本/组验证、全样式可重建描述、输入/翻页参数、全局内置模式/效果、模板标志，有界记录/调色表与资源名解析；字体/工厂对象不保存。初始化在View恢复后用公开suspend接口依次执行，之后调色合并和打开；重建不覆盖系统View状态，逐书snapshot可覆盖初始模式/效果。成功样式缓存避免预备/失败版式写盘，设置成功和停止/状态保存补存。四种主题协调明暗文字/背景/手柄，自定义工具栏跟随底色。Debug构建通过（2秒），未新增或运行测试；实际冷/暖重建、偏好/逐书配置优先级、坏数据/资源更新、取消/失败和视觉对比度仍待设备验证。设计文档与实施计划同步，目标继续保持完整范围。
+本轮新增ReaderPreferences与ReaderThemes：宿主独立JSON版本/组验证、全样式可重建描述、输入/翻页参数、全局内置模式/效果、模板标志，有界记录/调色表与资源名解析；字体/工厂对象不保存。初始化在View恢复后用公开suspend接口依次执行，之后调色合并和打开；重建不覆盖系统View状态，逐书snapshot可覆盖初始模式/效果。成功样式缓存避免预备/失败版式写盘，设置成功和停止/状态保存补存。四种主题协调明暗文字/背景/手柄，自定义工具栏跟随底色。Debug构建通过（2秒），未新增或运行测试；实际冷/暖重建、偏好/逐书配置优先级、坏数据/资源更新、取消/失败和视觉对比度仍待设备验证。设计文档与实施计划同步，目标继续保持完整范围。
 
-本轮新增DemoReaderStylePanel替代Activity内嵌间距编辑：五组菜单覆盖页面/chrome/正文/标题/内容边距、标题/正文sp与em字距、行段距、标题对齐，另提供系统字体/缩进/chrome内容和高度。共用数值与四边输入、ScrollView和labelFor、最新样式字段合并、当前弹窗身份/Activity检查及停止/销毁关闭；全部经公开applyStyle与成功偏好链路。Debug构建通过，未新增或运行测试；面板键盘/屏幕尺寸、取消/重建/旧弹窗、真实重排/选区和自定义模板字段行为待验证。设计文档/实施计划同步，网络示例/控制面板/独立与自定义效果等仍保持在目标中。
+本轮新增TypographySheet替代Activity内嵌间距编辑：五组菜单覆盖页面/chrome/正文/标题/内容边距、标题/正文sp与em字距、行段距、标题对齐，另提供系统字体/缩进/chrome内容和高度。共用数值与四边输入、ScrollView和labelFor、最新样式字段合并、当前弹窗身份/Activity检查及停止/销毁关闭；全部经公开applyStyle与成功偏好链路。Debug构建通过，未新增或运行测试；面板键盘/屏幕尺寸、取消/重建/旧弹窗、真实重排/选区和自定义模板字段行为待验证。设计文档/实施计划同步，网络示例/控制面板/独立与自定义效果等仍保持在目标中。
 
-本轮新增DemoReaderControlPanel：Activity非模态覆盖层不改变阅读尺寸，中间点击显示/隐藏、显式按钮/返回收起；目录/排版/设置、上一章/下一章、章节SeekBar和页号输入。公开Ready/Idle与章节分页结果控制可用性，目标实例/章节/revision/layoutKey/页数在提交与协程执行时复核；触摸预览到释放提交、键盘/辅助技术分支、单导航Job和过期序号保护，换书/停止/销毁关闭取消，导航结果沿原Widget链路。Debug构建通过，未新增或运行测试；实机覆盖层/触摸/IME/服务、虚拟页、快速重排/取消/生命周期仍待验证。设计与计划同步，目标保持完整范围。
+本轮新增ReaderMenuController：Activity非模态覆盖层不改变阅读尺寸，中间点击显示/隐藏、显式按钮/返回收起；目录/排版/设置、上一章/下一章、章节SeekBar和页号输入。公开Ready/Idle与章节分页结果控制可用性，目标实例/章节/revision/layoutKey/页数在提交与协程执行时复核；触摸预览到释放提交、键盘/辅助技术分支、单导航Job和过期序号保护，换书/停止/销毁关闭取消，导航结果沿原Widget链路。Debug构建通过，未新增或运行测试；实机覆盖层/触摸/IME/服务、虚拟页、快速重排/取消/生命周期仍待验证。设计与计划同步，目标保持完整范围。
 
-本轮新增DemoReaderEffects宿主目录与WipeEffect：自定义demo.wipe工厂每次新实例，公开生命周期/双页面进度裁剪/方向RTL/阴影，Canvas finally还原，结束/取消/解绑清事务，无独立计时器/导航/位图。效果菜单包含自定义示例；宿主偏好已知ID与Activity自定义标记重建工厂，库内置解析/快照不扩展，内置逐书效果仍保持原恢复优先级。Debug构建通过（2秒），未新增或运行测试；实机手势/端点/回退/RTL/效果切换、模式/重建和渲染仍待验证。API设计与计划同步，独立效果容器和网络示例等仍保持在目标中。
+本轮新增ReaderEffects宿主目录与WipeEffect：自定义demo.wipe工厂每次新实例，公开生命周期/双页面进度裁剪/方向RTL/阴影，Canvas finally还原，结束/取消/解绑清事务，无独立计时器/导航/位图。效果菜单包含自定义示例；宿主偏好已知ID与Activity自定义标记重建工厂，库内置解析/快照不扩展，内置逐书效果仍保持原恢复优先级。Debug构建通过（2秒），未新增或运行测试；实机手势/端点/回退/RTL/效果切换、模式/重建和渲染仍待验证。API设计与计划同步，独立效果容器和网络示例等仍保持在目标中。
 
-本轮新增独立通用容器演示：DemoContainerActivity内部Activity入口、DemoCardReadView继承BaseReadView<Int>、CardAdapter公开SPI与五TextView卡片，不依赖书籍模型。候选精确测量、代次/所有者检查、surface转移与dispose/detach释放、viewport首次补初始化/已显示复测；通用方向/能力/导航/效果复用。效果目录含自定义擦除，状态监听与Activity已提交序号/工厂标识恢复，稳定View ID沿原SavedState保存轻量配置。Debug构建通过（3秒），未新增或运行测试；实际挂载/重建、效果/手势/取消、键盘/辅助技术与边界待验证。文档同步，网络来源示例与完整剩余范围继续保持。
+本轮新增独立通用容器演示：ContainerActivity内部Activity入口、CardReadView继承BaseReadView<Int>、CardAdapter公开SPI与五TextView卡片，不依赖书籍模型。候选精确测量、代次/所有者检查、surface转移与dispose/detach释放、viewport首次补初始化/已显示复测；通用方向/能力/导航/效果复用。效果目录含自定义擦除，状态监听与Activity已提交序号/工厂标识恢复，稳定View ID沿原SavedState保存轻量配置。Debug构建通过（3秒），未新增或运行测试；实际挂载/重建、效果/手势/取消、键盘/辅助技术与边界待验证。文档同步，网络来源示例与完整剩余范围继续保持。
 
-本轮新增网络章节来源演示：宿主DemoNetworkBookSource实现BookSource/AutoCloseable，HTTPS同源目录JSON/正文、流与响应上限、严格UTF-8与行块、目录原子安装/章节并发、协程取消/超时/连接清理。DemoNetworkActivity显式地址输入、打开/取消/重试/前后页、序号拒绝旧回调；停止关闭连接/Widget并导出snapshot，Bundle保存版本化位置/恢复标志避免停止后状态保存丢位置，前台恢复重建来源。Manifest网络权限仅app，三份协议样本加入docs/examples/network。Debug构建通过，未新增或运行测试，未访问外部网络；实际HTTP/TLS/并发/取消/生命周期和位置恢复待设备验证。API设计/计划同步，完整剩余范围继续保持。
+本轮新增网络章节来源演示：宿主NetworkBookSource实现BookSource/AutoCloseable，HTTPS同源目录JSON/正文、流与响应上限、严格UTF-8与行块、目录原子安装/章节并发、协程取消/超时/连接清理。NetworkActivity显式地址输入、打开/取消/重试/前后页、序号拒绝旧回调；停止关闭连接/Widget并导出snapshot，Bundle保存版本化位置/恢复标志避免停止后状态保存丢位置，前台恢复重建来源。Manifest网络权限仅app，三份协议样本加入docs/examples/network。Debug构建通过，未新增或运行测试，未访问外部网络；实际HTTP/TLS/并发/取消/生命周期和位置恢复待设备验证。API设计/计划同步，完整剩余范围继续保持。
 
 本轮审阅网络示例后补齐可确认边界：URI构造前和ASCII解析后2048长度上限，远端目录JSONObject前32层结构/引号转义/根后内容/取消检查，字段真实类型验证，响应长度格式不再静默视为未知。避免字节有界但JSON递归无界以及字符串隐式转换；原子快照安装/失败保留契约不变。Debug构建通过，未新增或运行测试/外部网络请求；恶意深度、Unicode地址、损坏字段/HTTP头与生命周期仍待运行验证。设计/计划同步，完整目标继续保持。
 
-本轮新增DemoAnnotationPanel统一书签/高亮管理与正文高亮点击详情：计数菜单、有效/待验证/失效原因、摘录预览/详情有界、改色/删除、严格锚点跳转、未验证显式章首加载后复查；书签仍走goToBookmark恢复。窗口身份/书籍实例/标注相等复核、执行前重查、单Job/序号、换书/停止/销毁取消。公开接口与原AnnotationStorage事件持久化复用，Widget模型不扩展。Debug构建通过，未新增或运行测试；实际失效/加载验证/回退/Busy、生命周期和服务操作待验证。设计/计划同步，完整目标继续保持。
+本轮新增AnnotationPanel统一书签/高亮管理与正文高亮点击详情：计数菜单、有效/待验证/失效原因、摘录预览/详情有界、改色/删除、严格锚点跳转、未验证显式章首加载后复查；书签仍走goToBookmark恢复。窗口身份/书籍实例/标注相等复核、执行前重查、单Job/序号、换书/停止/销毁取消。公开接口与原AnnotationStorage事件持久化复用，Widget模型不扩展。Debug构建通过，未新增或运行测试；实际失效/加载验证/回退/Busy、生命周期和服务操作待验证。设计/计划同步，完整目标继续保持。
 
-本轮新增DemoPageIndexPanel替代旧全书页数弹窗：计算/输入窗口和监听器集中管理，挂起API单Job/序号，正常窗口切换解除旧dismiss动作；取消/换书/停止/销毁清理。输入窗口绑定书籍/索引实例，索引失效关闭，提交及执行前复核Long页号，最终沿公开goToGlobalPage的库内索引与导航取消保护。Debug构建通过，未新增或运行测试；实际全书页数、快速重排/刷新/换书、取消/重建和页号边界待设备验证。设计/计划同步，完整目标继续保持。
+本轮新增PageIndexPanel替代旧全书页数弹窗：计算/输入窗口和监听器集中管理，挂起API单Job/序号，正常窗口切换解除旧dismiss动作；取消/换书/停止/销毁清理。输入窗口绑定书籍/索引实例，索引失效关闭，提交及执行前复核Long页号，最终沿公开goToGlobalPage的库内索引与导航取消保护。Debug构建通过，未新增或运行测试；实际全书页数、快速重排/刷新/换书、取消/重建和页号边界待设备验证。设计/计划同步，完整目标继续保持。
 
 
 本轮补齐同一正文视图内虚拟节点边界的普通字符/词/段落移动：按片段阅读顺序寻找相邻可见有效语义，进入方向决定首/尾游标，清除旧选区、标准焦点转移、目标节点事件与重入后身份/启用复核。复用已有几何/UTF-16范围，不读取来源或提交阅读位置。Debug构建通过，未新增或运行测试；跨节点扩展、滚动跨行/可见页外移动、TalkBack焦点及服务事件实际验收仍待完成。设计/计划同步，完整目标继续保持。
@@ -273,7 +273,7 @@ Demo 文件接入扩展为 TXT/EPUB 格式选择：系统文档选择器、可�
 
 本轮补齐自定义选区工具栏的真实宿主示例和默认恢复：setter 接受 null，Demo 独立视图仅调用公开受控动作并清理监听；设置可切换，宿主保存标志并重建工厂，不序列化工厂对象。新增操作结果提示及旧偏好兼容。Debug 构建通过，未新增或运行测试；长按/切换/操作/解绑、旋转冷启动与窗口实况仍待验证，API/计划/接入说明同步，完整目标保持。
 
-本轮新增自定义正文块的真实宿主示例：DemoDividerBlock 与 DemoDividerLayoutProvider 只依赖公开 API，提供稳定身份、资源估算、worker 测量和共用绘制几何，并明确非文本选择边界。独立 DemoCustomContentActivity 提供分页/滚动/导航/重试及生命周期请求归属，已注册菜单入口。Debug 构建通过，未新增或运行测试；分页边界、恢复/旋转、缓存、取消与无障碍实际行为待验证，设计/计划/接入说明同步，完整目标保持。
+本轮新增自定义正文块的真实宿主示例：DividerBlock 与 DividerLayoutProvider 只依赖公开 API，提供稳定身份、资源估算、worker 测量和共用绘制几何，并明确非文本选择边界。独立 CustomContentActivity 提供分页/滚动/导航/重试及生命周期请求归属，已注册菜单入口。Debug 构建通过，未新增或运行测试；分页边界、恢复/旋转、缓存、取消与无障碍实际行为待验证，设计/计划/接入说明同步，完整目标保持。
 
 本轮推进分页普通文字粒度的离屏衔接：独立异步入口不先清源焦点，Job 延后启动并校验源切片/版本/焦点，统一无动画导航成功后校验活动页与提交位置再进入目标边界。忙碌/边界拒绝，尺寸变化和 detach 取消，主机 SPI 兼容委托原导航。Debug 构建通过，未新增或运行测试；滚动离屏、离屏选区扩展、空页焦点及 TalkBack/SwitchAccess 真实行为仍待完成，文档同步，完整目标保持。
 
@@ -297,7 +297,7 @@ Demo 文件接入扩展为 TXT/EPUB 格式选择：系统文档选择器、可�
 
 本轮落实 TXT 逐行规范化：TextBookOptions 增加 TextNormalization，默认保留、可选择去行尾或行两端空白；非默认策略计入 revision，偏移始终对应输出文本。合并内存/磁盘章节语法为 TextSnapshotParser，行规则为 TextLineReader，存储只处理结果；内存移除整书换行替换副本，身份回调后检查取消。Debug 构建通过，未新增或运行测试；两条路径一致性、边界输入、取消与恢复实际行为仍待验证，持久索引复用/设备性能仍待完成，架构/API正文及计划/接入说明同步。
 
-本轮补齐 TXT 配置真实宿主示例：独立 Activity 展示存储/规范化/内容 ID 的公开扩展、重读和模式切换，菜单/Manifest/固定 View ID 已接入；重复空白行显式消歧。宿主停止时导出快照/撤销归属/关闭来源，前台重建恢复，设置与位置保存在 Bundle；网络/文本共用 DemoSnapshotState，旧网络格式兼容。Debug 构建通过，未新增或运行测试；切换、恢复/旋转、取消和文件释放实际行为仍待设备验证，API/计划/README 同步，完整目标保持。
+本轮补齐 TXT 配置真实宿主示例：独立 Activity 展示存储/规范化/内容 ID 的公开扩展、重读和模式切换，菜单/Manifest/固定 View ID 已接入；重复空白行显式消歧。宿主停止时导出快照/撤销归属/关闭来源，前台重建恢复，设置与位置保存在 Bundle；网络/文本共用 SnapshotState，旧网络格式兼容。Debug 构建通过，未新增或运行测试；切换、恢复/旋转、取消和文件释放实际行为仍待设备验证，API/计划/README 同步，完整目标保持。
 
 本轮开始原始需求逐项核对，新增 07 核对索引并保留全部未核对范围。FR-VIEW-01 发现默认页脚仅进度的真实缺口，已追加 PAGE_PROGRESS_AND_TIME/XML=8，DEFAULT 页脚使用组合项，分钟更新保留进度；Demo 主 XML 与面板接入，原枚举/显式配置兼容。Debug 构建通过，未新增或运行测试。只读设备查询确认在线 API36 模拟器，不证明当前行为或目标设备矩阵完成；页面实况/所有验收场景仍待验证，API/计划/README同步，完整目标保持。
 
@@ -313,10 +313,10 @@ Demo 文件接入扩展为 TXT/EPUB 格式选择：系统文档选择器、可�
 
 本轮核对 FR-STYLE-01 至 09，修复 applyStyle 在中断/失效回调后才捕获代次导致旧请求接管新归属的风险。回调前记录预期代次，通知/状态发布后复核；失败回滚保留等待期间已接受的装饰配置，回滚各步骤检查归属。继续使用局部函数和统一导航，未增加公共类。仅装饰更新免重排，其他样式保守失效，纯颜色缓存优化尚未实现。未新增或运行测试；背景/字体/分层间距、位置恢复及重入实际行为仍待验证，API/计划和07核对表同步。
 本轮核对 FR-DEMO-01 至 07，修复 EPUB 无目标分组仍可点击后才报错：原目录保留层级，空路径行禁用并显示文字说明；控制面板只有可读/空闲且目录非空才启用目录。更新目录操作捕获书籍实例并在点击时复核，防止旧对话框更新新会话。实现留在宿主，未增加库 API。未新增或运行测试；目录实况、辅助服务、配置/进度/标注恢复、文件授权与全部示例扩展仍需证据，API/计划和07核对表同步。
-本轮核对生命周期质量路径，修正 DemoNetworkActivity.stop 在取消后才清空请求、关闭后才清空来源的顺序。先撤销归属，再以 finally 链关闭阅读器及旧来源；停止失败清理未安装新来源。网络来源 close 清空连接登记，锁外逐个断开，普通异常继续剩余清理，重复关闭不再保留连接列表。Debug 构建通过，未新增或运行测试；取消延迟、异常/重开、连接及资源最终释放仍缺动态证据，API/计划及07质量属性映射同步。
+本轮核对生命周期质量路径，修正 NetworkActivity.stop 在取消后才清空请求、关闭后才清空来源的顺序。先撤销归属，再以 finally 链关闭阅读器及旧来源；停止失败清理未安装新来源。网络来源 close 清空连接登记，锁外逐个断开，普通异常继续剩余清理，重复关闭不再保留连接列表。Debug 构建通过，未新增或运行测试；取消延迟、异常/重开、连接及资源最终释放仍缺动态证据，API/计划及07质量属性映射同步。
 本轮核对网络内容版本，发现目录标题生成正文 HeadingBlock 但章节 revision 只摘要响应字节，改标题会保持错误同版。新增宿主内部章节摘要 v2，覆盖域标识、长度前缀精确 UTF-16 标题和原始响应，8KiB 分块取消检查，最终复核关闭；目录版本/身份不变，旧保存修订按原失配规则处理。API 正文及计划同步，07 新增九项一致性证据映射；未新增或运行测试，标题更新/标注/恢复与并发行为仍待验证。
 本轮修复页面工厂/块布局提供者切换在中断和失效回调后无归属检查的问题，共享 refreshLayoutConfiguration，视口失效后亦复核代次。延后重排用本地序号合并同代次重复 post，旧 Job 先撤销字段再取消、LAZY 登记后启动、finally 仅清自身，失败通知不污染新请求，窗口离开使延后任务失效。Debug 构建通过，未新增或运行测试；公开接口/统一提交机制保留，API/计划及07原始20项验收证据映射同步，扩展重入/恢复实况仍待验证。
-本轮补齐真实 Java 宿主示例：编译产物确认 ReaderListener 默认函数在 Java 视角为 abstract，新增两个无状态抽象适配器，避免每个 Java 宿主补齐空回调。DemoJavaActivity 直接使用公开模型/来源/Widget，展示打开/导航/取消/保存恢复、只覆盖状态监听；菜单/Manifest/稳定 ID 接入，宿主序号及取消前撤销字段、返回句柄完成检查。Debug 构建实际执行 Java 编译且通过，未新增或运行测试；编译只证明具体调用可用，取消恰好一次与恢复/窗口行为仍需动态证据。API/计划/README及07 Java 证据范围同步。
+本轮补齐真实 Java 宿主示例：编译产物确认 ReaderListener 默认函数在 Java 视角为 abstract，新增两个无状态抽象适配器，避免每个 Java 宿主补齐空回调。JavaReaderActivity 直接使用公开模型/来源/Widget，展示打开/导航/取消/保存恢复、只覆盖状态监听；菜单/Manifest/稳定 ID 接入，宿主序号及取消前撤销字段、返回句柄完成检查。Debug 构建实际执行 Java 编译且通过，未新增或运行测试；编译只证明具体调用可用，取消恰好一次与恢复/窗口行为仍需动态证据。API/计划/README及07 Java 证据范围同步。
 本轮修复 repository 已移到工作线程但内容指纹扫描不可取消的缺口。ChapterContent 内部准备接收检查回调，repository 提供当前协程 ensureActive；类型/块/字符串及4KiB批次检查、整章缓冲复用，完成后才缓存。取消不留下假 null/半结果，同一对象后续重试可重新准备，结构摘要格式未改变，模型无协程依赖。Debug/Java 编译通过，未新增或运行测试；真实取消延迟、锁竞争与大章资源趋势仍待验证，架构/API/计划及07证据同步。
 本轮核对非协程请求通知，submit 的回调增加普通 Exception 诊断隔离且不重送达；两类监听分发同样仅隔离 Exception，Error 传播。取消/完成 KDoc 明确线程安全幂等、终态不改写、isCompleted 先于排队回调；API 正文修正 StyleApplication 字段及仅装饰免重排事实。Debug/Java 编译通过，未新增或运行测试，终态竞争/回调异常/重入/释放实况仍待验证；公开结果及单完成钩子机制保留，API/计划/07同步。
 本轮核对交付边界，生成并读取最新 Release AAR：Manifest 只有库包/minSdk21，无 Demo权限/Activity；classes.jar 518条目，ReaderView/监听适配器存在，未发现Demo包/测试类名。收回 protected readerScope 为 internal，Demo通用容器改公共 callback 导航初始化，避免宿主控制内部作用域；Kotlininternal合成访问仍存在，不宣称字节码安全隔离。consumer注释明确直接引用/反射责任，未新增全库keep。Debug/Java/Release构建通过，未新增或运行测试，Maven发布/独立消费/压缩和设备矩阵仍待完成；API/计划/README/07同步。
@@ -521,7 +521,7 @@ release先终止操作/监听引用，再独立尝试任务/书籍/导航/适配
 
 按用户最新优先级完善 Apple/iBook、Google/MoonReader 两类仿真。curl 保留为 Apple 兼容别名；CurlOptions/CurlControlPointPolicy 公开外观、网格和控制点策略，非默认配置不伪装成可恢复默认工厂。Apple 用纯几何 BoundCurlGeometry 取代归位零向量奇点，约束正面装订边并使两端网格连续退化；是逐行圆柱二维近似，倾斜折边阴影仍有局限。Google 以本机 PlayLikeCurl 为主要参考，移植波形/半径增长/平移/透视关系至 Canvas 网格，许可通知保留。两种效果共用双快照预算生命周期。
 
-ReaderPageFactories.withDecorations 组合任意 View 页眉/页脚，默认正文继续参与既有测量和导航；提供独立 create/bind/unbind/分钟更新协议。DemoCurlActivity 以真实 ImageView/ProgressBar 装饰展示效果切换和拖动，状态区固定高度以避免切换时重排。
+ReaderPageFactories.withDecorations 组合任意 View 页眉/页脚，默认正文继续参与既有测量和导航；提供独立 create/bind/unbind/分钟更新协议。CurlActivity 以真实 ImageView/ProgressBar 装饰展示效果切换和拖动，状态区固定高度以避免切换时重排。
 
 Debug/Java/Release 构建通过（5秒）。本次源码 APK 在 API36、1080×2424 模拟器手动检查两种效果，各观察到前翻/短拖复位/后翻页码 1→2→2→1，并检查实际中间帧。直接调用已编译几何的临时采样覆盖 70,525,455 材料点：装订边位移0；相邻控制点 x/y 各0.01px的样本最大位移0.103272px，归位差0.001px时最大位移0.005982px；端点断言通过。这是有限采样，不是全域误差上界或完整交互验收。未新增/运行仓库自动化测试套件。
 
@@ -532,7 +532,7 @@ Debug/Java/Release 构建通过（5秒）。本次源码 APK 在 API36、1080×2
 
 ## 67. 全模式演示、交互装饰与 RTL 观察（2026-10-08）
 
-补齐 DemoCurlActivity 的六效果入口、方向/自定义参数/模式切换；任意 View 装饰增加真实 Button 与 SeekBar 交互。控件绑定使用页上下文，解绑撤销监听；ReaderPageDecoration 的主线程、稳定 View、重复绑定/尺寸/清理契约已写入公开注释。自定义策略重映射 x 的平滑行程，使 Google 示例实际消费控制点策略。状态容器固定48dp、标题单行省略，提示文字不再改变正文视口。实测发现 Demo 未声明 supportsRtl，已修正并构建/安装；最后 Debug/Java/Release 构建通过（1秒）。
+补齐 CurlActivity 的六效果入口、方向/自定义参数/模式切换；任意 View 装饰增加真实 Button 与 SeekBar 交互。控件绑定使用页上下文，解绑撤销监听；ReaderPageDecoration 的主线程、稳定 View、重复绑定/尺寸/清理契约已写入公开注释。自定义策略重映射 x 的平滑行程，使 Google 示例实际消费控制点策略。状态容器固定48dp、标题单行省略，提示文字不再改变正文视口。实测发现 Demo 未声明 supportsRtl，已修正并构建/安装；最后 Debug/Java/Release 构建通过（1秒）。
 
 
 没有新增/运行仓库自动化测试套件。iBook保持回退、未完成；连续滚动组合、快速变向、生命周期配置变化、API21/不同尺寸/性能与完整原始需求仍待独立确认。历史发布包/JVM清单未更新。
@@ -657,7 +657,7 @@ Debug与库Release构建通过（6秒），仅安装5556/5558，未操作用户�
 
 ## 82. Java页装饰适配器与实际Release清单（2026-10-08）
 
-核对JVM签名发现ReaderPageDecoration的Kotlin默认方法仍为Java抽象成员。新增ReaderPageDecorationAdapter，为unbind/needsTimeUpdates/onTimeChanged提供默认值，Java仅需View/bind；监听器/任务清理仍由宿主覆盖，无输入代理或额外计时器。DemoJavaDecorations实际使用独立TextView/Button工厂，DemoJavaActivity配置Google CurlOptions及连续端点控制点SAM，固定两行状态防止反馈文字改变阅读视口。
+核对JVM签名发现ReaderPageDecoration的Kotlin默认方法仍为Java抽象成员。新增ReaderPageDecorationAdapter，为unbind/needsTimeUpdates/onTimeChanged提供默认值，Java仅需View/bind；监听器/任务清理仍由宿主覆盖，无输入代理或额外计时器。JavaPageDecorations实际使用独立TextView/Button工厂，JavaReaderActivity配置Google CurlOptions及连续端点控制点SAM，固定两行状态防止反馈文字改变阅读视口。
 
 Java编译通过，独立API36 LTR观察页脚按钮响应但页眉仍1，前后翻1→2→1、短拖持页显示实际Google曲面并复位1。Release AAR、源码/POM/模块元数据及本地Maven ZIP生成通过；当前ZIP元数据选中AAR哈希与当前Release一致，保留历史SNAPSHOT条目。接口清单刷新为516 class条目/所选217 Java可见类型，Demo/测试匹配0，Manifest minSdk21无权限/Activity；清单不等于支持API白名单。导出脚本可重复从AAR生成，09说明同步。
 
@@ -793,3 +793,143 @@ CornerCurlEffect改用IBookCurlShadow，锥面/圆柱统一按真实轮廓高度
 ## 2026-10-13：iReadView 命名与仓库迁移
 
 项目品牌统一为 iReadView，阅读库模块及物理目录改为 :app:ireadview / app/ireadview；更新 Gradle 依赖、AAR 名称、发布元数据、Demo 显示名称、日志标签、示例宿主和文档/工具引用。Maven 坐标保持 org.peyilo.ireadview:ireadview；已有内容身份摘要域保持兼容。Release JVM 清单和当前发布包摘要由重新构建的产物生成。Demo Debug、库 Release 和本地 Maven 发布包构建成功，独立 Kotlin/Java 宿主 Debug 构建成功；本轮未运行自动化测试。GitHub 私有仓库为 https://github.com/Peyilo/iReadView 。
+
+## 2026-10-13：Demo 真实 TXT 小说接入
+
+从旧参考 Demo 的本地 assets 复制《妖精之诗》（尼希维尔特）到 Demo assets，默认首页与专门的 Apple/Google/卷页观察页通过真实 TXT 来源读取。TextFiles 承担文件元数据查询、64 KiB 编码采样及 Demo 的输入工厂；ProgressTextBookSource 包装公开 TextBookSource 以观察实际输入字节和书籍目录完成，解析、磁盘索引、正文布局仍归 Library。未引入第二套章节解析器或人为加载延迟。
+
+系统文档选择后自动尝试 BOM/UTF-8/UTF-16 特征/GB18030；启发式不保证全部编码，TXT 信息与失败对话框可手动更换。真实小说和选中文件使用磁盘索引、TRIM_LINE_EDGES，前言及章节分割复用当前库规则；保留 URI 授权、历史和位置恢复。读取比例仅在提供文件大小时确定，未知大小和目录整理/页面准备显示不定进度，不伪装成全书排版百分比。专门效果页增加目录并在暂停/重建时保存轻量位置、取消请求和关闭 TXT 来源。
+
+Demo Debug APK 构建成功；本轮未运行自动化测试或声称全部编码、文件提供器及设备生命周期已验收。
+
+## 2026-10-13：Demo 类名与目录整理
+
+移除当前 Demo 类的 Demo 前缀，源码归入 ui、data、reader、content；界面进一步区分 reader/panel、effects、container、examples，数据区分 source、storage、state。实现公开 SPI 的示例使用 CustomPageFactory、CustomPlaceholderFactory、CustomSelectionToolbarFactory，避免与接口重名。TextFiles/ProgressTextBookSource 和 DividerBlock/DividerLayoutProvider 分为独立文件。
+
+同步更新 Kotlin/Java 跨包引用、根 namespace 的 R 导入、Manifest 的 Activity 完整类名、既有集成测试入口及文档链接。MainActivity 的宿主方法简化为 applyReaderStyle/addSampleHighlight，应用 ID、来源身份、偏好和快照键保持。当前职责及目录见 [Demo 工程结构](../app/README.md)。Demo Debug 构建成功，未运行测试。
+
+## 2026-10-13：启动菜单与真实网络书源
+
+HomeActivity 成为 launcher，三个主要按钮分别打开内置小说、系统 TXT 文件选择器和网络阅读。原阅读页改名 ReaderActivity / activity_reader，通过明确的入口参数区分内置书与已选 URI，避免按钮打开最近的其他文件；取消文件选择不进入阅读页。其他 Widget 示例收纳到更多示例入口。
+
+参考旧 BiqugeBookLoader 的“目录 HTML → 章节 HTML”流程新增 WebBookSource，以 jsoup 解析书名、链接与段落，再实现公开 BookSource 的按章加载。默认维基文库《西游记》；旧站规则保留，但原 https://www.yuyouku.com/book/185030/ 本轮请求超时，不宣称可用。原 JSON 来源保留，两者复用 HttpsBookClient 的超时、上限、取消和关闭。HTML 可读取 gzip；JSON 保持 identity。NetworkActivity 增加书源选择、目录和效果菜单，并自动打开默认书。
+
+HTML 解析与 NIO desugaring 仅为 Demo 依赖。Debug APK 构建成功；未运行自动化测试或声称 Android 端联网、全部站点规则和生命周期已验收。流程、网站链接和来源范围见 app/README.md。
+
+## 2026-10-13：直接沿用原网络书源
+
+按用户要求，网络入口改用 BiqugeBookSource，直接适配旧 BiqugeBookLoader 的站点 https://www.yuyouku.com/、示例书籍 185030、article h1/#chapters-list li a/#txtContent 选择器、div.gad2 清理、p 展开和 br 分段。请求沿用原 Jsoup.connect、浏览器 User-Agent 与 20 秒 timeout；取消后检查协程和来源关闭状态，阻止过期结果提交。维基文库适配类移除，当前入口不再切换至其他站点。当前 BookSource 模型、身份/修订、目录跳转与来源生命周期仍由适配层衔接。Debug APK 构建成功，未运行测试，未重新声明站点联网可用。
+
+## 2026-10-13：主页视觉重设计
+
+HomeActivity 采用暖白底色、深绿主卡片和书籍矢量封面，突出内置小说；本地 TXT、网络来源采用带图标的独立卡片，更多示例采用轻量入口。统一圆角、排版、间距、按压反馈和系统栏配色。卡片保留原点击路由，并以按钮语义提供无障碍焦点；装饰图标不重复朗读。可滚动布局和最小高度允许文字放大后扩展内容。资源使用 XML shape/ripple/vector，无需图片下载或新的 UI 依赖。Debug 构建通过，未运行设备或自动化测试。
+
+## 2026-10-13：阅读页移除重复导航
+
+参照旧 ReadActivity/ControlPanelFragment，将内置书籍与本地文件的 ReaderActivity 页面改为 ReaderView 主体，移除宿主顶部状态文本和底部两排常驻按钮，保留 Widget 页眉与进度/时间页脚。中心点击打开底部覆盖面板，面板外点击和返回键关闭；边缘点击/拖动复用 Widget 输入。原书籍选择、模式、目录、排版和效果操作转入菜单。面板采用无默认灰色背景的按钮、圆角顶部和进度控制，挂载到 reader_root 安全区域，不改变正文测量尺寸。文件解析状态也改为覆盖层，错误改用短消息/对话框。系统栏图标随阅读背景调整明暗。阅读区域扩大后的重排遵循现有锚点恢复。Debug 构建成功，未运行设备或自动化测试。
+
+## 2026-10-13：原版底部菜单与职责拆分
+
+底部菜单改用与旧 ControlPanelFragment 相同的 Material BottomSheetDialog、两排 XML、#F6F6F6 背景、8dp 横向/顶部与 24dp 底部间距、1:2:1 章节导航比例、原矢量图标和图标在上方的目录/排版/设置按钮。Material 1.10.0 与 AppCompat 1.6.1 沿用旧项目版本；依赖只加入 Demo。章节进度外观保持原 DualThumbProgressBar 的轨道、白色主游标、灰色返回游标与阴影，导航改由松手提交一次，取消手势不提交；单章和零章避免除零，提供键盘与无障碍章节步进。
+
+ReaderMenuController 位于 ui/reader/menu，负责窗口、当前书籍绑定和可取消导航；ChapterProgressView 单独负责绘制与交互；view_reader_menu.xml 和 ic_reader_* 负责布局与图标。TypographySheet 迁至 ui/reader/typography，名称明确为排版对话框；ReaderActivity 的字段改为 readerMenu/typographyDialog。阅读模式与书籍切换移入设置菜单，底部不增加额外行。关闭菜单或换书取消请求并拒绝旧回调。Debug 构建成功，未运行设备或自动化测试。
+## 2026-10-13：目录、排版、设置底部面板与样式 API
+
+新增 ContentsSheet、TypographySheet、ReadingSettingsSheet，参照旧目录 RecyclerView/圆角窗口、排版的六区域边距与双列参数、设置的效果/主题分段项；统一 ReaderBottomSheets 窗口策略，ReferenceSliderView/SegmentedChoiceView 为独立通用控件。EPUB 目录也改为该目录面板。排版补充视口/段落边距、字体、页眉页脚、缩进和行距倍率；失败后重新读取实际样式，关闭/换书/停止 Activity 时关闭面板。
+
+Library 新增 ReaderStyles 公共静态读写辅助 API、PaddingRegion/TextRole 和 BodyStyle/TitleStyle.letterSpacingDp。固定字距接入 TextPaint/StaticLayout、XML dimension 属性、Library SavedState 与宿主偏好，默认 null 保持原 em 行为；字段追加改变完整 JVM 构造/copy 签名，不承诺旧二进制兼容。区域、单位、建议数值、Java/Kotlin 用法和证据范围见 [排版 API](26_READER_PANELS_AND_TYPOGRAPHY_API.md)。Debug APK、Release AAR、本地 Maven 包构建通过，未新增或运行测试。
+## 2026-10-14：段落长按与选区菜单
+
+- 长按由词边界改为段落源范围，涵盖段落跨页的不可见续文，分页和滚动统一。
+- 库新增图文 item、回调、宽度配置和工厂 API；默认工具栏统一 PopupWindow 生命周期，溢出以左右箭头翻组。
+- Demo 接入六项真实宿主动作，保留完全自定义 View SPI 示例。
+- Debug APK、Release AAR、Maven 仓库包构建成功；JVM 清单刷新为535类条目/226公开类型声明。未添加或运行测试，设备交互待验收。
+
+## 2026-10-14：选区视觉与紧凑菜单
+
+选区背景改为逐行字形高度路径，排除行/段间距和换行尾部空白，移到正文绘制下方。橙色起始端点圆点在上、终止端点在下，竖线贯穿该行字高；保留扩大触摸命中范围和跨页拖动偏移。菜单固定项目宽度，降低到52dp常规行高，缩小图文间距和箭头槽。ReaderStyles 新增选区背景色与手柄色便利 API，XML/状态保存沿用已有字段。Demo 迁移旧蓝色并保持正文调整，主题不再覆盖手柄色。Debug APK/Release AAR/Maven 包构建通过，未添加或运行测试。
+
+## 2026-10-14：独立划线注解
+
+先实现库中的 Underline、五种 TextLinePattern、颜色/粗细/波浪和虚线尺寸、TextLineStyles 工厂，以及选择转换、注解增删改、逐行几何与分页/滚动绘制。沿用统一源范围校验并扩展 AnnotationSnapshot.underlines；高亮保持独立背景，菜单改为正确名称。再接入 Demo 直接划线、线条设置面板、默认样式保存、每条注解 JSON 保存以及列表中的样式编辑/删除/跳转。Debug APK/Release AAR/Maven 包构建成功，API清单刷新，未新增或运行测试。
+
+## 2026-10-14：统一注解与切换，移除样式 UI
+
+移除 Demo 的线条设置 item/面板、样式编辑按钮及样式偏好，API 与既有划线样式数据保留。修复行尾裁剪，线段限制为可见文字范围。菜单采用高亮/划线状态与切换接口。ReaderAnnotation/RangedAnnotation、AnnotationSnapshot.items 及通用增删改统一模型与管理，AnnotationStore 只有一套按 id 存储；Demo 升为类型/版本/payload 的统一记录，兼容版本1并保留未知类型记录。Debug APK/Release AAR/Maven 包构建通过，未添加或运行测试。
+
+## 2026-10-14：菜单按当前组收缩
+
+按可见 item 和真实箭头数量计算菜单宽度，移除首末组的不可见箭头占位。切组同步重测及更新 PopupWindow 宽度/位置，分页容量保持稳定窗口预算。Debug APK、Release AAR、Maven 仓库包构建通过，未新增或运行测试。
+
+## 2026-10-14：隐藏导航栏占位
+
+Demo 改为显式窗口 inset 管理，移除阅读根自动 fitsSystemWindows，与 BottomSheet 共用单次安全边距分配。隐藏导航栏时底部不留系统高度，显示时避让，键盘高度独立保留；消费已处理的系统 inset，关闭面板手势 peek-height 占位，缩减菜单内部底部 padding。Debug APK 构建通过，未添加或运行测试。
+
+## 2026-10-14：状态栏显示统一
+
+修复主题背景与状态栏后方 inset 区域颜色不同的问题：Demo 用统一 Appearance 绘制顶部/可见导航安全区、设置透明系统栏与明暗图标，弹窗继承阅读窗口色；设置面板刷新主题时同步弹窗外观。保留隐藏导航栏时不留占位的逻辑。Debug APK 构建通过，未新增或运行测试。
+
+## 2026-10-14：改为全屏阅读 View
+
+根据用户纠正，移除状态栏色块 overlay 与主阅读窗口外层 inset padding，ReaderView 真正铺满窗口，背景由页面模板绘制。Demo FullScreenPageFactory 在模板内部叠加系统安全范围，不修改宿主保存的样式；透明状态栏覆盖阅读背景。系统范围改变沿用工厂更换与重排路径，隐藏导航栏不留底部系统范围。弹窗保留自身控件避让，带工具条调试入口保持自动避让。Debug APK 构建通过，未添加或运行测试。
+
+## 2026-10-14：背面颜色跟随主题
+
+对照旧 IBookCurlEffect/Renderer 的背景采样与 ColorMatrix 混合，修复默认固定浅纸色。新增可选 PageBackgroundSurface 元数据，内置 ViewSurface 单独采样背景 Drawable；未知背景以已有翻页截图主色估计。iBook 两条绘制路径及 PageCurl shader 共用解析，开始翻页时按实际翻起面确定底色，显式 tint 仍可覆盖。保持各效果原内容混合比例及原光照。Demo 不增加调色 UI。Debug APK/Release AAR/Maven 包构建通过，未添加或运行测试。
+
+## 2026-10-14：iBook 正面弯曲与背面向正面投影
+
+新增保持弧长的浅 S 形正面过渡带，平面与原圆锥/圆柱主卷边连续连接；索引网格独立细分，旧网格共享映射。背面材料边界按高度和统一光向生成高斯软投影，正面纹理绘制后、背面绘制前裁到正面网格，避免正面覆盖阴影。下一页投影共用光向/强度/柔和度，端点随半径/高度/进度连续消失。物理近似范围见31号文档。构建通过，未添加或运行测试。
+
+
+## 2026-10-14：iBook 每帧开销优化
+
+响应卡顿反馈，正面阴影裁剪由逐三角形/格子轮廓改为实际网格外边界，正面弯曲积分改为共享归一化查表；两种阴影缓存横向高斯权重，当前页阴影缓存索引拓扑。保留网格密度、正面弯曲和双接收面阴影。Debug/Release/发布包构建通过，未运行测试或测量设备帧耗时。
+
+## 2026-10-14：卷边末端异常处理
+
+iBook 索引网格增加4段生成线细分，减少收尖处长三角形的纹理插值误差；正面过渡带与主卷曲带独立连接，过滤退化三角形。快照启用 mipmap 提示处理掠射角文字走样，保留上一轮积分、阴影缓存与边界裁剪优化。构建通过，设备视觉和性能未实测。
+
+## 2026-10-14：iBook 阴影数学验证
+
+运行实际 Kotlin 几何和网格检查，原软边偏移带出现508个折叠单元；纸面采样投影未发现翻转。当前页阴影改为规则网格上的有限边界距离场，统一高斯衰减，避免尖角偏移自交。新增4项数学回归检查，修复旧 NavigationControllerTest 缺失清理错误回调导致的测试编译阻塞。设备视觉和帧耗时未验收；完整推导见32号文档。
+
+## 2026-10-14：参考旧项目的 iBook 渲染
+
+阅读旧 IBookCurlRenderer，借鉴正背面边界裁剪和缓存一维渐变；两条 Android 绘制分支分别裁到实际正背面外边界，当前页阴影改用距离平方查表，去掉热循环平方根/pow。旧 drawShadowA 仍为 TODO，因此保留当前正面过渡与距离场投影；没有原样搬入旧控制点除零/装订待办。详见33号文档。
+
+## 2026-10-14：绷直纸面保留阴影
+
+移除阴影按半径归零退出；对装订约束压缩半径增加连续的绷直抬起高度提示，不改二维纹理映射。下一页与当前页共用同一背面边界投影，仅更新一次并按接收面层次复用绘制。补偿是视觉近似，详见34号文档。本次构建通过，未运行测试或设备验收。
+
+## 2026-10-14：下一页投影回归与曲面遮蔽
+
+修正34号策略导致下一页卷边投影缺失：恢复独立卷边轮廓投影，补充绷直状态高度，当前页保留防自交距离场。两者共用光向和参数。纸面增加按弯曲角度计算的轻微环境遮蔽覆盖层，默认最高约7%，背面调色后绘制，平面和端点连续归零；两条Android路径共用已有网格。本次构建通过，未添加或运行测试，详见35号文档。
+
+## 2026-10-14：条形阴影裁剪
+
+下一页阴影显式扣除当前正背面覆盖区；条形有限边界的软端改为向内淡出，移除越过纸边端点的3σ延长尾巴。复用现有路径，不增加逐帧Path布尔差集。详见36号文档。本次构建通过，未添加或运行测试。
+
+## 2026-10-14：条形阴影改用缓存渐变纹理
+
+针对残留条纹反馈，把下一页卷边阴影从17列顶点颜色高斯近似改为1024×1缓存alpha纹理；两列几何端点负责位置/宽度，顶点alpha负责高度与端部渐隐。保留接收区域裁剪，顶点从425减到50，detach释放纹理。暂无新定位截图，无法断定所有条纹来自此通路。本次构建通过，未添加或运行测试，详见37号文档。
+
+## 2026-10-15：条形阴影光线投影范围约束
+
+确认37号渐变调整未解决范围问题。新增实际材料三角形的光线投影范围，下一页条带同时裁到纸张投影与可见接收区域。JVM检查复现5,565个范围外可见采样；Android16离屏像素检查24组，旧方案78,666个范围外像素，新方案为0，仍保留11,383个合法阴影像素（边界避让1像素）。独立设备测试包已移除；硬件帧耗时尚未测量。详见38号文档。
+
+## 2026-10-15：默认页眉页脚与业务状态API
+
+对照旧ReadPage布局，默认模板改为返回箭头＋标题，页脚左章内页码、右本地时钟，11sp；保留显式ChromeStyle配置与Demo安全边距。新增ReaderPageChrome/Provider/Action、setPageChromeProvider与refreshPageChrome；分页/滚动共享提供器桥接，动画期间刷新延后到Idle，候选提交前读取最新状态。仅更新chrome，不清空正文分页缓存；默认模板与自定义装饰接入刷新，全屏包装转发；释放清理宿主回调。构建通过，本次未添加或运行测试，详见39号文档。
+
+## 2026-10-15：章节尾部空白页
+
+内置TXT128章中127章有尾部空行。旧分页将空段/终行作为真实高度分页，可产生额外空页；新增4项用例修改前3项失败。现在仅从可视分页排除章节尾部纯空白，保留原文/ID与中间空行，尾部旧锚点映射最后一页，全空白章仍一张显式空页。新增4项及原分页3项检查通过，构建通过；截图具体章节帧尚未运行重现，详见40号文档。
+
+## 2026-10-15：跨页段落选择的端点可操作性
+
+分页模式对离开当前页的选区端点显示本页可见边界代理手柄，保留完整TextRange和quote；实际拖动超过touchSlop才修改端点，轻点不收缩选区。沿用边缘跨页扩选，圆点限制在正文View内并在尺寸变化时重建；滚动复用行不加重复代理。构建通过，本次未添加或运行测试，详见41号文档。
+
+## 2026-10-15：选择手柄避开首字
+
+修复页面边缘圆点内移同时带动竖线、导致起始条覆盖首字的问题。圆点与真实caret分别定位，竖线放在选区边界外侧，拖动偏移使用真实caret；圆点偏移时在圆点高度补连接。设计同步41号文档。Debug、Release与Maven包构建通过，本次未运行测试或设备手势验收。
