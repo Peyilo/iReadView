@@ -83,7 +83,9 @@ data class TitleStyle(
 }
 
 enum class ChromeAlignment { START, CENTER, END }
-enum class ChromeContent { DEFAULT, BOOK_TITLE, CHAPTER_TITLE, PAGE_NUMBER, PAGE_COUNT, PAGE_PROGRESS, NONE, TIME, PAGE_PROGRESS_AND_TIME }
+enum class ChromeContent { DEFAULT, BOOK_TITLE, CHAPTER_TITLE, PAGE_NUMBER, PAGE_COUNT, PAGE_PROGRESS, NONE, TIME, PAGE_PROGRESS_AND_TIME,
+    /** System battery percentage, e.g. 85%; empty when unavailable. No permission required. */
+    BATTERY_LEVEL }
 data class ChromeStyle(
     val visible: Boolean = true,
     val textSizeSp: Float = 11f,

@@ -1,14 +1,16 @@
 # iReadView 阅读组件功能需求基线
 
+> 本文保留原始FR编号、行为目标和验收场景，不等于当前实现状态。当前状态见[状态与验证](07_REQUIREMENT_IMPLEMENTATION_AUDIT.md)，新对话先读[交接说明](03_IMPLEMENTATION_HANDOFF.md)。
+
 > 用途：为 iReadView 新项目的重新设计和实现提供可验证的产品行为基线。本文描述组件边界、对外输入输出、读者功能、扩展能力、边界行为和质量要求，不规定代码实现。
 >
-> 范围依据：旧参考工作区的阅读器库、示例 App、README、演示界面和现有测试。旧实现中明确存在的能力写为“基线功能”；README TODO、仅实验页面展示的能力或尚未实现完整的能力单独标注。当前项目已开始 Widget 与默认分页实现，实际范围及验证记录见 [06_IMPLEMENTATION_PROGRESS.md](06_IMPLEMENTATION_PROGRESS.md)，不能把旧项目证据当作新项目已交付功能。
+> 范围依据：旧参考工作区的阅读器库、示例 App、README、演示界面和现有测试。旧实现中明确存在的能力写为“基线功能”；README TODO、仅实验页面展示的能力或尚未实现完整的能力单独标注。当前项目已开始 Widget 与默认分页实现，实际范围及验证记录见 [当前状态与验证](07_REQUIREMENT_IMPLEMENTATION_AUDIT.md)，不能把旧项目证据当作新项目已交付功能。
 
 ## 1. 产品目标
 
 提供一个可嵌入 Android 应用的阅读组件。组件是项目的核心产品，示例 App 仅用于展示接入、验证功能和演示自定义。组件需通过明确的接入/导出 API 与宿主交换章节内容、书签、高亮、阅读位置及事件；提供丰富的默认外观设置和翻页效果；并允许宿主定制阅读页内容和翻页效果。新实现需保持本文件定义的功能，同时改善性能、资源使用、状态一致性和边界清晰度。
 
-已确定交付形态为 **Android View Widget 库**：宿主能在 XML 或代码中创建并嵌入阅读控件，用其公开方法接入内容与功能。组件遵守 Android View 的测量、布局、输入和生命周期约定，不要求宿主接入库提供的 Activity/Fragment 或自行装配内部控制器。具体类/API 草案见 [04_WIDGET_API_DESIGN.md](04_WIDGET_API_DESIGN.md)，实现方法见 [05_WIDGET_IMPLEMENTATION_PLAN.md](05_WIDGET_IMPLEMENTATION_PLAN.md)。
+已确定交付形态为 **Android View Widget 库**：宿主能在 XML 或代码中创建并嵌入阅读控件，用其公开方法接入内容与功能。组件遵守 Android View 的测量、布局、输入和生命周期约定，不要求宿主接入库提供的 Activity/Fragment 或自行装配内部控制器。具体类/API 草案见 [04_WIDGET_API_DESIGN.md](04_WIDGET_API_DESIGN.md)，实现方法见 [当前架构与职责](02_ARCHITECTURE_AND_PROJECT_STRUCTURE.md)。
 
 ### 1.1 目标用户和使用方
 

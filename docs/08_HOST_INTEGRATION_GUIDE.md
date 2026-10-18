@@ -2,13 +2,13 @@
 
 区域边距、四种文字角色、固定 dp 字距及 Java/Kotlin 样式编辑方法见 [阅读面板与排版 API](26_READER_PANELS_AND_TYPOGRAPHY_API.md)。ReaderStyles 返回新样式，使用 applyStyle 提交并在成功后保存。
 
-本指南以当前实现为准，面向 Android View 宿主。目标设计与未确认范围见 04，完整验收缺口见 07；下列调用已有源码/编译证据，不代表设备交互通过。
+本指南以当前实现为准，面向 Android View 宿主。API契约见04，当前状态与验收缺口见07；下列调用已有源码/编译证据，不代表设备交互通过。
 
 ## 1. 依赖与入口
 
 开发工程使用 `implementation(project(":app:ireadview"))`。Release 构建命令为 `gradlew.bat :app:ireadview:assembleRelease`，产物在 `app/ireadview/build/outputs/aar/ireadview-release.aar`。已有本地 Maven 打包，开发坐标为 `org.peyilo.ireadview:ireadview:0.1.0-SNAPSHOT`，步骤见第11节。
 
-直接通过文件依赖 AAR 时，依赖不会嵌入 AAR。宿主需按库 build.gradle.kts/version catalogue 提供 Kotlin 标准库、AndroidX Core/CustomView/RecyclerView、coroutines Android 的运行依赖；完整独立消费及压缩仍待验证。库 minSdk21、compileSdk36、Java目标11；示例应用的网络权限不属于库。
+直接通过文件依赖 AAR 时，依赖不会嵌入 AAR。宿主需按库 build.gradle.kts/version catalogue 提供 Kotlin 标准库、AndroidX Core/CustomView/RecyclerView、coroutines Android 的运行依赖；独立消费及压缩的历史记录见示例README，当前改动仍需回归。库 minSdk21、compileSdk36、Java目标11；示例应用的网络权限不属于库。
 
 ```xml
 <org.peyilo.ireadview.widget.ReaderView
@@ -166,38 +166,9 @@ SnapshotBundles是独立示例的宿主Bundle格式：schema/format版本检查�
 ChapterLayout.continuousFragments返回的列表与片段尺寸须不可变、可由布局工作线程读取，不能在尺寸getter访问View。默认滚动呈现在工作线程准备行高度/累计表并逐片段检查取消，回主线程核对绑定代次。宿主同步getter仍应短且稳定；绘制、View绑定及交互沿相应UI线程契约。
 
 
-## 仿真参数与任意 View 装饰
+## 专题接入
 
-
-### 装饰交互和控制点策略示例
-
-CurlActivity 只用公开接口组合带 Button 的页眉和带 SeekBar 的页脚；页眉动作使用绑定 context.requestReaderAction，unbind 撤销监听，页脚滑块展示宿主交互响应而不改变位置。布局与绑定的稳定性/线程契约见 ReaderPageDecoration 注释。宿主需要提供自己的 ReaderActionHandler。
-
-### iBook装订斜圆柱与独立检查（2026-10-09）
-
-PageTurnEffects.iBookCurl/curl当前使用库内IBookCurlGeometry与IBookCurlMesh：单位法向带端点包络、整条材料装订边保持平面、折轴扣除圆柱弧长。API29及以上每面一次索引网格，旧系统使用双面规则bitmap mesh，严格水平时只需一行。现代圆柱沿切向无曲率，不使用meshRows增加细分；meshColumns控制圆弧密度。旧系统性能仍需改善。
-
-
-长按“仿真参数”切换8/16MiB预览预算，短按切换外观/控制点；16MiB不保证任意尺寸原分辨率。两种仿真共用SnapshotCurlEffect的两张预算快照，管理器负责提交/取消及租借清理。没有新增渲染线程、公共控制器或第三个仿真家族。
-
-### 翻页过程中改变配置
-
-
-
-
-
-
-
-### 自定义效果的更新频率
-
-
-
-
-### 平移效果的快照预算（2026-10-09）
-
-内置滑动、覆盖、视差在API29以下尝试两张原分辨率页面快照；预算不足时使用原View绘制，不对这些模式降采样。API29及以上使用原View绘制。两种仿真继续使用预算允许的捕获比例，公共配置方法不变。内部捕获由PageTurnSnapshots共用，管理器仍统一释放租借。
-
-
-
-
-
+- 任意页眉页脚View与默认六位置模板：[模板专题](PAGE_CHROME.md)。Demo直接使用模板，库底层兼容API仍保留。
+- 段落/跨页选区、图文菜单、统一标注和划线：[选择专题](SELECTION_AND_ANNOTATIONS.md)。
+- 各效果、主题背色及阴影范围：[渲染专题](RENDERING.md)。动画不负责提交阅读位置。
+- 当前源码职责与不确定范围分别见[架构](02_ARCHITECTURE_AND_PROJECT_STRUCTURE.md)、[状态](07_REQUIREMENT_IMPLEMENTATION_AUDIT.md)。

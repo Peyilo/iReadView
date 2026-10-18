@@ -1,6 +1,7 @@
 package org.peyilo.iread.demo.data.storage
 
 import org.peyilo.iread.demo.reader.ReaderEffects
+import org.peyilo.iread.demo.reader.PageChromeSettings
 
 import android.content.Context
 import org.json.JSONArray
@@ -16,7 +17,7 @@ internal class ReaderPreferences(context: Context) {
     private val resources = context.resources
     private val preferences = context.getSharedPreferences("reader-preferences", Context.MODE_PRIVATE)
     data class Settings(val style: ReaderStyle?, val input: ReaderInputOptions?, val turn: PageTurnOptions?,
-        val mode: ReadingMode?, val effectId: String?, val customPage: Boolean?, val customPlaceholder: Boolean?, val customSelectionToolbar: Boolean?)
+        val mode: ReadingMode?, val effectId: String?, val customPlaceholder: Boolean?, val customSelectionToolbar: Boolean?, val pageChrome: PageChromeSettings?)
 
     fun load(base: ReaderStyle): Settings? = runCatching {
         val raw = preferences.getString("settings", null) ?: return null
@@ -25,15 +26,8 @@ internal class ReaderPreferences(context: Context) {
         require(data.getInt("version") == 1)
         // Independent groups: one malformed group does not discard the others.
         val revision = data.optInt("typographyRevision")
-        val savedStyle = if (revision == org.peyilo.iread.demo.reader.ReaderDefaults.TYPOGRAPHY_REVISION || revision == 2 || revision == 3)
-            runCatching {
-                val loaded = decodeStyle(data.getJSONObject("style"), base)
-                val decoded = if (revision < 4) loaded.copy(selectionStyle = base.selectionStyle) else loaded
-                if (revision == 2) decoded.copy(
-                    header = decoded.header.copy(padding = decoded.header.padding.copy(topDp = base.header.padding.topDp)),
-                    footer = decoded.footer.copy(padding = decoded.footer.padding.copy(bottomDp = base.footer.padding.bottomDp))
-                ) else decoded
-            }.getOrNull() else null
+        val savedStyle = if (revision == org.peyilo.iread.demo.reader.ReaderDefaults.TYPOGRAPHY_REVISION)
+            runCatching { decodeStyle(data.getJSONObject("style"), base) }.getOrNull() else null
         Settings(savedStyle,
             runCatching {
                 val input = data.getJSONObject("input")
@@ -48,15 +42,16 @@ internal class ReaderPreferences(context: Context) {
                 ReadingMode.CONTINUOUS_SCROLL.id -> ReadingMode.CONTINUOUS_SCROLL
                 else -> null
             }, data.optString("effect").takeIf { ReaderEffects.fromId(it) != null },
-            runCatching { data.getBoolean("customPage") }.getOrNull(), runCatching { data.getBoolean("customPlaceholder") }.getOrNull(),
-            runCatching { data.getBoolean("customSelectionToolbar") }.getOrNull())
+            runCatching { data.getBoolean("customPlaceholder") }.getOrNull(),
+            runCatching { data.getBoolean("customSelectionToolbar") }.getOrNull(),
+            PageChromeCodec.decode(data.optJSONObject("pageChrome")?.toString()))
     }.getOrNull()
 
     fun save(style: ReaderStyle, input: ReaderInputOptions, turn: PageTurnOptions, mode: ReadingMode,
-        effectId: String, customPage: Boolean, customPlaceholder: Boolean, customSelectionToolbar: Boolean) {
+        effectId: String, customPlaceholder: Boolean, customSelectionToolbar: Boolean, pageChrome: PageChromeSettings) {
         val data = JSONObject().put("version", 1).put("mode", mode.id)
             .put("typographyRevision", org.peyilo.iread.demo.reader.ReaderDefaults.TYPOGRAPHY_REVISION)
-            .put("customPage", customPage).put("customPlaceholder", customPlaceholder)
+            .put("pageChrome", JSONObject(PageChromeCodec.encode(pageChrome))).put("customPlaceholder", customPlaceholder)
             .put("customSelectionToolbar", customSelectionToolbar)
             .put("input", JSONObject().put("gesture", input.gesturePagingEnabled).put("tap", input.tapPagingEnabled)
                 .put("keyboard", input.keyboardPagingEnabled).put("volume", input.volumeKeyPagingEnabled)
@@ -87,7 +82,7 @@ internal class ReaderPreferences(context: Context) {
                 .put("alignment", title.alignment.name).put("after", title.spacingAfterDp.toDouble())
                 .put("lineMultiplier", title.lineSpacingMultiplier.toDouble()).put("lineExtra", title.lineSpacingExtraDp.toDouble())
                 .put("letterDp", title.letterSpacingDp?.toDouble() ?: JSONObject.NULL).put("letter", title.letterSpacingEm.toDouble()).put("padding", insets(title.padding)).apply { font(title.readerFont)?.let { put("font", it) } })
-            .put("header", chrome(style.header)).put("footer", chrome(style.footer))
+            .put("header", chromeAppearance(style.header)).put("footer", chromeAppearance(style.footer))
             .put("selection", JSONObject().put("fill", style.selectionStyle.fillColor).put("handle", style.selectionStyle.handleColor)
                 .put("radius", style.selectionStyle.handleRadiusDp.toDouble()))
         val palette = style.highlightStyles.styles
@@ -128,18 +123,17 @@ internal class ReaderPreferences(context: Context) {
                 lineSpacingExtraDp = title.optDouble("lineExtra", base.title.lineSpacingExtraDp.toDouble()).toFloat(),
                 spacingAfterDp = title.number("after"), letterSpacingEm = title.number("letter"), letterSpacingDp = if (title.has("letterDp") && !title.isNull("letterDp")) title.number("letterDp") else null, padding = title.insets("padding"),
                 readerFont = decodeFont(title.optionalObject("font"), base.title.readerFont)),
-            header = decodeChrome(data.getJSONObject("header"), base.header), footer = decodeChrome(data.getJSONObject("footer"), base.footer),
+            header = decodeChromeAppearance(data.getJSONObject("header"), base.header), footer = decodeChromeAppearance(data.getJSONObject("footer"), base.footer),
             selectionStyle = SelectionStyle(selection.getInt("fill"), selection.getInt("handle"), selection.number("radius")), highlightStyles = palette)
     }
 
-    private fun chrome(style: ChromeStyle) = JSONObject().put("visible", style.visible).put("size", style.textSizeSp.toDouble())
-        .put("color", style.textColor).put("padding", insets(style.padding)).put("alignment", style.alignment.name).put("content", style.content.name).apply {
+    private fun chromeAppearance(style: ChromeStyle) = JSONObject().put("visible", style.visible).put("size", style.textSizeSp.toDouble())
+        .put("color", style.textColor).put("padding", insets(style.padding)).apply {
             put("height", style.heightDp?.toDouble() ?: JSONObject.NULL)
             font(style.readerFont)?.let { put("font", it) }; background(style.background)?.let { put("background", it) }
         }
-    private fun decodeChrome(data: JSONObject, base: ChromeStyle) = base.copy(visible = data.getBoolean("visible"), textSizeSp = data.number("size"),
-        textColor = data.getInt("color"), padding = data.insets("padding"), alignment = ChromeAlignment.valueOf(data.getString("alignment")),
-        content = ChromeContent.valueOf(data.getString("content")), heightDp = if (data.isNull("height")) null else data.number("height"),
+    private fun decodeChromeAppearance(data: JSONObject, base: ChromeStyle) = base.copy(visible = data.getBoolean("visible"), textSizeSp = data.number("size"),
+        textColor = data.getInt("color"), padding = data.insets("padding"), heightDp = if (data.isNull("height")) null else data.number("height"),
         readerFont = decodeFont(data.optionalObject("font"), base.readerFont), background = decodeBackground(data.optionalObject("background"), base.background))
 
     private fun insets(value: EdgeInsets) = JSONArray(listOf(value.startDp.toDouble(), value.topDp.toDouble(), value.endDp.toDouble(), value.bottomDp.toDouble()))

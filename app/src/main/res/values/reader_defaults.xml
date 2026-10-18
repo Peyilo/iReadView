@@ -31,15 +31,11 @@
         <item name="ireadHeaderTextSize">11sp</item>
         <item name="ireadHeaderTextColor">#000000</item>
         <item name="ireadHeaderFontFamily">sans-serif</item>
-        <item name="ireadHeaderContent">default_content</item>
-        <item name="ireadHeaderAlignment">start</item>
         <item name="ireadHeaderPaddingTop">8dp</item>
         <item name="ireadHeaderPaddingBottom">20dp</item>
         <item name="ireadFooterTextSize">11sp</item>
         <item name="ireadFooterTextColor">#000000</item>
         <item name="ireadFooterFontFamily">sans-serif</item>
-        <item name="ireadFooterContent">page_progress_and_time</item>
-        <item name="ireadFooterAlignment">end</item>
         <item name="ireadFooterPaddingTop">20dp</item>
         <item name="ireadFooterPaddingBottom">8dp</item>
     </style>

@@ -44,7 +44,7 @@
         <attr name="ireadHeaderHeight" format="dimension" />
         <attr name="ireadHeaderBackground" format="color|reference" />
         <attr name="ireadHeaderAlignment"><enum name="start" value="0" /><enum name="center" value="1" /><enum name="end" value="2" /></attr>
-        <attr name="ireadHeaderContent"><enum name="default_content" value="0" /><enum name="book_title" value="1" /><enum name="chapter_title" value="2" /><enum name="page_number" value="3" /><enum name="page_count" value="4" /><enum name="page_progress" value="5" /><enum name="no_content" value="6" /><enum name="time" value="7" /><enum name="page_progress_and_time" value="8" /></attr>
+        <attr name="ireadHeaderContent"><enum name="default_content" value="0" /><enum name="book_title" value="1" /><enum name="chapter_title" value="2" /><enum name="page_number" value="3" /><enum name="page_count" value="4" /><enum name="page_progress" value="5" /><enum name="no_content" value="6" /><enum name="time" value="7" /><enum name="page_progress_and_time" value="8" /><enum name="battery_level" value="9" /></attr>
         <attr name="ireadFooterPaddingStart" format="dimension" />
         <attr name="ireadFooterPaddingTop" format="dimension" />
         <attr name="ireadFooterPaddingEnd" format="dimension" />
@@ -52,7 +52,7 @@
         <attr name="ireadFooterHeight" format="dimension" />
         <attr name="ireadFooterBackground" format="color|reference" />
         <attr name="ireadFooterAlignment"><enum name="start" value="0" /><enum name="center" value="1" /><enum name="end" value="2" /></attr>
-        <attr name="ireadFooterContent"><enum name="default_content" value="0" /><enum name="book_title" value="1" /><enum name="chapter_title" value="2" /><enum name="page_number" value="3" /><enum name="page_count" value="4" /><enum name="page_progress" value="5" /><enum name="no_content" value="6" /><enum name="time" value="7" /><enum name="page_progress_and_time" value="8" /></attr>
+        <attr name="ireadFooterContent"><enum name="default_content" value="0" /><enum name="book_title" value="1" /><enum name="chapter_title" value="2" /><enum name="page_number" value="3" /><enum name="page_count" value="4" /><enum name="page_progress" value="5" /><enum name="no_content" value="6" /><enum name="time" value="7" /><enum name="page_progress_and_time" value="8" /><enum name="battery_level" value="9" /></attr>
         <attr name="ireadDefaultHighlightColor" format="color" />
         <attr name="ireadSelectionColor" format="color" />
         <attr name="ireadSelectionHandleColor" format="color" />

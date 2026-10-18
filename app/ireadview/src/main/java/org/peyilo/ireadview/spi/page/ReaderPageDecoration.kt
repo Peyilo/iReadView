@@ -10,7 +10,10 @@ fun interface ReaderPageDecorationFactory {
     fun create(context: Context): ReaderPageDecoration
 }
 
-/** Any Android View or ViewGroup, with page-scoped data and cleanup callbacks. */
+/** Low-level custom region: any Android View or ViewGroup, with page data and cleanup.
+ * Independent of the built-in three-column template and ReaderPageChromeSlot.
+ * Bind from ReaderPageContext and captured host state; reading context.chrome is optional.
+ */
 interface ReaderPageDecoration {
     /** Stable identity for this decoration's lifetime. May be any View or ViewGroup.
      * Uses normal Android event dispatch; the wrapper does not install touch/click listeners.

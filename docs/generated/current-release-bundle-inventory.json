@@ -1,9 +1,9 @@
 {
   "generated": "2026-10-15",
-  "zipSha256": "0c3760ed4495a6bbe77416398e12788c39463c049b04dbc59fda7ae2b2c83157",
-  "selectedAar": "ireadview-maven/org/peyilo/ireadview/ireadview/0.1.0-SNAPSHOT/ireadview-0.1.0-20261015.031945-37.aar",
-  "selectedAarSha256": "5d2d5cebc7d3812aca6909e5eee9c781b7408740f02219c14344b17e669154af",
+  "zipSha256": "7c537389f2df94d3ffaf34f595aa2729322b5c9d407f89dba22358af525cc64e",
+  "selectedAar": "ireadview-maven/org/peyilo/ireadview/ireadview/0.1.0-SNAPSHOT/ireadview-0.1.0-20261015.083459-42.aar",
+  "selectedAarSha256": "e87300623f76fbc38094fd10e63a9e49616830ae3028cef1975b934b1c3b86d1",
   "matchesCurrentReleaseAar": true,
-  "historicalAarEntryCount": 37,
-  "limits": "Selection caret stems remain at text boundaries independently of clamped dots; drag offsets use source caret coordinates. Debug, release and Maven bundle built; no tests or device gesture acceptance for this change."
+  "historicalAarEntryCount": 42,
+  "limits": "Custom page/decorations remain independent of the built-in six-position model. Default template owns content resolution and visibility-scoped battery observation; generic page clock only updates time. Debug, release and Maven bundle built; no tests or device acceptance for this change."
 }

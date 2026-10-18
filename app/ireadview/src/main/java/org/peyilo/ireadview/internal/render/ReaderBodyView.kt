@@ -169,7 +169,7 @@ internal class ReaderBodyView(context: Context) : View(context) {
     /** Dragging may enter a paragraph gap; select the nearest visible line without inventing text. */
     fun nearestAnchorAt(xPx: Float, yPx: Float): ContentAnchor? {
         anchorAt(xPx, yPx)?.let { return it }
-        val x = xPx.coerceIn(paddingLeft.toFloat(), maxOf(paddingLeft.toFloat(), (width - paddingRight - 1).toFloat()))
+        val x = xPx.coerceIn(paddingLeft.toFloat(), maxOf(paddingLeft.toFloat(), (width - paddingRight).toFloat()))
         val fragment = fragments.minByOrNull { fragment ->
             val top = paddingTop + fragment.topPx
             when { yPx < top -> top - yPx; yPx > top + fragment.heightPx -> yPx - top - fragment.heightPx; else -> 0f }
@@ -279,7 +279,10 @@ internal class ReaderBodyView(context: Context) : View(context) {
             val stroke = resources.displayMetrics.density * 1.2f
             // Keep the stem on the outside of the selected text boundary;
             // the independently clamped dot must never shift this boundary.
-            val left = if (handle.end) handle.caretX else handle.caretX - stroke
+            val outsideLeft = if (handle.end) handle.caretX else handle.caretX - stroke
+            // At an unindented line start the outside stem would be entirely
+            // clipped by this View. Keep one stroke visible, not a dot-radius inset.
+            val left = outsideLeft.coerceIn(0f, maxOf(0f, width - stroke))
             canvas.drawRect(left, minOf(handle.caretTop, handle.y),
                 left + stroke, maxOf(handle.caretBottom, handle.y), highlightPaint)
             if (handle.x != handle.caretX) {

@@ -19,9 +19,13 @@ data class ReaderPageContext(
     /** Bound to this page's position/generation; stale or uncommitted pages return false. */
     val requestReaderAction: (ReaderAction) -> Boolean = { false },
     val timeMillis: Long = System.currentTimeMillis(),
-    /** Live host bridge; prepared and visible pages always read the latest provider. */
+    /** Optional default-template configuration bridge, not a required custom-template input.
+     * Custom templates/decorations can ignore it and bind directly from page data/host state.
+     * Prepared and visible default templates always read the latest provider.
+     */
     val chromeProvider: ReaderPageChromeProvider? = null
 ) {
+    /** Resolve the built-in template's configuration only when a template opts into it. */
     val chrome: ReaderPageChrome get() = chromeProvider?.provide(this) ?: ReaderPageChrome()
 }
 
@@ -32,14 +36,24 @@ data class ReaderPageContext(
 fun interface ReaderPageFactory { fun create(context: Context): ReaderPageTemplate }
 
 object ReaderPageFactories {
+    /** High-level ready-made template implementing the same SPI available to custom factories.
+     * Six-position/back-button policies belong to this template, not ReaderPageTemplate.
+     */
     @JvmStatic fun default(): ReaderPageFactory = org.peyilo.ireadview.internal.render.DefaultReaderPageFactory()
-    /** Null preserves the built-in slot. Each supplied factory may create any View/ViewGroup. */
+    /** Low-level decoration composition. Null preserves the built-in region; a supplied
+     * factory completely replaces that region with any View/ViewGroup, independent of
+     * ReaderPageChromeSlot, column count, content enum or built-in back-button policy.
+     */
     @JvmStatic @JvmOverloads fun withDecorations(
         header: ReaderPageDecorationFactory? = null,
         footer: ReaderPageDecorationFactory? = null
     ): ReaderPageFactory = org.peyilo.ireadview.internal.render.DecoratedReaderPageFactory(header, footer)
 }
 
+/** Structural page SPI. No required column count, built-in content types or navigation button.
+ * For an arbitrary whole-page composition implement this directly. For arbitrary header/footer
+ * Views with the standard body placement use ReaderPageDecorationFactory.
+ */
 interface ReaderPageTemplate {
     /** Stable, non-throwing identities for this template's lifetime; bind/unbind must not replace them. */
     val root: View

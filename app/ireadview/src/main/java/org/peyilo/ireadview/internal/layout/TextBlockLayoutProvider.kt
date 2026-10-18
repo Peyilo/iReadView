@@ -78,6 +78,25 @@ private class TextBlockLayout(
 ) : BlockLayout {
     override val estimatedRetainedBytes: Long = 1536L + layout.text.length.toLong() * 2 + layout.lineCount.toLong() * 128
 
+    private fun offsetForHorizontal(line: Int, x: Float): Int {
+        val offset = layout.getOffsetForHorizontal(line, x)
+        val end = layout.getLineVisibleEnd(line)
+        val start = layout.getLineStart(line)
+        if (end <= start) return offset
+        val rtl = layout.getParagraphDirection(line) < 0
+        // A mixed-direction trailing run has its own visual boundary; leave its
+        // hit testing to Layout rather than assuming the paragraph's outer edge.
+        if (layout.isRtlCharAt(end - 1) != rtl) return offset
+        val edge = if (rtl) layout.getLineLeft(line) else layout.getLineRight(line)
+        // Layout may exclude the soft-wrap offset, since it is also the next
+        // line's start. Explicitly expose that exclusive endpoint on this line.
+        val last = layout.getOffsetForHorizontal(line, edge)
+        if (last !in start until end) return offset
+        val lastX = layout.getPrimaryHorizontal(last)
+        val midpoint = (lastX + edge) / 2f
+        return if (if (rtl) x <= midpoint else x >= midpoint) end else offset
+    }
+
     override fun fragment(firstUnitIndex: Int, endUnitExclusive: Int): BlockLayoutFragment {
         require(firstUnitIndex in units.indices && endUnitExclusive in (firstUnitIndex + 1)..units.size)
         val top = layout.getLineTop(firstUnitIndex)
@@ -121,13 +140,13 @@ private class TextBlockLayout(
                 if (yPx < 0 || yPx >= heightPx) return null
                 val line = layout.getLineForVertical((top + yPx).toInt())
                 if (xPx < minOf(layout.getLineLeft(line), layout.getLineRight(line)) || xPx > maxOf(layout.getLineLeft(line), layout.getLineRight(line))) return null
-                return ContentAnchor(blockId, layout.getOffsetForHorizontal(line, xPx).coerceIn(this.startOffset ?: 0, this.endOffset ?: 0))
+                return ContentAnchor(blockId, offsetForHorizontal(line, xPx).coerceIn(this.startOffset ?: 0, this.endOffset ?: 0))
             }
             override fun nearestAnchorAt(xPx: Float, yPx: Float): ContentAnchor? {
                 val y = yPx.coerceIn(0f, maxOf(0f, heightPx - 1f))
                 val line = layout.getLineForVertical((top + y).toInt())
                 val x = xPx.coerceIn(minOf(layout.getLineLeft(line), layout.getLineRight(line)), maxOf(layout.getLineLeft(line), layout.getLineRight(line)))
-                return ContentAnchor(blockId, layout.getOffsetForHorizontal(line, x).coerceIn(this.startOffset ?: 0, this.endOffset ?: 0))
+                return ContentAnchor(blockId, offsetForHorizontal(line, x).coerceIn(this.startOffset ?: 0, this.endOffset ?: 0))
             }
             override fun anchorForVerticalOffset(yPx: Float): ContentAnchor {
                 val line = layout.getLineForVertical((top + yPx.coerceIn(0f, maxOf(0f, heightPx - 1f))).toInt())

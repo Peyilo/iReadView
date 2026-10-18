@@ -5,10 +5,9 @@ import org.peyilo.ireadview.api.style.EdgeInsets
 import org.peyilo.ireadview.spi.page.*
 
 /** The page root/background fills ReaderView; only content inside the template avoids system UI. */
-internal class FullScreenPageFactory(private val safe: EdgeInsets,
-    private val delegate: ReaderPageFactory = ReaderPageFactories.default()) : ReaderPageFactory {
+internal class FullScreenPageFactory(private val safe: EdgeInsets) : ReaderPageFactory {
     override fun create(context: Context): ReaderPageTemplate {
-        val page = delegate.create(context)
+        val page = ReaderPageFactories.default().create(context)
         return object : ReaderPageTemplate {
             override val root get() = page.root
             override val bodyHost get() = page.bodyHost

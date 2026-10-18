@@ -131,9 +131,14 @@ internal class ScrollingBookPresentation(context: Context, private val host: Boo
     override fun onLongPress(xPx: Float, yPx: Float): Boolean {
         val (body, row) = bodyAt(xPx, yPx) ?: return false
         val (x, y) = local(body, xPx, yPx)
-        val anchor = body.anchorAt(x, y) ?: return false
         val content = row.chapter.layout.contentSnapshot ?: return false
-        val selection = TextSelectionResolver.paragraphAt(content, anchor) ?: return false
+        val highlightId = body.highlightAt(x, y)
+        val restored = highlightId?.let { id -> host.validHighlights(content.chapterId).firstOrNull { it.id == id } }
+            ?.let { TextSelectionResolver.fromHighlight(content, it) }
+        val selection = restored ?: run {
+            val anchor = body.anchorAt(x, y) ?: return false
+            TextSelectionResolver.paragraphAt(content, anchor) ?: return false
+        }
         return host.reportSelection(selection, host.generation) is ReaderResult.Success
     }
     private fun stopDrag() {

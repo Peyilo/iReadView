@@ -7,7 +7,9 @@ import org.peyilo.iread.demo.data.storage.AnnotationStorage
 import org.peyilo.iread.demo.data.storage.ReaderPreferences
 import org.peyilo.iread.demo.data.storage.ReadingStorage
 import org.peyilo.iread.demo.data.storage.UriGrantStore
-import org.peyilo.iread.demo.reader.CustomPageFactory
+import org.peyilo.iread.demo.reader.PageChromeSettings
+import org.peyilo.iread.demo.data.storage.PageChromeCodec
+import org.peyilo.ireadview.spi.page.ReaderPageChromeAction
 import org.peyilo.iread.demo.reader.CustomPlaceholderFactory
 import org.peyilo.iread.demo.reader.CustomSelectionToolbarFactory
 import org.peyilo.iread.demo.reader.ReaderEffects
@@ -43,7 +45,6 @@ import org.peyilo.ireadview.api.effect.*
 import org.peyilo.ireadview.api.input.PagingAxis
 import org.peyilo.ireadview.api.style.HighlightStyle
 import org.peyilo.ireadview.api.style.HighlightStyles
-import org.peyilo.ireadview.api.style.ChromeContent
 import org.peyilo.ireadview.api.style.ReaderStyle
 import org.peyilo.ireadview.source.MemoryBookSource
 import org.peyilo.ireadview.source.EpubTextBookSource
@@ -55,7 +56,6 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.CancellationException
 import org.peyilo.ireadview.api.source.BookSource
 import org.peyilo.ireadview.api.source.ReaderInput
-import org.peyilo.ireadview.spi.page.ReaderPageFactories
 import org.peyilo.ireadview.spi.page.ReaderPlaceholderFactories
 import java.nio.charset.Charset
 import java.security.MessageDigest
@@ -92,7 +92,7 @@ class ReaderActivity : Activity() {
     private var textPreparationJob: Job? = null
     private lateinit var uriGrants: UriGrantStore
     private var lastGrantReferences: Set<String>? = null
-    private var customPageTemplate = false
+    private var pageChrome = PageChromeSettings()
     private var pageSafeInsets = EdgeInsets()
     private var customPlaceholder = false
     private var customSelectionToolbar = false
@@ -132,7 +132,7 @@ class ReaderActivity : Activity() {
         importPanel = findViewById(R.id.txt_import_panel)
         importMessage = findViewById(R.id.txt_import_message)
         importProgress = findViewById(R.id.txt_import_progress)
-        typographySheet = TypographySheet(this, { reader.style }, ::applyReaderStyle)
+        typographySheet = TypographySheet(this, { reader.style }, ::applyReaderStyle, { pageChrome }, ::applyPageChrome)
         contentsSheet = ContentsSheet(this)
         settingsSheet = ReadingSettingsSheet(this, reader, ::applyReaderStyle, ::persistReaderPreferences, ::showMessage, ::showBookActions, ::showInputOptions, ::showBookmarks, ::showPageIndex, ::showCurrentBookDetails)
         readerMenu = ReaderMenuController(this, reader, hostScope, ::showContents, { typographySheet.show() }, ::showReaderSettings) {
@@ -143,8 +143,10 @@ class ReaderActivity : Activity() {
         readerPreferences = ReaderPreferences(this)
         savedInstanceState?.getString("demoCustomEffect")?.takeIf { ReaderEffects.isCustom(it) }
             ?.let { ReaderEffects.fromId(it) }?.let { reader.setPageTurnEffect(it) }
-        val coldSettings = if (savedInstanceState == null) readerPreferences.load(reader.style) else null
-        customPageTemplate = savedInstanceState?.getBoolean("customPageTemplate") ?: coldSettings?.customPage ?: false
+        val storedSettings = readerPreferences.load(reader.style)
+        val coldSettings = if (savedInstanceState == null) storedSettings else null
+        pageChrome = PageChromeCodec.decode(savedInstanceState?.getString("pageChrome")) ?: storedSettings?.pageChrome ?: PageChromeSettings()
+        installPageChrome()
         customPlaceholder = savedInstanceState?.getBoolean("customPlaceholder") ?: coldSettings?.customPlaceholder ?: false
         installFullScreenPageFactory()
         ViewCompat.setOnApplyWindowInsetsListener(reader) { _, insets ->
@@ -298,8 +300,19 @@ class ReaderActivity : Activity() {
         if (hasFocus) org.peyilo.iread.demo.reader.ReaderSystemBars.apply(this, window)
     }
     private fun installFullScreenPageFactory() {
-        reader.setPageFactory(org.peyilo.iread.demo.reader.FullScreenPageFactory(pageSafeInsets,
-            if (customPageTemplate) CustomPageFactory() else ReaderPageFactories.default()))
+        reader.setPageFactory(org.peyilo.iread.demo.reader.FullScreenPageFactory(pageSafeInsets))
+    }
+
+    @Suppress("DEPRECATION")
+    private fun installPageChrome() {
+        reader.setPageChrome(pageChrome.template().withBackButton(pageChrome.showBackButton,
+            ReaderPageChromeAction { onBackPressed() }))
+    }
+    private fun applyPageChrome(settings: PageChromeSettings) {
+        pageChrome = settings
+        installPageChrome()
+        typographySheet.refresh()
+        persistReaderPreferences()
     }
 
     private fun showBookActions() {
@@ -657,8 +670,6 @@ class ReaderActivity : Activity() {
             toggleLabel("键盘翻页", input.keyboardPagingEnabled), toggleLabel("音量键翻页", input.volumeKeyPagingEnabled),
             "分页方向：${if (input.pagingAxis == PagingAxis.Horizontal) "横向" else "纵向（无动画）"}",
             "翻页间隔：${reader.pageTurnOptions.minimumTurnIntervalMs} 毫秒",
-            "页眉内容：${if (customPageTemplate) "工具栏章节名" else if (reader.style.header.content == ChromeContent.TIME) "时间" else "章节名"}",
-            "页面模板：${if (customPageTemplate) "工具栏示例" else "默认"}",
             "加载提示：${if (customPlaceholder) "自定义示例" else "默认"}", "排版设置", "阅读主题",
             "选区工具栏：${if (customSelectionToolbar) "自定义视图示例" else "图文分页菜单"}")
         AlertDialog.Builder(this).setTitle("阅读输入").setItems(labels) { _, index ->
@@ -669,21 +680,15 @@ class ReaderActivity : Activity() {
                 3 -> reader.setInputOptions(input.copy(volumeKeyPagingEnabled = !input.volumeKeyPagingEnabled))
                 4 -> reader.setInputOptions(input.copy(pagingAxis = if (input.pagingAxis == PagingAxis.Horizontal) PagingAxis.Vertical else PagingAxis.Horizontal))
                 5 -> reader.setPageTurnOptions(reader.pageTurnOptions.copy(minimumTurnIntervalMs = if (reader.pageTurnOptions.minimumTurnIntervalMs == 0L) 250 else 0))
-                6 -> if (customPageTemplate) Toast.makeText(this, "切回默认页面后可选择页眉内容", Toast.LENGTH_SHORT).show()
-                    else applyReaderStyle(reader.style.copy(header = reader.style.header.copy(content = if (reader.style.header.content == ChromeContent.TIME) ChromeContent.CHAPTER_TITLE else ChromeContent.TIME)))
-                7 -> {
-                    customPageTemplate = !customPageTemplate
-                    installFullScreenPageFactory()
-                }
-                8 -> {
+                6 -> {
                     customPlaceholder = !customPlaceholder
                     reader.setPlaceholderFactory(if (customPlaceholder) CustomPlaceholderFactory() else ReaderPlaceholderFactories.default())
                 }
-                9 -> typographySheet.show()
-                10 -> AlertDialog.Builder(this).setTitle("阅读主题").setItems(ReaderThemes.labels) { _, theme ->
+                7 -> typographySheet.show()
+                8 -> AlertDialog.Builder(this).setTitle("阅读主题").setItems(ReaderThemes.labels) { _, theme ->
                     applyReaderStyle(ReaderThemes.apply(theme, reader.style))
                 }.setNegativeButton("取消", null).show()
-                11 -> {
+                9 -> {
                     customSelectionToolbar = !customSelectionToolbar
                     reader.setSelectionToolbarFactory(if (customSelectionToolbar) CustomSelectionToolbarFactory { reader.style }
                         else org.peyilo.iread.demo.reader.ReaderSelectionMenus.factory(this))
@@ -711,7 +716,7 @@ class ReaderActivity : Activity() {
         val style = committedStyle ?: return
         if (!preferencesReady || !::readerPreferences.isInitialized || isDestroyed) return
         readerPreferences.save(style, reader.inputOptions, reader.pageTurnOptions, reader.readingMode,
-            reader.pageTurnEffectId, customPageTemplate, customPlaceholder, customSelectionToolbar)
+            reader.pageTurnEffectId, customPlaceholder, customSelectionToolbar, pageChrome)
     }
 
     private fun showPageIndex() = pageIndexPanel.show()
@@ -769,7 +774,7 @@ class ReaderActivity : Activity() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         reader.pageTurnEffectId.takeIf { ReaderEffects.isCustom(it) }?.let { outState.putString("demoCustomEffect", it) }
-        outState.putBoolean("customPageTemplate", customPageTemplate)
+        outState.putString("pageChrome", PageChromeCodec.encode(pageChrome))
         outState.putBoolean("customSelectionToolbar", customSelectionToolbar)
         outState.putBoolean("customPlaceholder", customPlaceholder)
         persistProgress()

@@ -59,7 +59,7 @@ abstract class BookReadView @JvmOverloads constructor(
     private var pageClock: org.peyilo.ireadview.internal.render.ReaderPageClock? = null
     init {
         pageClock = org.peyilo.ireadview.internal.render.ReaderPageClock(this, { presentation }, { contentGeneration },
-            { !isReleased && currentPosition != null })
+            { !isReleased && currentPosition != null }, { refreshPageChrome() })
     }
     var readingMode: ReadingMode = ReadingMode.PAGED
         private set
@@ -736,6 +736,14 @@ abstract class BookReadView @JvmOverloads constructor(
         checkMainThread(); if (isReleased) return
         pageChromeProvider = provider
         refreshPageChrome()
+    }
+    /** Configure the default header/footer's six positions and the separate back button.
+     * Replaces the current chrome provider with a constant configuration. For content
+     * depending on host state use setPageChromeProvider and refreshPageChrome instead.
+     * Built-in chapter/page/time/battery contents still resolve per page automatically.
+     */
+    fun setPageChrome(chrome: ReaderPageChrome) {
+        setPageChromeProvider(ReaderPageChromeProvider { chrome })
     }
     /** Re-read captured host state without replacing the page factory or text layout.
      * During a page transition this is deferred until Idle so snapshots stay consistent.

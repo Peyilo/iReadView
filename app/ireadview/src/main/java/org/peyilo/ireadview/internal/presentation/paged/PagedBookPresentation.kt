@@ -98,8 +98,15 @@ internal class PagedBookPresentation(context: Context, private val bookHost: Boo
         val content = page.layout.contentSnapshot ?: return false
         val offset = Rect()
         container.offsetDescendantRectToMyCoords(page.body, offset)
-        val anchor = page.body.anchorAt(xPx - offset.left, yPx - offset.top) ?: return false
-        val selection = TextSelectionResolver.paragraphAt(content, anchor) ?: return false
+        val x = xPx - offset.left
+        val y = yPx - offset.top
+        val highlightId = page.body.highlightAt(x, y)
+        val restored = highlightId?.let { id -> bookHost.validHighlights(content.chapterId).firstOrNull { it.id == id } }
+            ?.let { TextSelectionResolver.fromHighlight(content, it) }
+        val selection = restored ?: run {
+            val anchor = page.body.anchorAt(x, y) ?: return false
+            TextSelectionResolver.paragraphAt(content, anchor) ?: return false
+        }
         return bookHost.reportSelection(selection, page.generation) is ReaderResult.Success
     }
     override fun onSelectionTouch(action: Int, xPx: Float, yPx: Float): Boolean {

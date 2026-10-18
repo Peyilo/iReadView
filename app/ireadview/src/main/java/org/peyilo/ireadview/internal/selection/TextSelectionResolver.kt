@@ -6,6 +6,15 @@ import org.peyilo.ireadview.api.model.*
 
 /** Uses platform boundaries; offsets always refer to the original, unchanged UTF-16 text. */
 internal object TextSelectionResolver {
+    /** Restore the complete stored source range, never just its visible page slice. */
+    fun fromHighlight(content: ChapterContent, highlight: Highlight): TextSelection? {
+        val range = highlight.range
+        if (range.bookId != content.bookId || range.chapterId != content.chapterId ||
+            range.contentRevision != null && range.contentRevision != content.revision) return null
+        val current = range.copy(contentRevision = content.revision)
+        if (!matches(content, current, highlight.quote)) return null
+        return TextSelection(current, highlight.quote)
+    }
     /** A visible accessibility slice must name the exact source text, not just its length. */
     fun matchesBlockRange(content: ChapterContent, range: org.peyilo.ireadview.spi.content.BlockTextRange,
         visibleText: String): Boolean {

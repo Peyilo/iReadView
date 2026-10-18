@@ -48,7 +48,11 @@ class TextSourceActivity : Activity() {
         snapshot = SnapshotState.read(savedInstanceState?.getBundle("textSnapshot"))
         val layout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; fitsSystemWindows = true }
         status = TextView(this).apply { text = "TXT 来源配置示例" }
-        reader = ReaderView(this).apply { id = R.id.text_source_reader }
+        reader = ReaderView(this).apply {
+            id = R.id.text_source_reader
+            setPageChrome(org.peyilo.iread.demo.reader.PageChromeSettings().template().withBackButton(true,
+                org.peyilo.ireadview.spi.page.ReaderPageChromeAction { finish() }))
+        }
         fun button(label: String, action: () -> Unit) = Button(this).apply {
             text = label; setOnClickListener { if (started && !isFinishing) action() }
         }

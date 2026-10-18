@@ -1,5 +1,8 @@
 package org.peyilo.iread.demo.ui.reader.typography
 
+import android.app.AlertDialog
+import org.peyilo.iread.demo.reader.PageChromeSettings
+import org.peyilo.iread.demo.reader.PageChromePosition
 import android.app.Activity
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -11,11 +14,13 @@ import org.peyilo.iread.demo.ui.reader.menu.ReaderBottomSheets
 import org.peyilo.ireadview.api.style.*
 import kotlin.math.roundToInt
 
-/** Reference typography controls, bound only to the public immutable style API. */
+/** Reference typography controls, using the public style API and default-template configuration API. */
 internal class TypographySheet(
     private val activity: Activity,
     private val current: () -> ReaderStyle,
-    private val apply: (ReaderStyle) -> Unit
+    private val apply: (ReaderStyle) -> Unit,
+    private val currentChrome: () -> PageChromeSettings,
+    private val applyChrome: (PageChromeSettings) -> Unit
 ) {
     private var dialog: BottomSheetDialog? = null
     private val bindings = ArrayList<() -> Unit>()
@@ -63,8 +68,7 @@ internal class TypographySheet(
         font(panel, "正文字体", TextRole.BODY)
         font(panel, "页眉字体", TextRole.HEADER)
         font(panel, "页脚字体", TextRole.FOOTER)
-        chrome(panel, "页眉", TextRole.HEADER)
-        chrome(panel, "页脚", TextRole.FOOTER)
+        pageChrome(panel)
         choices(panel, "页眉 / 页脚", listOf("全部显示", "仅页眉", "仅页脚", "全部隐藏"), {
             when { current().header.visible && current().footer.visible -> 0; current().header.visible -> 1; current().footer.visible -> 2; else -> 3 }
         }) { index ->
@@ -153,18 +157,33 @@ internal class TypographySheet(
             fonts.indexOf(ReaderStyles.readerFont(current(), role))
         }) { apply(ReaderStyles.withFont(current(), role, fonts[it])) }
     }
-    private fun chrome(panel: LinearLayout, text: String, role: TextRole) {
-        choices(panel, "${text}对齐", listOf("起始", "居中", "末尾"), { ReaderStyles.chrome(current(), role).alignment.ordinal }) {
-            apply(ReaderStyles.withChromeAlignment(current(), role, ChromeAlignment.entries[it]))
+    private fun pageChrome(panel: LinearLayout) {
+        val contents = listOf(ChromeContent.NONE, ChromeContent.CHAPTER_TITLE, ChromeContent.BOOK_TITLE,
+            ChromeContent.PAGE_NUMBER, ChromeContent.PAGE_COUNT, ChromeContent.PAGE_PROGRESS,
+            ChromeContent.TIME, ChromeContent.BATTERY_LEVEL, ChromeContent.PAGE_PROGRESS_AND_TIME)
+        val labels = listOf("不显示", "章节名", "书籍名", "章内页号", "章内页数", "章内页码 / 页数", "时间", "电池电量", "页码与时间")
+        val group = section(panel)
+        caption(group, "页眉页脚模板")
+        PageChromePosition.entries.forEach { position ->
+            val item = TextView(context).apply {
+                setTextColor(0xff222222.toInt()); setPadding(dp(4), dp(12), dp(4), dp(12))
+            }
+            val update = {
+                item.text = "${position.label}：${labels[contents.indexOf(currentChrome().content(position))]}  ›"
+            }
+            update(); bindings += update
+            item.setOnClickListener {
+                AlertDialog.Builder(activity).setTitle(position.label)
+                    .setSingleChoiceItems(labels.toTypedArray(), contents.indexOf(currentChrome().content(position))) { picker, index ->
+                        applyChrome(currentChrome().withContent(position, contents[index]))
+                        refresh(); picker.dismiss()
+                    }.setNegativeButton("取消", null).show()
+            }
+            group.addView(item, LinearLayout.LayoutParams(-1, -2))
         }
-        choices(panel, "${text}内容", listOf("默认", "书名", "章节", "页码"), {
-            when (ReaderStyles.chrome(current(), role).content) { ChromeContent.DEFAULT -> 0; ChromeContent.BOOK_TITLE -> 1; ChromeContent.CHAPTER_TITLE -> 2; ChromeContent.PAGE_PROGRESS_AND_TIME, ChromeContent.PAGE_PROGRESS, ChromeContent.PAGE_NUMBER -> 3; else -> -1 }
-        }) {
-            apply(ReaderStyles.withChromeContent(current(), role, listOf(ChromeContent.DEFAULT, ChromeContent.BOOK_TITLE, ChromeContent.CHAPTER_TITLE, ChromeContent.PAGE_PROGRESS_AND_TIME)[it]))
-        }
-        val more = listOf(ChromeContent.PAGE_NUMBER, ChromeContent.PAGE_COUNT, ChromeContent.PAGE_PROGRESS, ChromeContent.TIME, ChromeContent.NONE)
-        choices(panel, "${text}更多内容", listOf("页号", "页数", "进度", "时间", "无文字"), { more.indexOf(ReaderStyles.chrome(current(), role).content) }) {
-            apply(ReaderStyles.withChromeContent(current(), role, more[it]))
+        choices(panel, "模板返回按钮", listOf("显示", "隐藏"), { if(currentChrome().showBackButton) 0 else 1 }) {
+            applyChrome(currentChrome().copy(showBackButton = it == 0))
+            refresh()
         }
     }
 }

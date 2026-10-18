@@ -6,11 +6,14 @@ import org.peyilo.iread.demo.content.DividerBlock
 import org.peyilo.iread.demo.content.DividerLayoutProvider
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.os.Bundle
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import org.peyilo.ireadview.api.event.ReaderListener
+import org.peyilo.ireadview.api.event.ReaderAction
+import org.peyilo.ireadview.api.event.ReaderActionHandler
 import org.peyilo.ireadview.api.model.*
 import org.peyilo.ireadview.api.state.*
 import org.peyilo.ireadview.source.MemoryBookSource
@@ -46,8 +49,30 @@ class CustomContentActivity : Activity() {
         status = TextView(this).apply { text = "自定义文本与图形；文本元数据沿用正文排版，图形不提供文字选区" }
         reader = ReaderView(this).apply {
             id = R.id.custom_content_reader
+            setPageFactory(org.peyilo.iread.demo.reader.CustomPageFactory())
             setBlockLayoutProviders(listOf(DividerLayoutProvider()))
         }
+        reader.setReaderActionHandler(ReaderActionHandler { _, action ->
+            when(action) {
+                ReaderAction.ShowTableOfContents -> {
+                    val chapters = reader.currentBook?.chapters.orEmpty()
+                    AlertDialog.Builder(this).setTitle("示例目录")
+                        .setItems(chapters.map { it.title }.toTypedArray()) { _, index ->
+                            reader.goToChapter(chapters[index].chapterId, callback = navigationCallback())
+                        }.setNegativeButton("取消", null).show()
+                    true
+                }
+                ReaderAction.ShowSettings -> {
+                    val sizes = listOf(18f, 20f, 22f)
+                    AlertDialog.Builder(this).setTitle("示例正文字号")
+                        .setItems(sizes.map { "${it.toInt()} sp" }.toTypedArray()) { _, index ->
+                            reader.applyStyle(reader.style.copy(body = reader.style.body.copy(textSizeSp = sizes[index]))) { }
+                        }.setNegativeButton("取消", null).show()
+                    true
+                }
+                ReaderAction.ExitReader -> { finish(); true }
+            }
+        })
         fun button(label: String, action: () -> Unit) = Button(this).apply {
             text = label
             setOnClickListener { if (started && !isFinishing) action() }

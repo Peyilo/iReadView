@@ -1,7 +1,7 @@
 iReadView Release JVM signature inventory
 Generated: 2026-10-15
-AAR SHA-256: 5d2d5cebc7d3812aca6909e5eee9c781b7408740f02219c14344b17e669154af
-classes.jar SHA-256: 6f74cb8238000bb93101df295fefb1d414f091b21a1b338db046b70f9036f81a
+AAR SHA-256: e87300623f76fbc38094fd10e63a9e49616830ae3028cef1975b934b1c3b86d1
+classes.jar SHA-256: 23b56fe659182d337d302bcc5932db42e7e28792c51900263d5611c7a2f10703
 Tool: JDK 17 javap -protected -s
 Scope: public bytecode declarations under api/spi/widget/source, public/protected members; file helpers and lambda classes excluded.
 Includes compiler generated/Kotlin internal JVM members; not a supported API allowlist.
@@ -3839,6 +3839,8 @@ public final class org.peyilo.ireadview.api.style.ChromeContent extends java.lan
     descriptor: Lorg/peyilo/ireadview/api/style/ChromeContent;
   public static final org.peyilo.ireadview.api.style.ChromeContent PAGE_PROGRESS_AND_TIME;
     descriptor: Lorg/peyilo/ireadview/api/style/ChromeContent;
+  public static final org.peyilo.ireadview.api.style.ChromeContent BATTERY_LEVEL;
+    descriptor: Lorg/peyilo/ireadview/api/style/ChromeContent;
   public static org.peyilo.ireadview.api.style.ChromeContent[] values();
     descriptor: ()[Lorg/peyilo/ireadview/api/style/ChromeContent;
 
@@ -5633,11 +5635,11 @@ public final class org.peyilo.ireadview.spi.page.PlaceholderState {
 
 Compiled from "ReaderPageChrome.kt"
 public final class org.peyilo.ireadview.spi.page.ReaderPageChrome {
-  public org.peyilo.ireadview.spi.page.ReaderPageChrome(java.lang.String, java.lang.String, java.lang.String, boolean, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction);
-    descriptor: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;)V
+  public org.peyilo.ireadview.spi.page.ReaderPageChrome(java.lang.String, java.lang.String, java.lang.String, boolean, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeSlot, org.peyilo.ireadview.spi.page.ReaderPageChromeSlot, org.peyilo.ireadview.spi.page.ReaderPageChromeSlot, org.peyilo.ireadview.spi.page.ReaderPageChromeSlot, org.peyilo.ireadview.spi.page.ReaderPageChromeSlot, org.peyilo.ireadview.spi.page.ReaderPageChromeSlot);
+    descriptor: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;)V
 
-  public org.peyilo.ireadview.spi.page.ReaderPageChrome(java.lang.String, java.lang.String, java.lang.String, boolean, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, int, kotlin.jvm.internal.DefaultConstructorMarker);
-    descriptor: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+  public org.peyilo.ireadview.spi.page.ReaderPageChrome(java.lang.String, java.lang.String, java.lang.String, boolean, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeSlot, org.peyilo.ireadview.spi.page.ReaderPageChromeSlot, org.peyilo.ireadview.spi.page.ReaderPageChromeSlot, org.peyilo.ireadview.spi.page.ReaderPageChromeSlot, org.peyilo.ireadview.spi.page.ReaderPageChromeSlot, org.peyilo.ireadview.spi.page.ReaderPageChromeSlot, int, kotlin.jvm.internal.DefaultConstructorMarker);
+    descriptor: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 
   public final java.lang.String getHeaderText();
     descriptor: ()Ljava/lang/String;
@@ -5663,6 +5665,36 @@ public final class org.peyilo.ireadview.spi.page.ReaderPageChrome {
   public final org.peyilo.ireadview.spi.page.ReaderPageChromeAction getFooterEndAction();
     descriptor: ()Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;
 
+  public final org.peyilo.ireadview.spi.page.ReaderPageChromeSlot getHeaderStart();
+    descriptor: ()Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;
+
+  public final org.peyilo.ireadview.spi.page.ReaderPageChromeSlot getHeaderCenter();
+    descriptor: ()Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;
+
+  public final org.peyilo.ireadview.spi.page.ReaderPageChromeSlot getHeaderEnd();
+    descriptor: ()Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;
+
+  public final org.peyilo.ireadview.spi.page.ReaderPageChromeSlot getFooterStart();
+    descriptor: ()Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;
+
+  public final org.peyilo.ireadview.spi.page.ReaderPageChromeSlot getFooterCenter();
+    descriptor: ()Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;
+
+  public final org.peyilo.ireadview.spi.page.ReaderPageChromeSlot getFooterEnd();
+    descriptor: ()Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;
+
+  public final org.peyilo.ireadview.spi.page.ReaderPageChrome withHeader(org.peyilo.ireadview.spi.page.ReaderPageChromeSlot, org.peyilo.ireadview.spi.page.ReaderPageChromeSlot, org.peyilo.ireadview.spi.page.ReaderPageChromeSlot);
+    descriptor: (Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;)Lorg/peyilo/ireadview/spi/page/ReaderPageChrome;
+
+  public final org.peyilo.ireadview.spi.page.ReaderPageChrome withFooter(org.peyilo.ireadview.spi.page.ReaderPageChromeSlot, org.peyilo.ireadview.spi.page.ReaderPageChromeSlot, org.peyilo.ireadview.spi.page.ReaderPageChromeSlot);
+    descriptor: (Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;)Lorg/peyilo/ireadview/spi/page/ReaderPageChrome;
+
+  public final org.peyilo.ireadview.spi.page.ReaderPageChrome withBackButton(boolean, org.peyilo.ireadview.spi.page.ReaderPageChromeAction);
+    descriptor: (ZLorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;)Lorg/peyilo/ireadview/spi/page/ReaderPageChrome;
+
+  public static org.peyilo.ireadview.spi.page.ReaderPageChrome withBackButton$default(org.peyilo.ireadview.spi.page.ReaderPageChrome, boolean, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, int, java.lang.Object);
+    descriptor: (Lorg/peyilo/ireadview/spi/page/ReaderPageChrome;ZLorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;ILjava/lang/Object;)Lorg/peyilo/ireadview/spi/page/ReaderPageChrome;
+
   public final java.lang.String component1();
     descriptor: ()Ljava/lang/String;
 
@@ -5687,11 +5719,29 @@ public final class org.peyilo.ireadview.spi.page.ReaderPageChrome {
   public final org.peyilo.ireadview.spi.page.ReaderPageChromeAction component8();
     descriptor: ()Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;
 
-  public final org.peyilo.ireadview.spi.page.ReaderPageChrome copy(java.lang.String, java.lang.String, java.lang.String, boolean, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction);
-    descriptor: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;)Lorg/peyilo/ireadview/spi/page/ReaderPageChrome;
+  public final org.peyilo.ireadview.spi.page.ReaderPageChromeSlot component9();
+    descriptor: ()Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;
 
-  public static org.peyilo.ireadview.spi.page.ReaderPageChrome copy$default(org.peyilo.ireadview.spi.page.ReaderPageChrome, java.lang.String, java.lang.String, java.lang.String, boolean, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, int, java.lang.Object);
-    descriptor: (Lorg/peyilo/ireadview/spi/page/ReaderPageChrome;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;ILjava/lang/Object;)Lorg/peyilo/ireadview/spi/page/ReaderPageChrome;
+  public final org.peyilo.ireadview.spi.page.ReaderPageChromeSlot component10();
+    descriptor: ()Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;
+
+  public final org.peyilo.ireadview.spi.page.ReaderPageChromeSlot component11();
+    descriptor: ()Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;
+
+  public final org.peyilo.ireadview.spi.page.ReaderPageChromeSlot component12();
+    descriptor: ()Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;
+
+  public final org.peyilo.ireadview.spi.page.ReaderPageChromeSlot component13();
+    descriptor: ()Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;
+
+  public final org.peyilo.ireadview.spi.page.ReaderPageChromeSlot component14();
+    descriptor: ()Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;
+
+  public final org.peyilo.ireadview.spi.page.ReaderPageChrome copy(java.lang.String, java.lang.String, java.lang.String, boolean, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeSlot, org.peyilo.ireadview.spi.page.ReaderPageChromeSlot, org.peyilo.ireadview.spi.page.ReaderPageChromeSlot, org.peyilo.ireadview.spi.page.ReaderPageChromeSlot, org.peyilo.ireadview.spi.page.ReaderPageChromeSlot, org.peyilo.ireadview.spi.page.ReaderPageChromeSlot);
+    descriptor: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;)Lorg/peyilo/ireadview/spi/page/ReaderPageChrome;
+
+  public static org.peyilo.ireadview.spi.page.ReaderPageChrome copy$default(org.peyilo.ireadview.spi.page.ReaderPageChrome, java.lang.String, java.lang.String, java.lang.String, boolean, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeSlot, org.peyilo.ireadview.spi.page.ReaderPageChromeSlot, org.peyilo.ireadview.spi.page.ReaderPageChromeSlot, org.peyilo.ireadview.spi.page.ReaderPageChromeSlot, org.peyilo.ireadview.spi.page.ReaderPageChromeSlot, org.peyilo.ireadview.spi.page.ReaderPageChromeSlot, int, java.lang.Object);
+    descriptor: (Lorg/peyilo/ireadview/spi/page/ReaderPageChrome;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;ILjava/lang/Object;)Lorg/peyilo/ireadview/spi/page/ReaderPageChrome;
 
   public java.lang.String toString();
     descriptor: ()Ljava/lang/String;
@@ -5701,6 +5751,24 @@ public final class org.peyilo.ireadview.spi.page.ReaderPageChrome {
 
   public boolean equals(java.lang.Object);
     descriptor: (Ljava/lang/Object;)Z
+
+  public org.peyilo.ireadview.spi.page.ReaderPageChrome(java.lang.String, java.lang.String, java.lang.String, boolean, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeSlot, org.peyilo.ireadview.spi.page.ReaderPageChromeSlot, org.peyilo.ireadview.spi.page.ReaderPageChromeSlot, org.peyilo.ireadview.spi.page.ReaderPageChromeSlot, org.peyilo.ireadview.spi.page.ReaderPageChromeSlot);
+    descriptor: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;)V
+
+  public org.peyilo.ireadview.spi.page.ReaderPageChrome(java.lang.String, java.lang.String, java.lang.String, boolean, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeSlot, org.peyilo.ireadview.spi.page.ReaderPageChromeSlot, org.peyilo.ireadview.spi.page.ReaderPageChromeSlot, org.peyilo.ireadview.spi.page.ReaderPageChromeSlot);
+    descriptor: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;)V
+
+  public org.peyilo.ireadview.spi.page.ReaderPageChrome(java.lang.String, java.lang.String, java.lang.String, boolean, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeSlot, org.peyilo.ireadview.spi.page.ReaderPageChromeSlot, org.peyilo.ireadview.spi.page.ReaderPageChromeSlot);
+    descriptor: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;)V
+
+  public org.peyilo.ireadview.spi.page.ReaderPageChrome(java.lang.String, java.lang.String, java.lang.String, boolean, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeSlot, org.peyilo.ireadview.spi.page.ReaderPageChromeSlot);
+    descriptor: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;)V
+
+  public org.peyilo.ireadview.spi.page.ReaderPageChrome(java.lang.String, java.lang.String, java.lang.String, boolean, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeSlot);
+    descriptor: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;)V
+
+  public org.peyilo.ireadview.spi.page.ReaderPageChrome(java.lang.String, java.lang.String, java.lang.String, boolean, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction);
+    descriptor: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;)V
 
   public org.peyilo.ireadview.spi.page.ReaderPageChrome(java.lang.String, java.lang.String, java.lang.String, boolean, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, org.peyilo.ireadview.spi.page.ReaderPageChromeAction);
     descriptor: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;)V
@@ -5725,6 +5793,9 @@ public final class org.peyilo.ireadview.spi.page.ReaderPageChrome {
 
   public org.peyilo.ireadview.spi.page.ReaderPageChrome();
     descriptor: ()V
+
+  public final org.peyilo.ireadview.spi.page.ReaderPageChrome withBackButton(boolean);
+    descriptor: (Z)Lorg/peyilo/ireadview/spi/page/ReaderPageChrome;
 }
 
 Compiled from "ReaderPageChrome.kt"
@@ -5737,6 +5808,57 @@ Compiled from "ReaderPageChrome.kt"
 public interface org.peyilo.ireadview.spi.page.ReaderPageChromeProvider {
   public abstract org.peyilo.ireadview.spi.page.ReaderPageChrome provide(org.peyilo.ireadview.spi.page.ReaderPageContext);
     descriptor: (Lorg/peyilo/ireadview/spi/page/ReaderPageContext;)Lorg/peyilo/ireadview/spi/page/ReaderPageChrome;
+}
+
+Compiled from "ReaderPageChrome.kt"
+public final class org.peyilo.ireadview.spi.page.ReaderPageChromeSlot {
+  public org.peyilo.ireadview.spi.page.ReaderPageChromeSlot(org.peyilo.ireadview.api.style.ChromeContent, java.lang.String, org.peyilo.ireadview.spi.page.ReaderPageChromeAction);
+    descriptor: (Lorg/peyilo/ireadview/api/style/ChromeContent;Ljava/lang/String;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;)V
+
+  public org.peyilo.ireadview.spi.page.ReaderPageChromeSlot(org.peyilo.ireadview.api.style.ChromeContent, java.lang.String, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, int, kotlin.jvm.internal.DefaultConstructorMarker);
+    descriptor: (Lorg/peyilo/ireadview/api/style/ChromeContent;Ljava/lang/String;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+
+  public final org.peyilo.ireadview.api.style.ChromeContent getContent();
+    descriptor: ()Lorg/peyilo/ireadview/api/style/ChromeContent;
+
+  public final java.lang.String getText();
+    descriptor: ()Ljava/lang/String;
+
+  public final org.peyilo.ireadview.spi.page.ReaderPageChromeAction getAction();
+    descriptor: ()Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;
+
+  public final org.peyilo.ireadview.api.style.ChromeContent component1();
+    descriptor: ()Lorg/peyilo/ireadview/api/style/ChromeContent;
+
+  public final java.lang.String component2();
+    descriptor: ()Ljava/lang/String;
+
+  public final org.peyilo.ireadview.spi.page.ReaderPageChromeAction component3();
+    descriptor: ()Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;
+
+  public final org.peyilo.ireadview.spi.page.ReaderPageChromeSlot copy(org.peyilo.ireadview.api.style.ChromeContent, java.lang.String, org.peyilo.ireadview.spi.page.ReaderPageChromeAction);
+    descriptor: (Lorg/peyilo/ireadview/api/style/ChromeContent;Ljava/lang/String;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;)Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;
+
+  public static org.peyilo.ireadview.spi.page.ReaderPageChromeSlot copy$default(org.peyilo.ireadview.spi.page.ReaderPageChromeSlot, org.peyilo.ireadview.api.style.ChromeContent, java.lang.String, org.peyilo.ireadview.spi.page.ReaderPageChromeAction, int, java.lang.Object);
+    descriptor: (Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;Lorg/peyilo/ireadview/api/style/ChromeContent;Ljava/lang/String;Lorg/peyilo/ireadview/spi/page/ReaderPageChromeAction;ILjava/lang/Object;)Lorg/peyilo/ireadview/spi/page/ReaderPageChromeSlot;
+
+  public java.lang.String toString();
+    descriptor: ()Ljava/lang/String;
+
+  public int hashCode();
+    descriptor: ()I
+
+  public boolean equals(java.lang.Object);
+    descriptor: (Ljava/lang/Object;)Z
+
+  public org.peyilo.ireadview.spi.page.ReaderPageChromeSlot(org.peyilo.ireadview.api.style.ChromeContent, java.lang.String);
+    descriptor: (Lorg/peyilo/ireadview/api/style/ChromeContent;Ljava/lang/String;)V
+
+  public org.peyilo.ireadview.spi.page.ReaderPageChromeSlot(org.peyilo.ireadview.api.style.ChromeContent);
+    descriptor: (Lorg/peyilo/ireadview/api/style/ChromeContent;)V
+
+  public org.peyilo.ireadview.spi.page.ReaderPageChromeSlot();
+    descriptor: ()V
 }
 
 Compiled from "ReaderPageFactory.kt"
@@ -7297,6 +7419,9 @@ public abstract class org.peyilo.ireadview.widget.BookReadView extends org.peyil
   public final void setPageChromeProvider(org.peyilo.ireadview.spi.page.ReaderPageChromeProvider);
     descriptor: (Lorg/peyilo/ireadview/spi/page/ReaderPageChromeProvider;)V
 
+  public final void setPageChrome(org.peyilo.ireadview.spi.page.ReaderPageChrome);
+    descriptor: (Lorg/peyilo/ireadview/spi/page/ReaderPageChrome;)V
+
   public final void refreshPageChrome();
     descriptor: ()V
 
@@ -7606,10 +7731,10 @@ public abstract class org.peyilo.ireadview.widget.BookReadView extends org.peyil
   public static final boolean access$onCommittedLocationChanged$current(long, org.peyilo.ireadview.widget.BookReadView, long, org.peyilo.ireadview.api.model.BookDescriptor, org.peyilo.ireadview.api.event.ReadLocationChange);
     descriptor: (JLorg/peyilo/ireadview/widget/BookReadView;JLorg/peyilo/ireadview/api/model/BookDescriptor;Lorg/peyilo/ireadview/api/event/ReadLocationChange;)Z
 
-  public static final boolean access$publishReaderError$current$82(long, org.peyilo.ireadview.widget.BookReadView, long, org.peyilo.ireadview.api.state.ReaderError, kotlin.jvm.functions.Function0);
+  public static final boolean access$publishReaderError$current$83(long, org.peyilo.ireadview.widget.BookReadView, long, org.peyilo.ireadview.api.state.ReaderError, kotlin.jvm.functions.Function0);
     descriptor: (JLorg/peyilo/ireadview/widget/BookReadView;JLorg/peyilo/ireadview/api/state/ReaderError;Lkotlin/jvm/functions/Function0;)Z
 
-  public static final boolean access$publishState$current$84(long, org.peyilo.ireadview.widget.BookReadView, long, long);
+  public static final boolean access$publishState$current$85(long, org.peyilo.ireadview.widget.BookReadView, long, long);
     descriptor: (JLorg/peyilo/ireadview/widget/BookReadView;JJ)Z
 
   public static final java.lang.Object access$goToBookmark$move(org.peyilo.ireadview.widget.BookReadView, org.peyilo.ireadview.api.model.ReadingPosition, kotlin.coroutines.Continuation);

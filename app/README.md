@@ -65,8 +65,10 @@ jsoup 与支持 API21 的 NIO desugaring 仅添加到 Demo：参考[jsoup Androi
 
 Windows 使用 `gradlew.bat`。输出为 `app/build/outputs/apk/debug/app-debug.apk`。
 
-目录、排版、设置均采用底部面板，详情与 Library 新增样式 API 见 [排版 API](../docs/26_READER_PANELS_AND_TYPOGRAPHY_API.md)。原六区域边距之外还可调节正文视口与段落内边距；标题/正文使用固定 dp 字距，页眉页脚可设置字号、字体、内容、对齐、高度和可见性。
+目录、排版、设置均采用底部面板，详情与 Library 新增样式 API 见 [排版 API](../docs/26_READER_PANELS_AND_TYPOGRAPHY_API.md)。原六区域边距之外还可调节正文视口与段落内边距；标题/正文使用固定 dp 字距，页眉页脚通过默认模板逐一配置六位置内容及返回按钮；字号、字体、边距、高度和整体可见性使用底层样式API，不再调用旧单行内容与对齐配置。
 # 默认小说排版
 
 内置书籍、本地 TXT、网络加载及卷页小说示例共用 `res/values/reader_defaults.xml` 中的 `ReaderDefaultStyle`，参数和默认字体取自旧 Demo：正文20sp、标题28sp左对齐、额外行距10dp、段距18dp、标题底部72dp；完整六区域边距见[排版文档](../docs/26_READER_PANELS_AND_TYPOGRAPHY_API.md)。首次升级冷启动迁移旧排版偏好，后续调整继续保存。
 
+
+主阅读页直接使用库内六位置默认模板；模板配置独立持久化，无旧页眉页脚内容迁移。完整自定义页面放在CustomContentActivity示例中，参见[Demo模板接入](../docs/PAGE_CHROME.md)。

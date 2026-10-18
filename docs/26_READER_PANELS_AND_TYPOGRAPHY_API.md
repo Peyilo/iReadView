@@ -1,5 +1,7 @@
 # 阅读面板与排版 API
 
+> 当前Demo用六位置模板配置内容，旧单行内容/整行对齐不再作为Demo调用路径；底层ReaderStyles样式API仍保留，见[模板专题](PAGE_CHROME.md)。
+
 ## Demo 面板
 
 参考旧 ChapListFragment、TypesettingFragment 和 SettingsFragment：
@@ -37,11 +39,11 @@ Demo 的统一默认样式由 `res/values/reader_defaults.xml` 的 `ReaderDefaul
 
 标题行距新增 `TitleStyle.lineSpacingMultiplier/lineSpacingExtraDp`、`ReaderStyles.withTitleLineSpacing` 和 XML `ireadTitleLineSpacingMultiplier/ireadTitleLineSpacingExtra`，接入 StaticLayout、分页、选区与状态保存。缺少新键的旧状态沿用当前基准值。
 
-2026-10-14 调整：当前阅读根布局已经避让系统栏，页眉顶部不再沿用旧64dp，页脚底部不再沿用旧20dp，两者均改为8dp。内侧边距与正文参数继续参照旧 Demo。
+当前ReaderView本身全屏，FullScreenPageFactory在模板内部为内容增加系统安全边距；页眉顶部与页脚底部外观padding均为8dp，不沿用旧64dp/20dp。内侧边距与正文参数继续参照参考Demo。
 
-Demo 偏好 typographyRevision=4（版本3迁移导航边距，版本4迁移橙色选区）；版本2冷启动时只迁移页眉顶部和页脚底部，保留其他排版调整；更早记录沿用先前的默认排版迁移策略。输入/效果偏好保留，此后用户调节的排版照常保存。Widget 自身的通用默认值不由 Demo 预设改变。
+Demo偏好保留当前typographyRevision=4的外观数据；旧revision2/3兼容分支已移除。模板六位置/返回按钮使用PageChromeCodec单独保存，不读取旧内容和整行对齐字段。Widget自身通用默认值不由Demo预设改变。
 
-这里对齐参数和字体；旧引擎逐字符布局，新引擎使用 StaticLayout，字体度量、自动换行及分页未声明像素一致。旧页脚左右分开的进度与时钟，当前仍使用合并的 PAGE_PROGRESS_AND_TIME 内容。
+这里对齐参数和字体；旧引擎逐字符布局，新引擎使用 StaticLayout，字体度量、自动换行及分页未声明像素一致。当前Demo页脚使用显式三位置：左章内进度、中时间、右电量；不再靠旧PAGE_PROGRESS_AND_TIME单项内容表达布局。
 
 | 参数 | 当前 API | Demo 范围 |
 |---|---|---|
@@ -54,7 +56,7 @@ Demo 偏好 typographyRevision=4（版本3迁移导航边距，版本4迁移橙�
 | 缩进、行距倍率 | withFirstLineIndentEm、withLineSpacing | 0..4 em；0.5..3倍 |
 | 字体 | withFont + ReaderFont | 默认、无衬线、衬线、等宽 |
 | 页眉/页脚高度与可见性 | withChromeHeightDp/withChromeVisibility | 滑条0表示自动高度，API使用null；显示/隐藏 |
-| 页眉/页脚对齐与内容 | withChromeAlignment/withChromeContent | 起始/居中/末尾；章节、进度、时间等 |
+| 页眉/页脚对齐与内容 | 库保留withChromeAlignment/withChromeContent底层API | Demo改用ReaderPageChrome六位置模板，见模板专题 |
 | 各文字区域颜色 | textColor/withTextColor | API接收ARGB颜色；Demo主题统一设置 |
 | 段落内边距 | withPadding(PARAGRAPH, ...) | 0..32 dp |
 
@@ -90,24 +92,12 @@ Library SavedState 与 Demo 偏好保存新字段；旧记录缺少新键时恢�
 
 滑条在松手时提交一次样式；取消手势或控件离开窗口时恢复原值。设置面板在请求结束后读取实际模式和动画选项，拒绝修改时恢复选择。原先无入口的翻页效果 AlertDialog 已移除，统一由设置面板提供操作。
 
-## Demo 系统导航栏
+## Demo窗口与模板
 
-小说阅读页面默认隐藏系统底部导航栏，状态栏保持可见。设置面板“系统底部导航栏”提供显示/隐藏选择，并通过独立 reader-window 偏好保存。ReaderSystemBars 使用 WindowInsetsControllerCompat，只控制导航栏；从底部滑动可临时唤出系统按钮或手势区域。阅读窗口重新获得焦点及四个底部菜单窗口均应用同一偏好；主页维持原系统栏行为。根布局继续处理系统栏 inset，导航栏隐藏后释放底部空间。此项属于 Demo 宿主窗口配置，未增加 Widget API。
+小说主阅读页的ReaderView填满窗口，默认隐藏系统底部导航栏、保持状态栏可见。ReaderSystemBars负责窗口策略；FullScreenPageFactory在默认模板内部增加可见系统栏/挖孔安全边距，导航栏隐藏后不保留旧底部占位。底部面板使用宿主窗口策略，不另造一层常驻导航。
 
-## 构建范围
+这是Demo的窗口配置，不给Widget内置某种Activity或系统栏政策。NetworkActivity等独立示例可使用各自窗口布局；不要把小说主页面的全屏声明当成所有示例都采用同一布局。
 
-Debug APK、Release AAR 和本地 Maven 仓库包构建通过，JVM API 清单由新 AAR 刷新。未新增或运行测试；设备外观、字体缩放、全部边界组合及生命周期恢复尚未验收。
-## 导航栏隐藏后的空间处理（早期实现，已由下述全屏方案替代）
+## 验证范围
 
-Demo 的 ReaderSystemBars 显式关闭 decor 自动避让，在窗口 content 根处理可见系统 inset：顶部为状态栏/挖孔，底部为显示的导航栏与键盘高度的较大值；隐藏导航栏不保留其稳定高度，临时滑出的导航栏覆盖而不缩小正文。处理后的系统 inset 清零后再下发，避免子容器及 Material BottomSheet 重复添加底部占位。
-
-ReaderActivity、NetworkActivity、CurlActivity 及四个底部面板共用此策略，移除阅读根 fitsSystemWindows；底部面板关闭手势 inset 的 peek-height 占位，一级菜单底部自身 padding 从24dp降到8dp。主页维持原窗口策略。此修改只在 Demo 宿主，不修改库排版边距。仅 Debug APK 构建验收，设备效果未验收。
-
-## 全屏 ReaderView 与透明系统栏（2026-10-14）
-
-此前外层根 padding 和状态栏色块方案已移除。ReaderActivity 中 ReaderView 铺满窗口，包括状态栏后方，页面背景由阅读模板本身绘制；系统栏透明，只根据主题决定图标明暗。没有额外顶底色块或 content.overlay。
-
-Demo FullScreenPageFactory 包装默认或自定义模板，给模板内部 page.padding 叠加系统安全范围，使正文/页眉/页脚避让，ReaderView 和页面背景仍是全屏。安全值不写入阅读样式偏好。系统 inset 改变时重新安装模板以触发原有重排；隐藏导航栏时不加底部系统 padding。状态栏继续可见，不等于隐藏状态栏。
-
-底部弹窗透明区显示后方全屏阅读页，只有弹窗自己的控件区域避让状态栏/键盘。Network/Curl 带独立工具条的调试入口仍使用 decor 自动避让，不套用主阅读页的全屏模板。主页行为保留。仅 Debug APK 构建通过，设备布局尚未验收。
-
+相关实现有历史构建记录；当前行为与设备验证边界统一见[状态清单](07_REQUIREMENT_IMPLEMENTATION_AUDIT.md)。本次文档整理不重新构建，不运行软件测试。

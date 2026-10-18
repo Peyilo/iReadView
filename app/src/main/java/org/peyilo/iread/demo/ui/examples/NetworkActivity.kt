@@ -50,7 +50,11 @@ class NetworkActivity : Activity() {
             setText(url ?: "")
         }
         status = TextView(this).apply { text = "正在打开网络示例书籍 185030…" }
-        reader = ReaderView(this, defStyleRes = R.style.ReaderDefaultStyle).apply { id = R.id.network_reader }
+        reader = ReaderView(this, defStyleRes = R.style.ReaderDefaultStyle).apply {
+            id = R.id.network_reader
+            setPageChrome(org.peyilo.iread.demo.reader.PageChromeSettings().template().withBackButton(true,
+                org.peyilo.ireadview.spi.page.ReaderPageChromeAction { finish() }))
+        }
         fun button(text: String, action: () -> Unit) = Button(this).apply { this.text = text; setOnClickListener { if (started) action() } }
         layout.addView(address)
         layout.addView(LinearLayout(this).apply {
