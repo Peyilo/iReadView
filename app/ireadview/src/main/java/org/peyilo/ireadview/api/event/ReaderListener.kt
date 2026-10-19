@@ -5,7 +5,7 @@ import org.peyilo.ireadview.api.model.ReadingPosition
 import org.peyilo.ireadview.api.model.AnnotationSnapshot
 import org.peyilo.ireadview.api.model.AnnotationStatus
 import org.peyilo.ireadview.api.model.Highlight
-import org.peyilo.ireadview.api.model.TextSelection
+import org.peyilo.ireadview.api.model.ReaderSelection
 import org.peyilo.ireadview.api.state.*
 import org.peyilo.ireadview.api.effect.EffectFallbackReason
 import org.peyilo.ireadview.widget.BaseReadView
@@ -35,8 +35,8 @@ interface ReaderListener {
     fun onAnnotationsChanged(view: BookReadView, snapshot: AnnotationSnapshot) {}
     fun onAnnotationStatusChanged(view: BookReadView, id: String, status: AnnotationStatus) {}
     fun onHighlightStyleFallback(view: BookReadView, id: String, styleId: String) {}
-    fun onHighlightTapped(view: BookReadView, highlight: Highlight) {}
-    fun onSelectionChanged(view: BookReadView, selection: TextSelection?) {}
+    fun onHighlightTapped(view: BookReadView, highlight: org.peyilo.ireadview.api.model.HighlightAnnotation) {}
+    fun onSelectionChanged(view: BookReadView, selection: ReaderSelection?) {}
     /** Explicit content-update/catalogue-reload recovery; ordinary navigation never falls back. */
     fun onPositionRestored(view: BookReadView, restoration: Restoration, reason: PositionChangeReason) {}
     fun onError(view: BookReadView, error: ReaderError) {}

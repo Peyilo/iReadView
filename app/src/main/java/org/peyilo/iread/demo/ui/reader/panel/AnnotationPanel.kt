@@ -28,7 +28,7 @@ internal class AnnotationPanel(
     fun show() {
         val book = reader.currentBook ?: return
         val snapshot = reader.exportAnnotations() ?: return
-        val entries = arrayOf("书签（${snapshot.bookmarks.size}）", "高亮（${snapshot.highlights.size}）", "添加当前位置书签", "添加示例高亮", "划线（${snapshot.underlines.size}）")
+        val entries = arrayOf("书签（${snapshot.bookmarks.size}）", "高亮（${snapshot.allHighlights.size}）", "添加当前位置书签", "添加示例高亮", "划线（${snapshot.allUnderlines.size}）")
         val next = AlertDialog.Builder(activity).setTitle("阅读注解").setItems(entries) { selected, index ->
             if (!alive(book) || dialog !== selected) return@setItems
             when (index) {
@@ -65,24 +65,24 @@ internal class AnnotationPanel(
         }.setNegativeButton("取消", null).create())
     }
     private fun underlines(book: BookDescriptor) {
-        val entries = reader.exportAnnotations()?.underlines ?: return
+        val entries = reader.exportAnnotations()?.allUnderlines ?: return
         if (entries.isEmpty()) { message("还没有划线"); return }
         display(AlertDialog.Builder(activity).setTitle("划线").setItems(entries.map { "${preview(it.quote)} · ${status(it.id)}" }.toTypedArray()) { selected, index ->
             if (!alive(book) || dialog !== selected) return@setItems
             val item = entries[index]
-            fun unchanged() = alive(book) && reader.exportAnnotations()?.underlines?.any { it == item } == true
+            fun unchanged() = alive(book) && reader.exportAnnotations()?.allUnderlines?.any { it == item } == true
             display(AlertDialog.Builder(activity).setTitle("划线").setMessage(item.quote)
-                .setPositiveButton("关闭", null).setNeutralButton("删除") { _, _ -> if (unchanged()) report(reader.removeUnderline(item.id)) }
+                .setPositiveButton("关闭", null).setNeutralButton("删除") { _, _ -> if (unchanged()) report(reader.removeAnnotation(item.id)) }
                 .setNegativeButton("跳转") { _, _ ->
                     if (unchanged()) navigate(book) {
-                        reader.goToPosition(ReadingPosition(book.bookId, item.range.chapterId, item.range.start, item.range.contentRevision))
+                        reader.goToAnnotation(item.id)
                     }
                 }.create())
         }.setNegativeButton("关闭", null).create())
     }
 
     private fun highlights(book: BookDescriptor) {
-        val entries = reader.exportAnnotations()?.highlights ?: return
+        val entries = reader.exportAnnotations()?.allHighlights ?: return
         if (entries.isEmpty()) { message("还没有高亮，请长按正文选择文字"); return }
         display(AlertDialog.Builder(activity).setTitle("高亮").setItems(entries.map {
             "${preview(it.quote)} · ${status(it.id)}"
@@ -93,25 +93,25 @@ internal class AnnotationPanel(
 
     fun showHighlight(id: String) {
         val book = reader.currentBook ?: return
-        val highlight = reader.exportAnnotations()?.highlights?.firstOrNull { it.id == id } ?: return
+        val highlight = reader.exportAnnotations()?.allHighlights?.firstOrNull { it.id == id } ?: return
         val annotationStatus = reader.getAnnotationStatus(id)
-        fun unchanged() = alive(book) && reader.exportAnnotations()?.highlights?.any { it == highlight } == true
+        fun unchanged() = alive(book) && reader.exportAnnotations()?.allHighlights?.any { it == highlight } == true
         // Details are bounded in the UI; the original quote in the model is never shortened.
         val quote = highlight.quote.take(4096).let { if (it.lastOrNull()?.isHighSurrogate() == true) it.dropLast(1) else it }
         val next = AlertDialog.Builder(activity).setTitle("高亮 · ${status(id)}")
             .setMessage(quote + if (quote.length < highlight.quote.length) "\n…（这里只显示摘录前部）" else "")
-            .setNeutralButton("删除") { selected, _ -> if (dialog === selected && unchanged()) report(reader.removeHighlight(id)) }
+            .setNeutralButton("删除") { selected, _ -> if (dialog === selected && unchanged()) report(reader.removeAnnotation(id)) }
             .setNegativeButton("颜色") { selected, _ -> if (dialog === selected && unchanged()) colors(book, highlight) }
         when (annotationStatus) {
             AnnotationStatus.Valid -> next.setPositiveButton("跳转") { selected, _ ->
                 if (dialog === selected && unchanged() && reader.getAnnotationStatus(id) == AnnotationStatus.Valid) navigate(book) {
                     if (!unchanged() || reader.getAnnotationStatus(id) != AnnotationStatus.Valid) NavigationResult.Rejected(ReaderRejection.UnknownAnnotation)
-                    else reader.goToPosition(ReadingPosition(book.bookId, highlight.range.chapterId, highlight.range.start, highlight.range.contentRevision))
+                    else reader.goToAnnotation(id)
                 }
             }
             AnnotationStatus.PendingValidation -> next.setPositiveButton("打开章节校验") { selected, _ ->
                 if (dialog === selected && unchanged()) navigate(book, after = { if (unchanged()) showHighlight(id) }) {
-                    if (unchanged()) reader.goToPosition(ReadingPosition(book.bookId, highlight.range.chapterId, pageNumberHint = 1))
+                    if (unchanged()) reader.goToAnnotation(id)
                     else NavigationResult.Rejected(ReaderRejection.UnknownAnnotation)
                 }
             }
@@ -120,14 +120,18 @@ internal class AnnotationPanel(
         display(next.create())
     }
 
-    private fun colors(book: BookDescriptor, highlight: Highlight) {
+    private fun colors(book: BookDescriptor, highlight: HighlightAnnotation) {
         val ids = reader.style.highlightStyles.styles.keys.toList()
         display(AlertDialog.Builder(activity).setTitle("高亮颜色").setSingleChoiceItems(ids.map {
             when (it) { "default" -> "默认"; "blue" -> "蓝色"; else -> it }
         }.toTypedArray(), ids.indexOf(highlight.styleId)) { selected, index ->
             if (dialog !== selected || !alive(book)) return@setSingleChoiceItems
-            if (reader.exportAnnotations()?.highlights?.any { it == highlight } != true) { message("标注已更新，请重新打开"); selected.dismiss(); return@setSingleChoiceItems }
-            report(reader.updateHighlight(highlight.copy(styleId = ids[index]))); selected.dismiss()
+            if (reader.exportAnnotations()?.allHighlights?.any { it == highlight } != true) { message("标注已更新，请重新打开"); selected.dismiss(); return@setSingleChoiceItems }
+            val updated = when (highlight) {
+                is Highlight -> highlight.copy(styleId = ids[index])
+                is DocumentHighlight -> highlight.copy(styleId = ids[index])
+            }
+            report(reader.updateAnnotation(updated)); selected.dismiss()
         }.setNegativeButton("取消", null).create())
     }
 

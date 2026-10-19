@@ -10,6 +10,7 @@ import org.peyilo.ireadview.api.style.SelectionStyle
 import org.peyilo.ireadview.internal.cache.ByteBudgetCache
 import org.peyilo.ireadview.internal.layout.PaginationEngine
 import org.peyilo.ireadview.internal.layout.TextBlockLayoutProvider
+import org.peyilo.ireadview.internal.layout.ImageBlockLayoutProvider
 import org.peyilo.ireadview.spi.content.*
 import org.peyilo.ireadview.spi.presentation.*
 
@@ -207,6 +208,8 @@ internal class ReaderCoordinator(
         layoutRequests[key]?.takeIf { it !in failedLayoutRequests }?.let { return consumeLayout(it) }
         val session = sessionId
         val scope = sessionScope ?: return ReaderResult.Rejected(ReaderRejection.NotReady)
+        val resourceSource = source
+        val resourceRevision = book?.revision
         val owner = Any()
         lateinit var request: Deferred<ReaderResult<ChapterLayout>>
         request = scope.async(start = CoroutineStart.LAZY) {
@@ -215,9 +218,10 @@ internal class ReaderCoordinator(
             publishPagination(id, ChapterPaginationState.Calculating)
             try {
                 val resolvedStyle = withContext(Dispatchers.IO) { resolveFonts(style) }
+                val imageProvider = ImageBlockLayoutProvider.prepare(content, resourceSource, resourceRevision, viewport, key.providers.map { it.provider })
                 val layout = withContext(Dispatchers.Default) {
                     val computation = currentCoroutineContext()
-                    paginator.paginate(content, BlockLayoutContext(viewport, resolvedStyle, bodyTextSizePx, titleTextSizePx) { computation.ensureActive() }, key.providers.map { it.provider } + textProvider, opaqueKey)
+                    paginator.paginate(content, BlockLayoutContext(viewport, resolvedStyle, bodyTextSizePx, titleTextSizePx) { computation.ensureActive() }, key.providers.map { it.provider } + listOf(imageProvider, textProvider), opaqueKey)
                 }
                 currentCoroutineContext().ensureActive()
                 if (session != sessionId || layoutRequests[key] !== request) return@async ReaderResult.Superseded

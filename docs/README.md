@@ -1,6 +1,6 @@
 # 文档入口
 
-整理日期：2026-10-18。本文档集只保留当前契约、必要设计依据和有明确范围的验证记录，不再维护逐轮追加日志。
+整理日期：2026-10-19。本文档集只保留当前契约、必要设计依据和有明确范围的验证记录，不再维护逐轮追加日志。
 
 ## 新对话最小阅读集合
 
@@ -14,9 +14,16 @@
 | 公共 API、线程、生命周期与所有权 | [API 契约](04_WIDGET_API_DESIGN.md) |
 | 当前功能状态、已知缺口和证据 | [状态与验证](07_REQUIREMENT_IMPLEMENTATION_AUDIT.md) |
 | 创建 Widget、来源、恢复、本地 Maven 接入 | [宿主接入](08_HOST_INTEGRATION_GUIDE.md) |
+| 多书源、TXT/EPUB/网络小说、图片和正文链接 | [内容与书源架构](CONTENT_SOURCES.md) |
+| 正文 View 抽象、文本/EPUB 的职责边界 | [正文层设计](READER_BODY.md) |
+| 独立替换正文绘制、选区交互/绘制、完整引擎与翻页 | [组件扩展API](EXTENSIONS.md) |
+| 文本/EPUB共用的三页缓存、所有权和切换API | [分页缓存](PAGE_CACHE.md) |
+| 自研 EPUB 正文、系统 WebView 与 API21 边界 | [EPUB 引擎接入](EPUB_ENGINE.md) |
 | 六位置默认模板及任意 View 自定义的两层边界 | [页眉页脚](PAGE_CHROME.md) |
 | 选择、跨页手柄、菜单、高亮、划线与统一标注 | [选择与标注](SELECTION_AND_ANNOTATIONS.md) |
 | iBook、Google、GLSL卷页、阴影数学及历史验证 | [翻页渲染](RENDERING.md) |
+| 文本/EPUB全部翻页效果的性能对照与当前瓶颈 | [翻页性能测量](EPUB_TURN_PERFORMANCE.md) |
+| 手势首帧、跟手动画、正文交接与白闪回归 | [手势响应及正文交接](GESTURE_AND_EPUB_HANDOFF.md) |
 | 样式字段、单位与排版调节方法 | [排版 API](26_READER_PANELS_AND_TYPOGRAPHY_API.md) |
 | 发布摘要及 Java/JVM 签名导出方法 | [发布清单说明](09_RELEASE_JVM_API_REFERENCE.md) |
 | Demo目录与各示例用途 | [Demo说明](../app/README.md) |

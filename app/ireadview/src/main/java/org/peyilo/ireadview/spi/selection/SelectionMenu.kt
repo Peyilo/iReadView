@@ -4,11 +4,11 @@ import android.content.Context
 import android.view.View
 import androidx.annotation.DrawableRes
 import org.peyilo.ireadview.R
-import org.peyilo.ireadview.api.model.TextSelection
+import org.peyilo.ireadview.api.model.ReaderSelection
 
 /** Called on the main thread for a still-valid selection. Clear selection explicitly if desired. */
 fun interface SelectionMenuAction {
-    fun onClick(selection: TextSelection, actions: SelectionActions)
+    fun onClick(selection: ReaderSelection, actions: SelectionActions)
 }
 
 /** Stable unique id, label, packaged drawable icon and runtime handler. Icons retain their colors. */
@@ -21,7 +21,7 @@ data class SelectionMenuItem(val id: String, val title: String, @DrawableRes val
     init { require(id.isNotBlank() && title.isNotBlank() && iconResource != 0) }
 }
 /** Optional live menu state; evaluated for the current selection on the main thread. */
-fun interface SelectionMenuState { fun isActive(selection: TextSelection, actions: SelectionActions): Boolean }
+fun interface SelectionMenuState { fun isActive(selection: ReaderSelection, actions: SelectionActions): Boolean }
 
 /** Width is also constrained to the visible window. Suggested maximum 280..400 dp; item 56..80 dp. */
 data class SelectionMenuOptions @JvmOverloads constructor(
@@ -50,7 +50,7 @@ object SelectionToolbars {
         val snapshot = items.toList()
         require(snapshot.map { it.id }.distinct().size == snapshot.size) { "Selection menu item ids must be unique" }
         return object : SelectionToolbarFactory {
-            override fun create(context: Context, selection: TextSelection, actions: SelectionActions): View =
+            override fun create(context: Context, selection: ReaderSelection, actions: SelectionActions): View =
                 org.peyilo.ireadview.internal.selection.PagedSelectionMenu(context, snapshot.map { item ->
                     if (item.state?.isActive(selection, actions) == true && item.activeTitle != null) item.copy(title = item.activeTitle) else item
                 }, options, selection, actions)

@@ -19,6 +19,9 @@ import kotlinx.coroutines.*
 import org.peyilo.ireadview.api.event.*
 import org.peyilo.ireadview.api.model.*
 import org.peyilo.ireadview.api.source.BookSource
+import org.peyilo.ireadview.api.source.PresentationBookSource
+import org.peyilo.ireadview.api.source.BookNavigationSource
+import org.peyilo.ireadview.api.source.BookNavigationEntry
 import org.peyilo.ireadview.api.state.*
 import org.peyilo.ireadview.api.style.ReaderStyle
 import org.peyilo.ireadview.internal.style.ReaderStyleStateCodec
@@ -56,10 +59,11 @@ abstract class BookReadView @JvmOverloads constructor(
     private var chromeRefreshPending = false
     private var refreshingChrome = false
     private var presentation: BookPresentation? = null
+    private var presentationSource: PresentationBookSource? = null
     private var pageClock: org.peyilo.ireadview.internal.render.ReaderPageClock? = null
     init {
         pageClock = org.peyilo.ireadview.internal.render.ReaderPageClock(this, { presentation }, { contentGeneration },
-            { !isReleased && currentPosition != null }, { refreshPageChrome() })
+            { !isReleased && currentPosition != null })
     }
     var readingMode: ReadingMode = ReadingMode.PAGED
         private set
@@ -67,12 +71,100 @@ abstract class BookReadView @JvmOverloads constructor(
     private var modeExplicitlySet = false
     private var requestedModeGeneration = -1L
     private var globalIndexNavigation: Job? = null
+    private var linkHandler: ReaderLinkHandler? = null
+    private var linkRequest: Job? = null
+    private var linkSequence = 0L
+    private var configuredPageCacheMode = ReaderPageCacheMode.THREE_PAGE
+    val pageCacheMode: ReaderPageCacheMode get() = configuredPageCacheMode
+    private var configuredComponents = ReaderPresentationComponents.DEFAULT
+    val presentationComponents: ReaderPresentationComponents get() = configuredComponents
+    private var configuredPresentationFactory: BookPresentationFactory? = null
+    private var presentationConfigurationVersion = 0L
+
+    /** Installs independent content drawing, selection rendering and gesture factories.
+     * Main thread. Rebuilds cached bodies at the current source anchor; does not reopen the source.
+     * Success installs configuration; async restoration is observed through readerState/events.
+     */
+    fun setPresentationComponents(components: ReaderPresentationComponents): ReaderResult<Unit> {
+        checkMainThread()
+        if (isReleased) return ReaderResult.Rejected(ReaderRejection.Released)
+        if (navigationState != ReadNavigationState.Idle || draggingSelection || requestedMode != null || phase == ReaderPhase.LoadingBook)
+            return ReaderResult.Rejected(ReaderRejection.Busy)
+        if (configuredComponents != components) { configuredComponents = components; presentationConfigurationVersion++; refreshPresentationConfiguration(invalidateLayouts = false) }
+        return if (isReleased || configuredComponents != components) ReaderResult.Superseded else ReaderResult.Success(Unit)
+    }
+    /** Null restores source/default backend selection. Full engine/layout replacement
+     * belongs here; page drawing and selection-only changes use setPresentationComponents.
+     */
+    fun setBookPresentationFactory(factory: BookPresentationFactory?): ReaderResult<Unit> {
+        checkMainThread()
+        if (isReleased) return ReaderResult.Rejected(ReaderRejection.Released)
+        if (navigationState != ReadNavigationState.Idle || draggingSelection || requestedMode != null || phase == ReaderPhase.LoadingBook)
+            return ReaderResult.Rejected(ReaderRejection.Busy)
+        if (configuredPresentationFactory !== factory) { configuredPresentationFactory = factory; presentationConfigurationVersion++; refreshLayoutConfiguration() }
+        return if (isReleased || configuredPresentationFactory !== factory) ReaderResult.Superseded else ReaderResult.Success(Unit)
+    }
+
+    /** Main thread; preserves the committed page. Busy changes are rejected rather than
+     * disposing a surface while a gesture or navigation transaction still owns it.
+     */
+    fun setPageCacheMode(mode: ReaderPageCacheMode): ReaderResult<Unit> {
+        checkMainThread()
+        if (isReleased) return ReaderResult.Rejected(ReaderRejection.Released)
+        if (navigationState != ReadNavigationState.Idle) return ReaderResult.Rejected(ReaderRejection.Busy)
+        if (pageCacheMode != mode) {
+            configuredPageCacheMode = mode
+            presentation?.onPageCacheModeChanged()
+        }
+        return ReaderResult.Success(Unit)
+    }
+
+    /** Intercepts links before built-in book navigation. External actions belong to the host. */
+    fun setReaderLinkHandler(handler: ReaderLinkHandler?) {
+        checkMainThread()
+        if (!isReleased) linkHandler = handler
+    }
+
+    private fun activateLink(target: LinkTarget, chapterId: String, generation: Long): Boolean {
+        checkMainThread()
+        if (isReleased || !isEnabled || !isAttachedToWindow || generation != contentGeneration || navigationState != ReadNavigationState.Idle) return false
+        val source = coordinator.source ?: return false
+        val origin = currentPosition
+        val revision = currentBook?.revision
+        val sequence = ++linkSequence
+        linkRequest?.cancel()
+        linkRequest = null
+        fun current() = !isReleased && isEnabled && isAttachedToWindow && generation == contentGeneration &&
+            sequence == linkSequence && coordinator.source === source && currentBook?.revision == revision && currentPosition == origin &&
+            navigationState == ReadNavigationState.Idle
+        if (linkHandler?.onLink(this, chapterId, target) == true || !current()) return true
+        if (target is LinkTarget.Internal) {
+            val resolver = source as? org.peyilo.ireadview.api.source.BookLinkSource
+            linkRequest = readerScope.launch {
+                try {
+                    val position = resolver?.let { withContext(Dispatchers.IO) { it.resolveLink(target, revision) } }
+                    if (!current()) return@launch
+                    if (position == null) reportReaderError(ReaderError(ReaderStage.NAVIGATION, "UnresolvedLink", "Book link target is unavailable", chapterId, retryable = false))
+                    else goToPosition(position)
+                } catch (cancelled: CancellationException) { throw cancelled }
+                catch (failure: Exception) {
+                    if (current()) reportReaderError(ReaderError(ReaderStage.NAVIGATION, "LinkResolutionFailed", failure.message ?: "Book link failed", chapterId, cause = failure))
+                }
+            }
+        }
+        // A real link consumes the tap even when no external-link handler is installed.
+        return true
+    }
     private class GlobalIndexInvalidated : CancellationException("Global page index unavailable")
     private var placeholderController: org.peyilo.ireadview.internal.render.ReaderPlaceholderController? = null
     private var placeholderFactory: ReaderPlaceholderFactory = org.peyilo.ireadview.internal.render.DefaultReaderPlaceholderFactory()
     private var lastOpenRequest = OpenBookRequest()
     private val annotationStore = AnnotationStore()
     private var selection: TextSelection? = null
+    private class DocumentSelectionBinding(val selected: DocumentTextSelection, var delegate: org.peyilo.ireadview.spi.selection.DocumentSelectionHandle,
+        var bounds: Rect?, val generation: Long) { lateinit var actions: SelectionActions }
+    private var documentSelection: DocumentSelectionBinding? = null
+    val currentSelection: ReaderSelection? get() = documentSelection?.selected ?: selection
     private var selectionRevision = 0L
     private var accessibleSelectionActions: SelectionActions? = null
     private var draggingSelection = false
@@ -125,8 +217,33 @@ abstract class BookReadView @JvmOverloads constructor(
     val currentBook get() = coordinator.book
     val chapterCount get() = currentBook?.chapters?.size ?: 0
     val currentChapter get() = currentPosition?.let { position -> currentBook?.chapterForId(position.chapterId) }
+    /** Unified navigation tree. Format-specific fragments remain opaque ReadingPosition locators. */
+    suspend fun getNavigation(): ReaderResult<List<BookNavigationEntry>> {
+        checkMainThread()
+        if (isReleased) return ReaderResult.Rejected(ReaderRejection.Released)
+        val book = currentBook ?: return ReaderResult.Rejected(ReaderRejection.NoBook)
+        val source = coordinator.source
+        val generation = contentGeneration
+        return try {
+            val entries = if (source is BookNavigationSource) withContext(Dispatchers.IO) { source.loadNavigation() }
+            else {
+                fun convert(items: List<TocEntry>): List<BookNavigationEntry> = items.map { item -> when (item) {
+                    is TocEntry.Chapter -> BookNavigationEntry(item.descriptor.title, ReadingPosition(book.bookId, item.descriptor.chapterId))
+                    is TocEntry.Group -> BookNavigationEntry(item.title, null, convert(item.children))
+                } }
+                convert(book.tableOfContents)
+            }
+            if (generation != contentGeneration || currentBook !== book || coordinator.source !== source) ReaderResult.Superseded
+            else ReaderResult.Success(java.util.Collections.unmodifiableList(ArrayList(entries)))
+        } catch (cancelled: CancellationException) { throw cancelled }
+        catch (error: Exception) {
+            if (generation != contentGeneration || currentBook !== book) ReaderResult.Superseded
+            else ReaderResult.Failure(ReaderError(ReaderStage.BOOK, "NavigationLoadFailed", error.message ?: "Table of contents failed", cause = error))
+        }
+    }
+    fun getNavigation(callback: ReaderCallback<ReaderResult<List<BookNavigationEntry>>>): ReaderRequest = submit(callback) { getNavigation() }
     val bookPageIndex: BookPageIndex? get() = coordinator.pageIndex
-    val readerState: ReaderState get() = ReaderState(phase, currentBook?.bookId, currentPosition, currentPosition?.let { (coordinator.paginationState(it.chapterId) as? ChapterPaginationState.Ready)?.pageCount }, chapterCount, lastError, readingMode,
+    val readerState: ReaderState get() = ReaderState(phase, currentBook?.bookId, currentPosition, presentation?.currentPageCount ?: currentPosition?.let { (coordinator.paginationState(it.chapterId) as? ChapterPaginationState.Ready)?.pageCount }, chapterCount, lastError, readingMode,
         coordinator.pageIndexState, globalPageNumber(), coordinator.pageIndex?.totalPageCount, navigationState, navigationCapabilities)
     override fun onNavigationCapabilitiesChanged(capabilities: ReadNavigationCapabilities) { publishState() }
     private fun globalPageNumber(): Long? {
@@ -152,6 +269,7 @@ abstract class BookReadView @JvmOverloads constructor(
         checkMainThread()
         if (isReleased) return ReaderResult.Rejected(ReaderRejection.Released)
         if (currentBook == null) return ReaderResult.Rejected(ReaderRejection.NoBook)
+        if (presentationSource?.supportsBlockLayout == false || presentation?.supportsBlockLayout != true) return ReaderResult.Rejected(ReaderRejection.Unsupported)
         val viewport = presentation?.layoutViewport() ?: if (currentBook?.chapters?.isEmpty() == true) viewportSnapshot() else return ReaderResult.Rejected(ReaderRejection.NotReady)
         val metrics = resources.displayMetrics
         val capturedStyle = style
@@ -197,7 +315,7 @@ abstract class BookReadView @JvmOverloads constructor(
     fun goToGlobalPage(pageNumber: Long, callback: ReaderCallback<NavigationResult<ReadingPosition>>): ReaderRequest = submit(callback) { goToGlobalPage(pageNumber) }
 
     protected abstract val supportedModes: Set<ReadingMode>
-    override fun isPageTurnEffectActive() = readingMode == ReadingMode.PAGED
+    override fun isPageTurnEffectActive() = readingMode == ReadingMode.PAGED && presentation?.supportsPageTurnEffects != false
     override fun onPageTurnEffectFallback(id: String, reason: EffectFallbackReason) {
         dispatch(captureEffectConfigurationOwnership()) { it.onEffectFallback(this, id, "none", reason) }
     }
@@ -215,6 +333,9 @@ abstract class BookReadView @JvmOverloads constructor(
         return if (newChapter < oldChapter || newChapter == oldChapter && (to.pageNumberHint ?: 1) < (from.pageNumberHint ?: 1)) TurnDirection.Backward else TurnDirection.Forward
     }
     protected abstract fun createPresentation(mode: ReadingMode, host: BookPresentationHost): BookPresentation
+    private fun bookPresentation(mode: ReadingMode, host: BookPresentationHost): BookPresentation =
+        configuredPresentationFactory?.create(context, mode, coordinator.source, host)
+            ?: presentationSource?.createPresentation(context, mode, host) ?: createPresentation(mode, host)
 
     suspend fun setReadingMode(mode: ReadingMode): ReaderResult<ModeChange> {
         checkMainThread()
@@ -264,11 +385,31 @@ abstract class BookReadView @JvmOverloads constructor(
         placeholderController = placeholders
         var genericHost: ReadContentHost<ReadingPosition>? = null
         val host = object : BookPresentationHost {
+            override val presentationComponents get() = this@BookReadView.presentationComponents
+            override val pageCacheMode get() = this@BookReadView.pageCacheMode
             override val generation get() = contentGeneration
             override val viewport get() = genericHost?.viewport ?: viewportSnapshot()
             override val committedLocation get() = currentPosition
             override val book get() = currentBook
             override val style get() = this@BookReadView.style
+            override val inputOptions get() = this@BookReadView.inputOptions
+            override fun reportBodyTouch(event: MotionEvent): Boolean {
+                val view = presentation?.contentView ?: return false
+                val offset = Rect(); offsetDescendantRectToMyCoords(view, offset)
+                val local = MotionEvent.obtain(event)
+                return try {
+                    local.offsetLocation(offset.left.toFloat(), offset.top.toFloat())
+                    this@BookReadView.onTouchEvent(local)
+                } finally { local.recycle() }
+            }
+            override fun reportDocumentSelection(selected: DocumentTextSelection?, actions: org.peyilo.ireadview.spi.selection.DocumentSelectionHandle?,
+                bounds: android.graphics.RectF?, generation: Long): Boolean {
+                if (isReleased || !isEnabled || generation != contentGeneration) return false
+                val view = presentation?.contentView ?: return false
+                val offset = Rect(); offsetDescendantRectToMyCoords(view, offset)
+                val area = bounds?.let { android.graphics.RectF(it).apply { offset(offset.left.toFloat(), offset.top.toFloat()) } }
+                return bindDocumentSelection(selected, actions, area?.let { Rect().apply { it.roundOut(this) } }, generation)
+            }
             override val pageFactory get() = this@BookReadView.pageFactory
             override val pageChromeProvider get() = pageChromeBridge
             override val placeholderFactory get() = this@BookReadView.placeholderFactory
@@ -279,6 +420,7 @@ abstract class BookReadView @JvmOverloads constructor(
                 return this@BookReadView.requestReaderAction(action)
             }
             override val selection get() = this@BookReadView.selection
+            override val documentSelection get() = this@BookReadView.documentSelection?.selected
             override fun clearSelection() = this@BookReadView.clearSelection()
             override fun clearAccessibilitySelection(generation: Long): Boolean {
                 checkMainThread()
@@ -289,13 +431,22 @@ abstract class BookReadView @JvmOverloads constructor(
             override fun reportSelectionDrag(active: Boolean) {
                 draggingSelection = active
                 if (active) selectionToolbar.pause()
-                else if (presentation?.currentContent() != null) selection?.let { showSelectionToolbar(it, selectionRevision) }
+                else {
+                    selection?.let { showSelectionToolbar(it, selectionRevision) }
+                    this@BookReadView.documentSelection?.takeIf { it.actions.isValid() }?.let { selectionToolbar.show(it.selected, it.actions, it.bounds) }
+                }
             }
-            override suspend fun requestSelectionPage(chapterId: String, pageNumber: Int, generation: Long): NavigationResult<ReadingPosition> {
+            override suspend fun requestSelectionPage(chapterId: String, pageNumber: Int, generation: Long): NavigationResult<ReadingPosition> =
+                requestSelectionPage(chapterId, pageNumber, generation) { true }
+            override suspend fun requestSelectionPage(chapterId: String, pageNumber: Int, generation: Long, isCurrent: () -> Boolean): NavigationResult<ReadingPosition> {
                 if (generation != contentGeneration) return NavigationResult.Superseded
-                if (selection?.range?.chapterId != chapterId || currentPosition?.chapterId != chapterId) return NavigationResult.Rejected(ReaderRejection.InvalidSelection)
+                if (currentSelection?.chapterId != chapterId || currentPosition?.chapterId != chapterId) return NavigationResult.Rejected(ReaderRejection.InvalidSelection)
                 val book = currentBook ?: return NavigationResult.Rejected(ReaderRejection.NoBook)
-                return navigateWithReason(ReadNavigation.Position(ReadingPosition(book.bookId, chapterId, pageNumberHint = pageNumber)), NavigationOptions(animated = false, respectInterval = false), PositionChangeReason.UserNavigation)
+                val target = presentation?.positionForSelectionPage(chapterId, pageNumber)
+                    ?: ReadingPosition(book.bookId, chapterId, pageNumberHint = pageNumber)
+                return navigateWithReason(ReadNavigation.Position(target), NavigationOptions(animated = false, respectInterval = false), PositionChangeReason.UserNavigation) {
+                    generation == contentGeneration && !isReleased && isEnabled && isCurrent()
+                }
             }
             override suspend fun requestAccessibilityNavigation(target: ReadNavigation<ReadingPosition>, generation: Long): NavigationResult<ReadingPosition> {
                 return requestAccessibilityNavigation(target, generation) { true }
@@ -315,6 +466,18 @@ abstract class BookReadView @JvmOverloads constructor(
                 if (navigationState != ReadNavigationState.Idle) return ReaderResult.Rejected(ReaderRejection.Busy)
                 return selectText(selection)
             }
+            override fun documentAnnotations(chapterId: String): List<DocumentRangedAnnotation> =
+                annotations?.items?.filterIsInstance<DocumentRangedAnnotation>()?.filter { it.selection.chapterId == chapterId }.orEmpty()
+            override fun reportDocumentAnnotationStatus(annotation: DocumentRangedAnnotation, status: AnnotationStatus, generation: Long) {
+                if (generation != contentGeneration || isReleased) return
+                if (annotationStore.reportStatus(annotation, status)) {
+                    val revision = annotationStore.revision
+                    dispatch { if (generation == contentGeneration && revision == annotationStore.revision) it.onAnnotationStatusChanged(this@BookReadView, annotation.id, status) }
+                    if (generation == contentGeneration && revision == annotationStore.revision && isAttachedToWindow && !draggingSelection) {
+                        this@BookReadView.documentSelection?.takeIf { it.actions.isValid() }?.let { selectionToolbar.show(it.selected, it.actions, it.bounds) }
+                    }
+                }
+            }
             override fun validHighlights(chapterId: String): List<Highlight> = annotations?.highlights?.filter {
                 it.range.chapterId == chapterId && annotationStore.status(it.id) == AnnotationStatus.Valid
             } ?: emptyList()
@@ -325,11 +488,13 @@ abstract class BookReadView @JvmOverloads constructor(
                 dispatch { it.onHighlightStyleFallback(this@BookReadView, id, styleId) }
             }
             override fun reportHighlightTapped(id: String): Boolean {
-                val highlight = annotations?.highlights?.firstOrNull { it.id == id } ?: return false
+                val highlight = annotations?.allHighlights?.firstOrNull { it.id == id } ?: return false
                 if (annotationStore.status(id) != AnnotationStatus.Valid) return false
                 dispatch { it.onHighlightTapped(this@BookReadView, highlight) }
                 return true
             }
+            override fun reportLinkTapped(target: LinkTarget, chapterId: String, generation: Long): Boolean =
+                activateLink(target, chapterId, generation)
             override fun reportTap(xPx: Float, yPx: Float) {
                 val view = presentation?.contentView ?: return
                 val offset = Rect(); offsetDescendantRectToMyCoords(view, offset)
@@ -354,19 +519,28 @@ abstract class BookReadView @JvmOverloads constructor(
                 return coordinator.layoutChapter(chapterId, viewport, style, bodyPx, titlePx)
             }
         }
-        var content = createPresentation(readingMode, host)
+        var content = bookPresentation(readingMode, host)
+        var contentVersion = presentationConfigurationVersion
         presentation = content
         root.addView(content.contentView, FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         root.addView(placeholder, FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
-        return object : ReadContentAdapter<ReadingPosition> {
+        return object : ReadContentAdapter<ReadingPosition>, ReadVisualHandoff<ReadingPosition> {
+            override suspend fun prepareVisualHandoff(candidate: PreparedRead<ReadingPosition>) {
+                if (candidate is ModeCandidate) candidate.owner.prepareVisualHandoff(candidate.prepared)
+                else content.prepareVisualHandoff(candidate)
+            }
             override val currentSurface get() = content.currentSurface
             override fun navigationAvailability(target: ReadNavigation<ReadingPosition>) = content.navigationAvailability(target)
             override val contentView: View get() = root
             override fun attach(host: ReadContentHost<ReadingPosition>) { genericHost = host; content.attach(host) }
             override fun onViewportChanged(viewport: ReadViewport) = content.onViewportChanged(viewport)
             override suspend fun prepare(target: ReadNavigation<ReadingPosition>): ReadPreparation<ReadingPosition> {
-                val mode = requestedMode?.takeIf { requestedModeGeneration == contentGeneration } ?: return content.prepare(target)
-                val next = createPresentation(mode, host)
+                if (target is ReadNavigation.Position && target.location.documentLocator != null && presentationSource == null && configuredPresentationFactory == null)
+                    return ReadPreparation.Rejected(ReaderRejection.Unsupported)
+                val mode = requestedMode?.takeIf { requestedModeGeneration == contentGeneration }
+                    ?: readingMode.takeIf { contentVersion != presentationConfigurationVersion } ?: return content.prepare(target)
+                val nextVersion = presentationConfigurationVersion
+                val next = bookPresentation(mode, host)
                 check(next.contentView.parent == null) { "Presentation must own a fresh root" }
                 next.contentView.visibility = View.INVISIBLE
                 root.addView(next.contentView, 0, FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
@@ -377,7 +551,7 @@ abstract class BookReadView @JvmOverloads constructor(
                     return when (val result = next.prepare(target)) {
                         is ReadPreparation.Ready -> {
                             transferred = true
-                            ReadPreparation.Ready(ModeCandidate(next, result.candidate, mode))
+                            ReadPreparation.Ready(ModeCandidate(next, result.candidate, mode, nextVersion))
                         }
                         else -> result
                     }
@@ -390,6 +564,7 @@ abstract class BookReadView @JvmOverloads constructor(
                 check(candidate.generation == contentGeneration)
                 val old = content
                 content = candidate.owner; presentation = content; readingMode = candidate.mode
+                contentVersion = candidate.version
                 content.contentView.visibility = View.VISIBLE
                 candidate.retained = true
                 val cleanup = runCatching { old.detach() }
@@ -401,7 +576,7 @@ abstract class BookReadView @JvmOverloads constructor(
                 return actual
             }
             override fun detach() { placeholders.clear(); content.detach(); genericHost = null; if (placeholderController === placeholders) placeholderController = null; presentation = null }
-            inner class ModeCandidate(val owner: BookPresentation, val prepared: PreparedRead<ReadingPosition>, val mode: ReadingMode) : PreparedRead<ReadingPosition> {
+            inner class ModeCandidate(val owner: BookPresentation, val prepared: PreparedRead<ReadingPosition>, val mode: ReadingMode, val version: Long) : PreparedRead<ReadingPosition> {
                 override val target get() = prepared.target
                 override val generation get() = prepared.generation
                 var retained = false
@@ -428,6 +603,7 @@ abstract class BookReadView @JvmOverloads constructor(
         clearContentAdapter()
         if (sequence != openSequence || isReleased) return OpenResult.Superseded
         lastError = null
+        presentationSource = source as? PresentationBookSource
         ensureContentAdapter()
         if (sequence != openSequence || isReleased) return OpenResult.Superseded
         return try {
@@ -603,6 +779,7 @@ abstract class BookReadView @JvmOverloads constructor(
         if (sequence != openSequence || isReleased) return
         clearContentAdapter()
         if (sequence != openSequence || isReleased) return
+        presentationSource = null
         if (isAttachedToWindow) ensureContentAdapter()
         if (sequence != openSequence || isReleased) return
         phase = ReaderPhase.Closed; lastError = null
@@ -770,11 +947,12 @@ abstract class BookReadView @JvmOverloads constructor(
         coordinator.providers = providers.toList()
         refreshLayoutConfiguration()
     }
-    private fun refreshLayoutConfiguration() {
+    private fun refreshLayoutConfiguration() = refreshPresentationConfiguration(invalidateLayouts = true)
+    private fun refreshPresentationConfiguration(invalidateLayouts: Boolean) {
         val generation = contentGeneration + 1
         invalidateContentGeneration()
         if (generation != contentGeneration || isReleased) return
-        coordinator.invalidateLayouts()
+        if (invalidateLayouts) coordinator.invalidateLayouts()
         if (generation != contentGeneration || isReleased) return
         restoreVisiblePosition()
     }
@@ -865,9 +1043,40 @@ abstract class BookReadView @JvmOverloads constructor(
     }
     fun retryChapter(chapterId: String, callback: ReaderCallback<ReaderResult<Unit>>): ReaderRequest = submit(callback) { retryChapter(chapterId) }
 
-    fun getSelection(): TextSelection? { checkMainThread(); return selection }
+    /** Current selection for TXT, network text and EPUB alike. Main thread; null after clearing. */
+    fun getSelection(): ReaderSelection? { checkMainThread(); return if (isReleased) null else currentSelection }
+    fun getSelectedText(): String? = getSelection()?.text
+    /** Defensive copy in Widget-local physical pixels. */
+    fun getSelectionBounds(): android.graphics.RectF? {
+        checkMainThread()
+        documentSelection?.bounds?.let { return android.graphics.RectF(it) }
+        val content = presentation ?: return null
+        return content.selectionBounds()?.let { area ->
+            val offset = Rect(); offsetDescendantRectToMyCoords(content.contentView, offset)
+            android.graphics.RectF(area).apply { offset(offset.left.toFloat(), offset.top.toFloat()) }
+        }
+    }
+    fun getSelectionHandleBounds(start: Boolean): android.graphics.RectF? {
+        checkMainThread()
+        val content = presentation ?: return null
+        return content.selectionHandleBounds(start)?.let { area ->
+            val offset = Rect(); offsetDescendantRectToMyCoords(content.contentView, offset)
+            android.graphics.RectF(area).apply { offset(offset.left.toFloat(), offset.top.toFloat()) }
+        }
+    }
+    /** Format-specific access only for callers that explicitly need source UTF-16 anchors. */
+    fun getTextSelection(): TextSelection? { checkMainThread(); return selection }
+    fun copySelectedText(): ReaderResult<Unit> = getSelectionActions()?.copyText() ?: ReaderResult.Rejected(ReaderRejection.InvalidSelection)
+    @JvmOverloads fun highlightSelection(styleId: String = "default"): ReaderResult<HighlightAnnotation> =
+        getSelectionActions()?.highlight(styleId) ?: ReaderResult.Rejected(ReaderRejection.InvalidSelection)
+    @JvmOverloads fun underlineSelection(style: org.peyilo.ireadview.api.style.TextLineStyle = org.peyilo.ireadview.api.style.TextLineStyle()): ReaderResult<UnderlineAnnotation> =
+        getSelectionActions()?.underline(style) ?: ReaderResult.Rejected(ReaderRejection.InvalidSelection)
+    @JvmOverloads fun toggleSelectionHighlight(styleId: String = "default"): ReaderResult<Unit> =
+        getSelectionActions()?.toggleHighlight(styleId) ?: ReaderResult.Rejected(ReaderRejection.InvalidSelection)
+    @JvmOverloads fun toggleSelectionUnderline(style: org.peyilo.ireadview.api.style.TextLineStyle = org.peyilo.ireadview.api.style.TextLineStyle()): ReaderResult<Unit> =
+        getSelectionActions()?.toggleUnderline(style) ?: ReaderResult.Rejected(ReaderRejection.InvalidSelection)
     private fun canPerformSelectionAccessibilityAction(): Boolean = !isReleased && isEnabled &&
-        !draggingSelection && navigationState == ReadNavigationState.Idle && selection != null &&
+        !draggingSelection && navigationState == ReadNavigationState.Idle && currentSelection != null &&
         presentation?.selectionBounds() != null
 
     override fun onInitializeAccessibilityNodeInfo(info: AccessibilityNodeInfo) {
@@ -887,7 +1096,7 @@ abstract class BookReadView @JvmOverloads constructor(
             return when (action) {
                 AccessibilityNodeInfo.ACTION_COPY -> actions.copyText() is ReaderResult.Success
                 R.id.iread_action_highlight_selection -> actions.highlight() is ReaderResult.Success
-                else -> { actions.clearSelection(); selection == null }
+                else -> { actions.clearSelection(); currentSelection == null }
             }
         }
         return super.performAccessibilityAction(action, arguments)
@@ -896,15 +1105,93 @@ abstract class BookReadView @JvmOverloads constructor(
     fun getSelectionActions(): SelectionActions? {
         checkMainThread()
         if (isReleased) return null
-        return selection?.let { createSelectionActions(it, selectionRevision) }
+        return documentSelection?.actions ?: selection?.let { createSelectionActions(it, selectionRevision) }
+    }
+    private fun documentMarks(selected: DocumentTextSelection): List<DocumentRangedAnnotation> =
+        annotations?.items?.filterIsInstance<DocumentRangedAnnotation>()?.filter {
+            it.selection.bookId == selected.bookId && it.selection.chapterId == selected.chapterId &&
+                it.selection.contentRevision == selected.contentRevision && annotationStore.status(it.id) == AnnotationStatus.Valid &&
+                presentation?.documentSelectionCoveredBy(selected, it.selection) == true
+        }.orEmpty()
+    private fun toggleDocumentMark(selected: DocumentTextSelection, highlight: Boolean, add: () -> ReaderResult<Unit>): ReaderResult<Unit> {
+        val items = documentMarks(selected).filter { if (highlight) it is HighlightAnnotation else it is UnderlineAnnotation }
+        if (items.isEmpty()) return add()
+        val binding = documentSelection
+        val result = mutateAnnotations { items.forEach { annotationStore.removeAnnotation(it.id) }; ReaderResult.Success(Unit) }
+        if (documentSelection === binding) clearSelection()
+        return result
+    }
+    private inline fun <T> selectionOperation(code: String, action: () -> ReaderResult<T>): ReaderResult<T> = try {
+        checkMainThread()
+        action()
+    } catch (error: Exception) {
+        ReaderResult.Failure(ReaderError(ReaderStage.SELECTION, code, error.message ?: "Selection action failed", cause = error))
+    }
+    private fun bindDocumentSelection(selected: DocumentTextSelection?, delegate: org.peyilo.ireadview.spi.selection.DocumentSelectionHandle?, bounds: Rect?, generation: Long): Boolean {
+        if (selected == null) {
+            if (documentSelection != null) clearSelection()
+            return true
+        }
+        if (selected.bookId != currentBook?.bookId || delegate == null) return false
+        val old = documentSelection
+        if (old?.selected == selected && old.generation == generation) {
+            old.delegate = delegate
+            if (old.bounds != bounds) { old.bounds = bounds; if (!draggingSelection) selectionToolbar.show(selected, old.actions, bounds) }
+            return true
+        }
+        // Replacing a DOM range must not clear the newly selected range through old actions.
+        documentSelection = null
+        if (selection != null) clearSelection() else selectionToolbar.dismiss()
+        if (isReleased || generation != contentGeneration || selected.bookId != currentBook?.bookId) return false
+        val binding = DocumentSelectionBinding(selected, delegate, bounds, generation)
+        fun valid(): Boolean { checkMainThread(); return !isReleased && isEnabled && contentGeneration == generation && documentSelection === binding && binding.delegate.isValid() }
+        binding.actions = object : SelectionActions {
+            override fun isValid() = valid()
+            override fun hasHighlight() = valid() && documentMarks(selected).any { it is HighlightAnnotation }
+            override fun hasUnderline() = valid() && documentMarks(selected).any { it is UnderlineAnnotation }
+            override fun toggleHighlight(styleId: String): ReaderResult<Unit> =
+                if (valid()) toggleDocumentMark(selected, true) { highlight(styleId).mapToUnit() } else ReaderResult.Rejected(ReaderRejection.InvalidSelection)
+            override fun toggleUnderline(style: org.peyilo.ireadview.api.style.TextLineStyle): ReaderResult<Unit> =
+                if (valid()) toggleDocumentMark(selected, false) { underline(style).mapToUnit() } else ReaderResult.Rejected(ReaderRejection.InvalidSelection)
+            override fun highlight(styleId: String): ReaderResult<HighlightAnnotation> = selectionOperation("HighlightActionFailed") {
+                if (!valid()) ReaderResult.Rejected(ReaderRejection.InvalidSelection) else {
+                    val id = annotationIds.newHighlightId()
+                    if (valid()) this@BookReadView.highlightSelection(id, styleId) else ReaderResult.Rejected(ReaderRejection.InvalidSelection)
+                }
+            }
+            override fun underline(style: org.peyilo.ireadview.api.style.TextLineStyle): ReaderResult<UnderlineAnnotation> = selectionOperation("UnderlineActionFailed") {
+                if (!valid()) ReaderResult.Rejected(ReaderRejection.InvalidSelection) else {
+                    val id = annotationIds.newHighlightId()
+                    if (valid()) this@BookReadView.underlineSelection(id, style) else ReaderResult.Rejected(ReaderRejection.InvalidSelection)
+                }
+            }
+            override fun copyText(): ReaderResult<Unit> {
+                checkMainThread()
+                if (!valid()) return ReaderResult.Rejected(ReaderRejection.InvalidSelection)
+                return selectionOperation("CopyActionFailed") {
+                    (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("阅读选区", selected.text))
+                    if (valid()) this@BookReadView.clearSelection()
+                    ReaderResult.Success(Unit)
+                }
+            }
+            override fun clearSelection() { if (valid()) this@BookReadView.clearSelection() }
+        }
+        documentSelection = binding
+        val revision = ++selectionRevision
+        dispatch { if (revision == selectionRevision) it.onSelectionChanged(this, selected) }
+        if (documentSelection === binding && valid() && isAttachedToWindow && !draggingSelection) selectionToolbar.show(selected, binding.actions, bounds)
+        return true
     }
     fun clearSelection() {
         checkMainThread()
-        if (selection == null) { selectionToolbar.dismiss(); return }
+        val document = documentSelection
+        documentSelection = null
+        if (selection == null && document == null) { selectionToolbar.dismiss(); return }
         selection = null; draggingSelection = false; val revision = ++selectionRevision
         accessibleSelectionActions = null
         sendAccessibilityEvent(AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED)
         selectionToolbar.dismiss()
+        document?.delegate?.clearSelection()
         presentation?.onDecorationsChanged()
         dispatch { if (revision == selectionRevision) it.onSelectionChanged(this, null) }
     }
@@ -913,6 +1200,7 @@ abstract class BookReadView @JvmOverloads constructor(
     fun setSelectionToolbarFactory(factory: SelectionToolbarFactory?) {
         checkMainThread(); if (isReleased) return
         selectionToolbar.factory = factory
+        documentSelection?.let { selectionToolbar.show(it.selected, it.actions, it.bounds) }
         selection?.let { showSelectionToolbar(it, selectionRevision) }
     }
     /** Installs icon/text items in a paged floating menu. Runtime callbacks are not saved state.
@@ -922,9 +1210,23 @@ abstract class BookReadView @JvmOverloads constructor(
         items: List<org.peyilo.ireadview.spi.selection.SelectionMenuItem>,
         options: org.peyilo.ireadview.spi.selection.SelectionMenuOptions = org.peyilo.ireadview.spi.selection.SelectionMenuOptions()
     ) = setSelectionToolbarFactory(org.peyilo.ireadview.spi.selection.SelectionToolbars.menu(items, options))
-    fun highlightSelection(id: String, styleId: String): ReaderResult<Highlight> {
+    fun highlightSelection(id: String, styleId: String): ReaderResult<HighlightAnnotation> {
         checkMainThread()
         if (isReleased) return ReaderResult.Rejected(ReaderRejection.Released)
+        documentSelection?.let { document ->
+            if (!document.actions.isValid()) return ReaderResult.Rejected(ReaderRejection.InvalidSelection)
+            val item = DocumentHighlight(id, document.selected, styleId)
+            val result = addAnnotation(item)
+            if (result is ReaderResult.Success) {
+                if (documentSelection === document) clearSelection()
+                return ReaderResult.Success(item)
+            }
+            return when (result) {
+                is ReaderResult.Rejected -> result
+                is ReaderResult.Failure -> result
+                else -> ReaderResult.Superseded
+            }
+        }
         val selected = selection ?: return ReaderResult.Rejected(ReaderRejection.InvalidSelection)
         val content = presentation?.contentForChapter(selected.range.chapterId) ?: return ReaderResult.Rejected(ReaderRejection.NotReady)
         if (!TextSelectionResolver.matches(content, selected.range, selected.text)) return ReaderResult.Rejected(ReaderRejection.InvalidSelection)
@@ -934,9 +1236,23 @@ abstract class BookReadView @JvmOverloads constructor(
         return result
     }
     /** Converts the current source selection to an independent line annotation. Dimensions are dp. */
-    @JvmOverloads fun underlineSelection(id: String, style: org.peyilo.ireadview.api.style.TextLineStyle = org.peyilo.ireadview.api.style.TextLineStyle()): ReaderResult<Underline> {
+    @JvmOverloads fun underlineSelection(id: String, style: org.peyilo.ireadview.api.style.TextLineStyle = org.peyilo.ireadview.api.style.TextLineStyle()): ReaderResult<UnderlineAnnotation> {
         checkMainThread()
         if (isReleased) return ReaderResult.Rejected(ReaderRejection.Released)
+        documentSelection?.let { document ->
+            if (!document.actions.isValid()) return ReaderResult.Rejected(ReaderRejection.InvalidSelection)
+            val item = DocumentUnderline(id, document.selected, style)
+            val result = addAnnotation(item)
+            if (result is ReaderResult.Success) {
+                if (documentSelection === document) clearSelection()
+                return ReaderResult.Success(item)
+            }
+            return when (result) {
+                is ReaderResult.Rejected -> result
+                is ReaderResult.Failure -> result
+                else -> ReaderResult.Superseded
+            }
+        }
         val selected = selection ?: return ReaderResult.Rejected(ReaderRejection.InvalidSelection)
         val content = presentation?.contentForChapter(selected.range.chapterId) ?: return ReaderResult.Rejected(ReaderRejection.NotReady)
         if (!TextSelectionResolver.matches(content, selected.range, selected.text)) return ReaderResult.Rejected(ReaderRejection.InvalidSelection)
@@ -947,6 +1263,7 @@ abstract class BookReadView @JvmOverloads constructor(
     }
 
     private fun selectText(selected: TextSelection): ReaderResult<Unit> {
+        if (documentSelection != null) clearSelection()
         if (isReleased) return ReaderResult.Rejected(ReaderRejection.Released)
         val content = presentation?.contentForChapter(selected.range.chapterId) ?: return ReaderResult.Rejected(ReaderRejection.NotReady)
         if (!TextSelectionResolver.matches(content, selected.range, selected.text)) return ReaderResult.Rejected(ReaderRejection.InvalidSelection)
@@ -1000,7 +1317,7 @@ abstract class BookReadView @JvmOverloads constructor(
                 if (valid()) clearSelection()
                 return result
             }
-            override fun underline(style: org.peyilo.ireadview.api.style.TextLineStyle): ReaderResult<Underline> {
+            override fun underline(style: org.peyilo.ireadview.api.style.TextLineStyle): ReaderResult<UnderlineAnnotation> {
                 checkMainThread()
                 if (!valid()) return ReaderResult.Rejected(ReaderRejection.InvalidSelection)
                 return try {
@@ -1025,7 +1342,7 @@ abstract class BookReadView @JvmOverloads constructor(
                 if (valid()) this@BookReadView.clearSelection()
                 return ReaderResult.Success(Unit)
             }
-            override fun highlight(styleId: String): ReaderResult<Highlight> {
+            override fun highlight(styleId: String): ReaderResult<HighlightAnnotation> {
                 checkMainThread()
                 if (!valid()) return ReaderResult.Rejected(ReaderRejection.InvalidSelection)
                 return try {
@@ -1062,6 +1379,23 @@ abstract class BookReadView @JvmOverloads constructor(
     val annotations: AnnotationSnapshot? get() = annotationStore.snapshot()
     fun exportAnnotations(): AnnotationSnapshot? { checkMainThread(); return annotations }
     fun getAnnotationStatus(id: String): AnnotationStatus? { checkMainThread(); return annotationStore.status(id) }
+    /** Navigation target for any supported annotation, independent of its source format. */
+    fun getAnnotationPosition(id: String): ReadingPosition? {
+        checkMainThread()
+        return when (val item = annotations?.items?.firstOrNull { it.id == id }) {
+            is Bookmark -> item.position
+            is RangedAnnotation -> ReadingPosition(item.bookId, item.range.chapterId, item.range.start, item.range.contentRevision)
+            is DocumentRangedAnnotation -> presentation?.positionForDocumentSelection(item.selection)
+            else -> null
+        }
+    }
+    suspend fun goToAnnotation(id: String): NavigationResult<ReadingPosition> {
+        checkMainThread()
+        if (annotationStore.bookmark(id) != null) return goToBookmark(id)
+        val target = getAnnotationPosition(id) ?: return NavigationResult.Rejected(ReaderRejection.UnknownAnnotation)
+        return goToPosition(target)
+    }
+    fun goToAnnotation(id: String, callback: ReaderCallback<NavigationResult<ReadingPosition>>): ReaderRequest = submit(callback) { goToAnnotation(id) }
 
     fun replaceAnnotations(snapshot: AnnotationSnapshot): ReaderResult<Unit> = mutateAnnotations { annotationStore.replace(snapshot) }
     fun addBookmark(bookmark: Bookmark): ReaderResult<Bookmark> = mutateAnnotations { annotationStore.add(bookmark) }
@@ -1070,12 +1404,16 @@ abstract class BookReadView @JvmOverloads constructor(
     fun updateAnnotation(annotation: ReaderAnnotation): ReaderResult<ReaderAnnotation> = mutateAnnotations { annotationStore.putAnnotation(annotation, true) }
     fun removeAnnotation(id: String): ReaderResult<Unit> = mutateAnnotations(changed = annotations?.items?.any { it.id == id } == true) { annotationStore.removeAnnotation(id) }
     fun addHighlight(highlight: Highlight): ReaderResult<Highlight> = mutateAnnotations { annotationStore.put(highlight, update = false) }
+    fun addHighlight(highlight: HighlightAnnotation): ReaderResult<HighlightAnnotation> = mutateAnnotations { annotationStore.putAnnotation(highlight, false) }
     fun updateHighlight(highlight: Highlight): ReaderResult<Highlight> = mutateAnnotations { annotationStore.put(highlight, update = true) }
+    fun updateHighlight(highlight: HighlightAnnotation): ReaderResult<HighlightAnnotation> = mutateAnnotations { annotationStore.putAnnotation(highlight, true) }
     fun addUnderline(underline: Underline): ReaderResult<Underline> = mutateAnnotations { annotationStore.putUnderline(underline, update = false) }
+    fun addUnderline(underline: UnderlineAnnotation): ReaderResult<UnderlineAnnotation> = mutateAnnotations { annotationStore.putAnnotation(underline, false) }
     fun updateUnderline(underline: Underline): ReaderResult<Underline> = mutateAnnotations { annotationStore.putUnderline(underline, update = true) }
-    fun removeUnderline(id: String): ReaderResult<Unit> = mutateAnnotations(changed = annotations?.underlines?.any { it.id == id } == true) { annotationStore.removeUnderline(id) }
+    fun updateUnderline(underline: UnderlineAnnotation): ReaderResult<UnderlineAnnotation> = mutateAnnotations { annotationStore.putAnnotation(underline, true) }
+    fun removeUnderline(id: String): ReaderResult<Unit> = mutateAnnotations(changed = annotations?.allUnderlines?.any { it.id == id } == true) { annotationStore.removeUnderline(id) }
     fun removeBookmark(id: String): ReaderResult<Unit> = mutateAnnotations(changed = annotationStore.bookmark(id) != null) { annotationStore.remove(id, highlight = false) }
-    fun removeHighlight(id: String): ReaderResult<Unit> = mutateAnnotations(changed = annotations?.highlights?.any { it.id == id } == true) { annotationStore.remove(id, highlight = true) }
+    fun removeHighlight(id: String): ReaderResult<Unit> = mutateAnnotations(changed = annotations?.allHighlights?.any { it.id == id } == true) { annotationStore.remove(id, highlight = true) }
 
     private fun <T> mutateAnnotations(changed: Boolean = true, mutation: () -> ReaderResult<T>): ReaderResult<T> {
         checkMainThread()
@@ -1174,6 +1512,10 @@ abstract class BookReadView @JvmOverloads constructor(
         val book = currentBook
         fun current() = generation == contentGeneration && sequence == openSequence && currentBook === book &&
             currentPosition == change.to && !isReleased
+        documentSelection?.let { document ->
+            if (change.to?.chapterId != document.selected.chapterId || !draggingSelection && change.reason != PositionChangeReason.Scroll) clearSelection()
+        }
+        if (!current()) return
         val selected = selection
         if (selected != null && selected.range.chapterId != change.to?.chapterId) {
             val stillVisible = change.reason == PositionChangeReason.Scroll && presentation?.contentForChapter(selected.range.chapterId) != null && presentation?.selectionBounds() != null
@@ -1186,7 +1528,7 @@ abstract class BookReadView @JvmOverloads constructor(
         if (!current()) return
         publishState()
         if (!current()) return
-        coordinator.preloadNear(change.to)
+        if (presentationSource?.supportsBlockLayout != false && presentation?.supportsBlockLayout == true) coordinator.preloadNear(change.to)
         if (current() && !draggingSelection && isAttachedToWindow) selection?.let { showSelectionToolbar(it, selectionRevision) }
     }
     override fun onNavigationStateChanged(state: ReadNavigationState) {
@@ -1196,6 +1538,8 @@ abstract class BookReadView @JvmOverloads constructor(
         val position = currentPosition
         fun current() = generation == contentGeneration && sequence == openSequence && presentation === content &&
             navigationState == state && currentPosition == position && !isReleased
+        if (documentSelection?.generation?.let { it != contentGeneration } == true) clearSelection()
+        if (!current()) return
         content?.onNavigationStateChanged(state)
         if (!current()) return
         if (state == ReadNavigationState.Idle && chromeRefreshPending) refreshPageChrome()
@@ -1221,7 +1565,7 @@ abstract class BookReadView @JvmOverloads constructor(
         offsetDescendantRectToMyCoords(content.contentView, offset)
         return content.onLongPress(xPx - offset.left, yPx - offset.top)
     }
-    override fun isContentGestureBlocked(): Boolean = selection != null
+    override fun isContentGestureBlocked(): Boolean = selection != null || documentSelection != null
     override fun onContentTouch(event: MotionEvent): Boolean {
         val content = presentation ?: return false
         val offset = Rect()
@@ -1229,6 +1573,8 @@ abstract class BookReadView @JvmOverloads constructor(
         return content.onSelectionTouch(event.actionMasked, event.x - offset.left, event.y - offset.top)
     }
     override fun onContainerDetached() {
+        linkSequence++
+        linkRequest?.cancel(); linkRequest = null
         val generation = contentGeneration
         val sequence = openSequence
         relayoutSequence++
@@ -1252,6 +1598,10 @@ abstract class BookReadView @JvmOverloads constructor(
         if (current()) pageClock?.update()
     }
     override fun onRelease() {
+        presentationSource = null
+        linkSequence++
+        linkRequest?.cancel(); linkRequest = null
+        linkHandler = null
         openSequence++
         phase = ReaderPhase.Released
         pageChromeProvider = null
@@ -1366,7 +1716,7 @@ abstract class BookReadView @JvmOverloads constructor(
         val position: ReadingPosition?
         val modeId: String
         val styleState: Bundle?
-        constructor(superState: Parcelable?, position: ReadingPosition?, modeId: String, styleState: Bundle?) : super(superState) {
+        constructor(superState: Parcelable?, position: ReadingPosition?, modeId: String, styleState: Bundle?) : super(superState ?: EMPTY_STATE) {
             this.position = position; this.modeId = modeId; this.styleState = styleState
         }
         constructor(parcel: Parcel, loader: ClassLoader? = null) : super(parcel, loader ?: SavedState::class.java.classLoader) {
@@ -1376,7 +1726,7 @@ abstract class BookReadView @JvmOverloads constructor(
             position = data?.let { values -> runCatching {
                 ReadingPosition(values.getString("book")!!, values.getString("chapter")!!,
                     values.getString("block")?.let { ContentAnchor(it, values.getInt("offset")) }, values.getString("revision"),
-                    values.getInt("page").takeIf { it > 0 }, values.getInt("chapterNumber").takeIf { it > 0 })
+                    values.getInt("page").takeIf { it > 0 }, values.getInt("chapterNumber").takeIf { it > 0 }, values.getString("documentLocator"))
             }.getOrNull() }
         }
         override fun writeToParcel(out: Parcel, flags: Int) {
@@ -1388,6 +1738,7 @@ abstract class BookReadView @JvmOverloads constructor(
                 putString("book", value.bookId); putString("chapter", value.chapterId); putString("revision", value.contentRevision)
                 putString("block", value.anchor?.blockId); putInt("offset", value.anchor?.offset ?: 0)
                 putInt("page", value.pageNumberHint ?: 0); putInt("chapterNumber", value.chapterNumberHint ?: 0)
+                putString("documentLocator", value.documentLocator)
                 }
             })
         }

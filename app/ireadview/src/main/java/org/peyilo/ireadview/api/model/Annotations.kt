@@ -12,6 +12,9 @@ data class TextRange(
 
 /** Common identity for all built-in annotations. New kinds share storage and lifecycle. */
 sealed interface ReaderAnnotation { val id: String; val bookId: String }
+/** Format-independent annotation views. Source-specific range types remain available on subtypes. */
+sealed interface HighlightAnnotation : ReaderAnnotation { val quote: String; val styleId: String }
+sealed interface UnderlineAnnotation : ReaderAnnotation { val quote: String; val style: org.peyilo.ireadview.api.style.TextLineStyle }
 sealed interface RangedAnnotation : ReaderAnnotation {
     val range: TextRange
     val quote: String
@@ -22,15 +25,49 @@ data class Bookmark(override val id: String, val position: ReadingPosition, val 
     init { require(id.isNotBlank()) }
 }
 
-data class Highlight(override val id: String, override val range: TextRange, override val quote: String, val styleId: String = "default") : RangedAnnotation {
+data class Highlight(override val id: String, override val range: TextRange, override val quote: String, override val styleId: String = "default") : RangedAnnotation, HighlightAnnotation {
     init { require(id.isNotBlank() && styleId.isNotBlank()) }
 }
 
-data class TextSelection(val range: TextRange, val text: String)
+/** Shared toolbar payload. Source-text ranges and document locations retain their real semantics. */
+interface ReaderSelection {
+    val bookId: String
+    val chapterId: String
+    val text: String
+}
+
+sealed interface DocumentRangedAnnotation : ReaderAnnotation {
+    val selection: DocumentTextSelection
+    override val bookId: String get() = selection.bookId
+    val quote: String get() = selection.text
+}
+data class DocumentHighlight(override val id: String, override val selection: DocumentTextSelection,
+    override val styleId: String = "default") : DocumentRangedAnnotation, HighlightAnnotation {
+    override val quote: String get() = selection.text
+    init { require(id.isNotBlank() && styleId.isNotBlank()) }
+}
+data class DocumentUnderline(override val id: String, override val selection: DocumentTextSelection,
+    override val style: org.peyilo.ireadview.api.style.TextLineStyle = org.peyilo.ireadview.api.style.TextLineStyle()) : DocumentRangedAnnotation, UnderlineAnnotation {
+    override val quote: String get() = selection.text
+    init { require(id.isNotBlank()) }
+}
+data class TextSelection(val range: TextRange, override val text: String) : ReaderSelection {
+    override val bookId get() = range.bookId
+    override val chapterId get() = range.chapterId
+}
+data class DocumentTextSelection(
+    override val bookId: String,
+    override val chapterId: String,
+    val contentRevision: String?,
+    val documentLocator: String,
+    override val text: String
+) : ReaderSelection {
+    init { require(bookId.isNotBlank() && chapterId.isNotBlank() && documentLocator.isNotBlank() && text.isNotEmpty()) }
+}
 
 /** A line annotation independent from a background Highlight, with per-annotation appearance. */
 data class Underline(override val id: String, override val range: TextRange, override val quote: String,
-    val style: org.peyilo.ireadview.api.style.TextLineStyle = org.peyilo.ireadview.api.style.TextLineStyle()) : RangedAnnotation {
+    override val style: org.peyilo.ireadview.api.style.TextLineStyle = org.peyilo.ireadview.api.style.TextLineStyle()) : RangedAnnotation, UnderlineAnnotation {
     init { require(id.isNotBlank()) }
 }
 
@@ -46,6 +83,8 @@ class AnnotationSnapshot private constructor(val bookId: String, annotations: Li
     val bookmarks: List<Bookmark> = immutableList(items.filterIsInstance<Bookmark>())
     val highlights: List<Highlight> = immutableList(items.filterIsInstance<Highlight>())
     val underlines: List<Underline> = immutableList(items.filterIsInstance<Underline>())
+    val allHighlights: List<HighlightAnnotation> = immutableList(items.filterIsInstance<HighlightAnnotation>())
+    val allUnderlines: List<UnderlineAnnotation> = immutableList(items.filterIsInstance<UnderlineAnnotation>())
     @JvmOverloads constructor(bookId: String, bookmarks: List<Bookmark> = emptyList(), highlights: List<Highlight> = emptyList(), underlines: List<Underline> = emptyList()) :
         this(bookId, bookmarks + highlights + underlines, Unit)
     companion object {

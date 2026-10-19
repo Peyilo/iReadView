@@ -14,7 +14,8 @@ internal data class EpubReadingItem(val id: String, val path: String, val linear
 internal class EpubPackage(
     val path: String, val title: String?, val version: String,
     manifest: Map<String, EpubManifestItem>, readingOrder: List<EpubReadingItem>,
-    val navigationPath: String?, val ncxPath: String?, diagnostics: List<EpubPackageDiagnostic>
+    val navigationPath: String?, val ncxPath: String?, diagnostics: List<EpubPackageDiagnostic>,
+    val fixedLayout: Boolean = false
 ) {
     val manifest: Map<String, EpubManifestItem> = Collections.unmodifiableMap(LinkedHashMap(manifest))
     val readingOrder: List<EpubReadingItem> = Collections.unmodifiableList(ArrayList(readingOrder))
@@ -62,6 +63,7 @@ internal object EpubPackageParser {
             var titleDepth = -1
             val titleText = StringBuilder()
             var metaDepth = -1
+            var fixedLayout = false
             val metaText = StringBuilder()
             var ncxId: String? = null
             var manifestSeen = false
@@ -122,7 +124,10 @@ internal object EpubPackageParser {
                     XmlPullParser.END_TAG -> {
                         if (parser.depth == titleDepth) { title = titleText.toString().trim().takeIf { it.isNotEmpty() }; titleDepth = -1 }
                         if (parser.depth == metaDepth) {
-                            if (metaText.toString().trim() == "pre-paginated") diagnostics.add(EpubPackageDiagnostic("FixedLayoutTextOnly", path, "Fixed layout is reduced to reading-order text"))
+                            if (metaText.toString().trim() == "pre-paginated") {
+                                fixedLayout = true
+                                diagnostics.add(EpubPackageDiagnostic("FixedLayoutTextOnly", path, "Block-text adapters reduce fixed layout to reading-order text; document renderers retain the layout"))
+                            }
                             metaDepth = -1
                         }
                         parents.removeAt(parents.lastIndex)
@@ -158,7 +163,7 @@ internal object EpubPackageParser {
                 if (item.path == null || !archive.contains(item.path)) throw IOException("Missing EPUB NCX resource")
                 item.path
             }
-            EpubPackage(path, title, version, manifest, order, nav, ncx, diagnostics)
+            EpubPackage(path, title, version, manifest, order, nav, ncx, diagnostics, fixedLayout)
         }
     }
 }

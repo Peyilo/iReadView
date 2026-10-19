@@ -31,6 +31,14 @@ interface PreparedRead<L : Any> {
     fun dispose()
 }
 
+/** Optional compositor handoff before the navigation's atomic show/commit.
+ * The animation still covers the live content. Cancellation must leave the committed
+ * page intact; candidate disposal owns any provisional visibility/resources.
+ */
+interface ReadVisualHandoff<L : Any> {
+    suspend fun prepareVisualHandoff(candidate: PreparedRead<L>)
+}
+
 sealed interface ReadPreparation<out L : Any> {
     data class Ready<L : Any>(val candidate: PreparedRead<L>) : ReadPreparation<L>
     data class Unchanged<L : Any>(val location: L?) : ReadPreparation<L>

@@ -23,7 +23,7 @@ class HomeActivity : Activity() {
         super.onCreate(savedInstanceState)
         applySystemBarStyle()
         setContentView(R.layout.activity_home)
-        listOf(R.id.open_builtin, R.id.open_local_txt, R.id.open_network, R.id.more_examples).forEach { id ->
+        listOf(R.id.open_builtin, R.id.open_local_txt, R.id.open_epub, R.id.open_network, R.id.more_examples).forEach { id ->
             findViewById<View>(id).accessibilityDelegate = object : View.AccessibilityDelegate() {
                 override fun onInitializeAccessibilityNodeInfo(host: View, info: AccessibilityNodeInfo) {
                     super.onInitializeAccessibilityNodeInfo(host, info)
@@ -35,6 +35,9 @@ class HomeActivity : Activity() {
             startActivity(Intent(this, ReaderActivity::class.java).putExtra(ReaderActivity.EXTRA_ENTRY, ReaderActivity.ENTRY_BUILTIN))
         }
         findViewById<View>(R.id.open_local_txt).setOnClickListener { chooseTextFile() }
+        findViewById<View>(R.id.open_epub).setOnClickListener {
+            startActivity(Intent(this, ReaderActivity::class.java).putExtra(ReaderActivity.EXTRA_ENTRY, ReaderActivity.ENTRY_EPUB))
+        }
         findViewById<View>(R.id.open_network).setOnClickListener {
             startActivity(Intent(this, NetworkActivity::class.java))
         }

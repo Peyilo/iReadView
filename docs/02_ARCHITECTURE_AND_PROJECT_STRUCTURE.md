@@ -6,6 +6,7 @@
 
 - `:app:ireadview`：Android View Widget库，包根`org.peyilo.ireadview`，输出AAR及本地Maven仓库ZIP。
 - `:app`：示例宿主，包根`org.peyilo.iread.demo`；使用公开API，负责书源、权限、界面和业务持久化。
+- `:app:ireadview-epub`：自研 EPUB 正文模块，系统 WebView + 自有分页/DOM 定位，minSdk21，无 Readium 运行时或 Fragment 要求。TextReaderBodyView 与 EpubReaderBodyView 共同继承 ReaderBodyView，挂载同一页面模板，详见[正文抽象](READER_BODY.md)与[EPUB 接入](EPUB_ENGINE.md)。
 - `examples/maven-host`：独立Kotlin/Java/XML消费工程，不复制库源码。
 - 核心依赖为Android View/Canvas/StaticLayout、AndroidX Core/CustomView/RecyclerView与协程。宿主不必使用AppCompat、LifecycleOwner、数据库或Compose。
 
@@ -37,6 +38,8 @@
 | AnnotationStore / TextSelectionResolver / SelectionToolbarController | 统一标注校验、源选区与工具栏动作 |
 | ReaderPlaceholderController / ReaderPageClock | 占位与重试；通用分钟刷新 |
 | 内置Text/Epub来源、OwnedSourceFile | 解析、预算与私有文件租约；来源由宿主关闭 |
+| BookResourceSource / BookLinkSource | 可选资源读取与书内链接解析；无网络协议或 View 依赖 |
+| ImageBlockLayoutProvider / LinkedTextBlock | 有预算的图片排版、原文链接范围与命中；分页/滚动共用 |
 
 不为了匹配旧设计增设LocationStore、InputRouter、StyleDiff或总括SelectionController等空转发层。
 
@@ -61,6 +64,8 @@ Widget保存配置提供器并协调刷新，不解释六个位置；呈现层�
 - effects只接收只读PageSurface及手势/帧状态；提交页码由统一导航负责。
 
 ## 源码导航
+
+多格式及网络书源的目标、边界和迁移见[内容与书源架构](CONTENT_SOURCES.md)。
 
 库公开入口：widget、api.model/source/state/style/input/effect/event、spi.page/presentation/content/selection、source。
 内部实现：internal.container/book/presentation/layout/render/selection/annotation/source/style/effect/cache等。

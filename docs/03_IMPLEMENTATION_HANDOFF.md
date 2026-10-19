@@ -37,7 +37,15 @@
 
 截至上次实现：Demo Debug APK、库Release及Maven包已有构建记录；Demo最后一次模板调整只重建Debug。最近选择/模板/电量/重建未做设备交互验收。旧阴影离屏检查和章节分页测试只能证明有限场景，详见[状态与证据](07_REQUIREMENT_IMPLEMENTATION_AUDIT.md)。
 
-用户最后明确任务是整理文档并换对话继续，没有指定下一项功能。此前建议搜索、笔记/标注扩展、内容变化重定位、跨章选择、Compose和发布体系；这些只是建议，不是待自动执行的授权清单。优先与用户明确下一项；不要把旧清单中的未实现增强写成当前能力。
+用户当前已明确授权多书源架构工作：先阅读并编写目标文档，再持续实现 TXT、EPUB 和网络小说的统一加载与显示。设计见 [CONTENT_SOURCES.md](CONTENT_SOURCES.md)。已增加 BookResourceSource/BookLinkSource、LinkedTextBlock/ImageBlock、EpubBookSource、默认图片排版及分页/滚动链接点击；Demo EPUB 已切换新入口，TXT 与既有网络来源继续使用 BookSource。
+
+**最新方向（2026-10-19）**：用户要求在正文层定义 ReaderBodyView 抽象；已拆分 TextReaderBodyView，新增自研 EpubReaderBodyView 和 EpubReaderBookSource。移除 Readium 运行时与 Fragment 宿主恢复；同一 ReaderView、页面模板和导航入口。Demo 保持 API21，默认用户 ARM EPUB。实现与缺口见 [正文设计](READER_BODY.md)和[EPUB 专题](EPUB_ENGINE.md)，不要延续旧独立 Activity 或 Readium 接入方案；尚不能宣称完整 EPUB 兼容。
+正文选区已进一步统一：ReaderSelectionPainter + ReaderSelectionInteraction/ReaderSelectionScrollPolicy 共享活动选区手柄和分页/滚动策略，EPUB 不再用 WebView 系统选区/ActionMode/CSS ::selection。getSelection/getSelectedText 与复制、高亮、划线、标注分类/导航均有格式无关 API；Demo 持久化保存 DocumentHighlight/DocumentUnderline。24项JVM测试与两套原生/EPUB设备触摸流程通过，细节见[选择与标注](SELECTION_AND_ANNOTATIONS.md)和状态文档。不要恢复为系统 WebView 手柄/单词选择方案。
+
+
+本轮 Debug APK 与库 Release AAR 构建通过；也修复了基线 ReaderPageClock 调用参数不匹配。没有新增/运行软件测试或设备验收。下一步集中设备验证富内容、缺图/超预算占位、链接、取消和模式切换；跨图片选择、图片标注、无障碍链接动作及可配置/跨章资源缓存仍有待扩展。旧纯文本 EPUB 保留兼容入口，Flow revision 后缀避免将旧标注静默认作同版内容。不要把编译通过升级为设备体验已验收。
+
+此前建议搜索、笔记/标注扩展、重定位、跨章选择、Compose和发布体系；这些仍只是建议，不是待自动执行的授权清单。
 
 ## 本机工具与产物
 

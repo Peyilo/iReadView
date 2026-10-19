@@ -47,10 +47,13 @@ object PageTurnEffects {
     }
 }
 
-private class SlidingEffect(private val kind: Int) : PageTurnEffect {
+private class SlidingEffect(private val kind: Int) : SnapshotPageTurnEffect {
     private var context: PageTurnContext? = null
     private var host: PageTurnEffectHost? = null
     private val snapshots = PageTurnSnapshots()
+    override val usesPageSnapshots get() = snapshots.current != null && snapshots.target != null ||
+        ((context?.current as? RecordedPageSurface)?.isRecorded == true &&
+            (context?.target as? RecordedPageSurface)?.isRecorded == true)
     private val texture = Paint(Paint.FILTER_BITMAP_FLAG)
     private val pageRect = RectF()
     private val shadow = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -60,11 +63,13 @@ private class SlidingEffect(private val kind: Int) : PageTurnEffect {
         clear()
         this.context = context
         pageRect.set(0f, 0f, context.viewport.widthPx.toFloat(), context.viewport.heightPx.toFloat())
-        // Legacy rendering benefits from replacing the repeated view hierarchy with
-        // two images. Modern view drawing keeps its cheaper display-list path.
-        // Keep live drawing when the budget cannot fit two full-size images.
-        if (kind != 0 && android.os.Build.VERSION.SDK_INT < 29)
-            host?.let { snapshots.capture(it, context, fullResolutionOnly = true) }
+        // Native modern views keep their cheap display-list path. External renderers
+        // request bounded snapshots, including the same budgeted scale ladder as curls.
+        // Legacy native views retain live drawing unless full-resolution images fit.
+        val preferSnapshot = (context.current as? SnapshotPreferredSurface)?.preferSnapshot == true ||
+            (context.target as? SnapshotPreferredSurface)?.preferSnapshot == true
+        if (kind != 0 && (android.os.Build.VERSION.SDK_INT < 29 || preferSnapshot))
+            host?.let { snapshots.capture(it, context, fullResolutionOnly = !preferSnapshot) }
     }
     override fun update(frame: PageTurnFrame) {}
     override fun draw(canvas: Canvas, frame: PageTurnFrame) {

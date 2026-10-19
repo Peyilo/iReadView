@@ -11,12 +11,16 @@ data class ReadingPosition(
     val anchor: ContentAnchor? = null,
     val contentRevision: String? = null,
     val pageNumberHint: Int? = null,
-    val chapterNumberHint: Int? = null
+    val chapterNumberHint: Int? = null,
+    /** Opaque backend locator. Never interpret DOM/format locations as UTF-16 block offsets. */
+    val documentLocator: String? = null
 ) {
     init {
         require(bookId.isNotBlank() && chapterId.isNotBlank())
         require(pageNumberHint == null || pageNumberHint > 0)
         require(chapterNumberHint == null || chapterNumberHint > 0)
+        require(documentLocator == null || documentLocator.isNotBlank())
+        require(documentLocator == null || anchor == null) { "A position uses either a source-text anchor or a document locator" }
     }
 }
 

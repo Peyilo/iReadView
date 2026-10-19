@@ -7,7 +7,7 @@ import android.view.View
 import android.widget.PopupWindow
 import android.util.Log
 import org.peyilo.ireadview.internal.render.ReaderViewOwnership
-import org.peyilo.ireadview.api.model.TextSelection
+import org.peyilo.ireadview.api.model.ReaderSelection
 import org.peyilo.ireadview.spi.selection.*
 
 /** Same popup lifetime for built-in menus and host-defined toolbars. */
@@ -21,7 +21,7 @@ internal class SelectionToolbarController(private val owner: View) {
     private var binding: Binding? = null
     private var serial = 0L
 
-    fun show(selection: TextSelection, actions: SelectionActions, bounds: Rect?) {
+    fun show(selection: ReaderSelection, actions: SelectionActions, bounds: Rect?) {
         val epoch = ++serial
         releaseCurrent()
         if (epoch != serial) return
@@ -61,7 +61,9 @@ internal class SelectionToolbarController(private val owner: View) {
             val left = (location[0] + target.centerX() - root.measuredWidth / 2)
                 .coerceIn(frame.left, maxOf(frame.left, frame.right - root.measuredWidth))
             val above = location[1] + target.top - root.measuredHeight - gap
-            val top = (if (above >= frame.top) above else location[1] + target.bottom + gap)
+            val below = location[1] + target.bottom + gap
+            val top = (if (above >= frame.top) above else if (below + root.measuredHeight <= frame.bottom) below
+                else location[1] + target.top + gap)
                 .coerceIn(frame.top, maxOf(frame.top, frame.bottom - root.measuredHeight))
             window.showAtLocation(owner, Gravity.TOP or Gravity.LEFT, left, top)
             (root as? PagedSelectionMenu)?.onPageChanged = {
@@ -74,7 +76,9 @@ internal class SelectionToolbarController(private val owner: View) {
                     val updatedLeft = (location[0] + target.centerX() - root.measuredWidth / 2)
                         .coerceIn(frame.left, maxOf(frame.left, frame.right - root.measuredWidth))
                     val updatedAbove = location[1] + target.top - root.measuredHeight - gap
-                    val updatedTop = (if (updatedAbove >= frame.top) updatedAbove else location[1] + target.bottom + gap)
+                    val updatedBelow = location[1] + target.bottom + gap
+                    val updatedTop = (if (updatedAbove >= frame.top) updatedAbove else if (updatedBelow + root.measuredHeight <= frame.bottom) updatedBelow
+                        else location[1] + target.top + gap)
                         .coerceIn(frame.top, maxOf(frame.top, frame.bottom - root.measuredHeight))
                     window.update(updatedLeft, updatedTop, root.measuredWidth, root.measuredHeight)
                 }

@@ -34,6 +34,7 @@ dependencies {
     implementation(libs.jsoup)
     coreLibraryDesugaring(libs.desugar.jdk.nio)
     implementation(project(":app:ireadview"))
+    implementation(project(":app:ireadview-epub"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.kotlinx.coroutines.android)
 

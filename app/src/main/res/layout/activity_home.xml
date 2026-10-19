@@ -44,6 +44,16 @@
             </LinearLayout>
             <ImageView style="@style/HomeArrow" />
         </LinearLayout>
+        <LinearLayout android:id="@+id/open_epub" style="@style/HomeEntry" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="12dp" android:minHeight="92dp" android:background="@drawable/home_card" android:padding="18dp" android:gravity="center_vertical"
+            android:contentDescription="EPUB 原书阅读，内置图文示例或选择本地书籍">
+            <ImageView style="@style/HomeIcon" android:background="@drawable/home_icon_blue" android:src="@drawable/ic_home_book" android:tint="#527888" />
+            <LinearLayout style="@style/HomeEntryText" android:importantForAccessibility="noHideDescendants">
+                <TextView style="@style/HomeEntryTitle" android:text="EPUB 原书阅读" />
+                <TextView style="@style/HomeEntrySubtitle" android:text="保留图文排版 · 内置示例与本地书籍" />
+            </LinearLayout>
+            <ImageView style="@style/HomeArrow" />
+        </LinearLayout>
         <LinearLayout android:id="@+id/open_network" style="@style/HomeEntry" android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="12dp" android:minHeight="92dp" android:background="@drawable/home_card" android:padding="18dp" android:gravity="center_vertical"
             android:contentDescription="网络书源，在线读取目录与章节">

@@ -73,7 +73,7 @@ abstract class BaseReadView<L : Any> @JvmOverloads constructor(
     private var effectConfigurationSequence = 0L
     private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
     private val effectsDelegate = lazy {
-        PageTurnEffectManager(context, fallback = { id, reason ->
+        PageTurnEffectManager(context, hardwareAccelerated = { this@BaseReadView.isHardwareAccelerated }, fallback = { id, reason ->
             postEffectEvent({ onPageTurnEffectFallback(id, reason) }) {
                 it.onEffectFallback(this, id, "none", reason)
             }
@@ -329,17 +329,32 @@ abstract class BaseReadView<L : Any> @JvmOverloads constructor(
             override suspend fun show(candidate: PreparedRead<L>): L {
                 currentCoroutineContext().ensureActive()
                 if (isCurrent?.invoke() == false) throw SupersededNavigation()
+                val liveView = content.contentView
+                val liveAlpha = liveView.alpha
+                var suspendedLiveView = false
                 val show: suspend () -> L = {
+                    if (suspendedLiveView) { liveView.alpha = liveAlpha; suspendedLiveView = false }
+                    @Suppress("UNCHECKED_CAST")
+                    (content as? ReadVisualHandoff<L>)?.prepareVisualHandoff(candidate)
                     currentCoroutineContext().ensureActive()
                     if (candidate.generation != contentGeneration || isCurrent?.invoke() == false) throw SupersededNavigation()
                     content.show(candidate)
                 }
                 if ((!options.animated && gesture == null) || !ordinaryNavigation || !isPageTurnEffectActive() || currentLocation == null || currentLocation == candidate.target) return show()
-                return effects.transition(content.currentSurface, candidate.surface, viewportSnapshot(),
-                    turnDirection(target, currentLocation, candidate.target), {
+                try { return effects.transition(content.currentSurface, candidate.surface, viewportSnapshot(),
+                    turnDirection(target, currentLocation, candidate.target), { snapshotsReady ->
                         if (effects.overlay.parent == null) addView(effects.overlay, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
                         effects.overlay.bringToFront()
+                        if (snapshotsReady) {
+                            // Alpha keeps external renderer visibility/compositor lifetime
+                            // intact; INVISIBLE stops WebView painting and can flash on resume.
+                            liveView.alpha = 0f
+                            suspendedLiveView = true
+                        }
                     }, show, gesture, options.animated) { navigation.reportTransitionState(it) }
+                } finally {
+                    if (suspendedLiveView) liveView.alpha = liveAlpha
+                }
             }
         }
         return ownedOperation { navigation.navigate(transitioning, target, options, reason) {
@@ -717,7 +732,7 @@ abstract class BaseReadView<L : Any> @JvmOverloads constructor(
     }
     internal class ConfigurationSavedState : androidx.customview.view.AbsSavedState {
         val configuration: ReaderConfigurationState?
-        constructor(superState: Parcelable?, configuration: ReaderConfigurationState) : super(superState) { this.configuration = configuration }
+        constructor(superState: Parcelable?, configuration: ReaderConfigurationState) : super(superState ?: EMPTY_STATE) { this.configuration = configuration }
         constructor(parcel: Parcel, loader: ClassLoader? = null) : super(parcel, loader ?: ConfigurationSavedState::class.java.classLoader) {
             configuration = ReaderConfigurationState.fromBundle(parcel.readBundle(loader ?: javaClass.classLoader))
         }

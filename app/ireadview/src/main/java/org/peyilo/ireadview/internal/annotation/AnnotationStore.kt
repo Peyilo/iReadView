@@ -20,6 +20,11 @@ internal class AnnotationStore {
     fun bookmark(id: String): Bookmark? = items[id] as? Bookmark
     fun status(id: String): AnnotationStatus? = statuses[id]
     fun statusSnapshot(): Map<String, AnnotationStatus> = statuses.toMap()
+    fun reportStatus(item: ReaderAnnotation, status: AnnotationStatus): Boolean {
+        if (items[item.id] != item || statuses[item.id] == status) return false
+        statuses[item.id] = status; revision++
+        return true
+    }
     fun replace(snapshot: AnnotationSnapshot): ReaderResult<Unit> {
         val current = book ?: return ReaderResult.Rejected(ReaderRejection.NoBook)
         if (snapshot.bookId != current.bookId || snapshot.items.any { it.bookId != current.bookId }) return ReaderResult.Rejected(ReaderRejection.BookMismatch)
@@ -40,15 +45,15 @@ internal class AnnotationStore {
     fun add(bookmark: Bookmark) = putItem(bookmark, false)
     fun put(highlight: Highlight, update: Boolean) = putItem(highlight, update)
     fun putUnderline(item: Underline, update: Boolean) = putItem(item, update)
-    fun putAnnotation(item: ReaderAnnotation, update: Boolean) = putItem(item, update)
+    fun <T : ReaderAnnotation> putAnnotation(item: T, update: Boolean): ReaderResult<T> = putItem(item, update)
     private fun removeItem(id: String, matches: (ReaderAnnotation) -> Boolean): ReaderResult<Unit> {
         if (book == null) return ReaderResult.Rejected(ReaderRejection.NoBook)
         val item = items[id]
         if (item != null && matches(item)) { items.remove(id); statuses.remove(id); revision++ }
         return ReaderResult.Success(Unit)
     }
-    fun remove(id: String, highlight: Boolean) = removeItem(id) { if (highlight) it is Highlight else it is Bookmark }
-    fun removeUnderline(id: String) = removeItem(id) { it is Underline }
+    fun remove(id: String, highlight: Boolean) = removeItem(id) { if (highlight) it is HighlightAnnotation else it is Bookmark }
+    fun removeUnderline(id: String) = removeItem(id) { it is UnderlineAnnotation }
     fun removeAnnotation(id: String) = removeItem(id) { true }
     fun markPending(chapterId: String? = null) {
         revision++
@@ -57,6 +62,7 @@ internal class AnnotationStore {
     private fun itemChapterId(item: ReaderAnnotation): String = when (item) {
         is Bookmark -> item.position.chapterId
         is RangedAnnotation -> item.range.chapterId
+        is DocumentRangedAnnotation -> item.selection.chapterId
     }
     fun validate(content: ChapterContent): Map<String, AnnotationStatus> {
         if (content.bookId != book?.bookId) return emptyMap()
@@ -64,6 +70,7 @@ internal class AnnotationStore {
         for (item in items.values) {
             if (itemChapterId(item) != content.chapterId) continue
             val status = when (item) {
+                is DocumentRangedAnnotation -> continue // Document renderer validates actual DOM ranges and quotes.
                 is RangedAnnotation -> validateRange(item, content)
                 is Bookmark -> validateBookmark(item, content)
             }

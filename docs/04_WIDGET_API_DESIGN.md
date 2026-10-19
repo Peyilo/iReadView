@@ -7,16 +7,19 @@
 | 领域 | 接口与入口 |
 |---|---|
 | 控件 | BaseReadView<L>、BookReadView、ReaderView；XML或构造函数 |
-| 来源 | BookSource、ReaderInput、MemoryBookSource、TextBookSource、EpubTextBookSource |
-| 不可变内容 | BookDescriptor/TocEntry/ChapterDescriptor、ChapterContent、ContentBlock/TextContentBlock |
+| EPUB 正文 | `EpubReaderBookSource` 交给同一个 ReaderView.openBook；`EpubReaderBodyView : ReaderBodyView` 自研 DOM 排版，documentLocator 与文本 ContentAnchor 分开，见[正文抽象](READER_BODY.md) |
+| 来源 | BookSource、ReaderInput、MemoryBookSource、TextBookSource、EpubTextBookSource、EpubBookSource；可选 BookResourceSource/BookLinkSource |
+| 不可变内容 | BookDescriptor/TocEntry/ChapterDescriptor、ChapterContent、ContentBlock/TextContentBlock、LinkedTextBlock/TextLink、ImageBlock/LinkTarget |
 | 阅读位置 | ReadingPosition/ContentAnchor、ReaderSnapshot、显式BookPageIndex |
 | 操作 | openBook/closeBook/release、reloadBook/invalidateChapter/retryChapter；页/章/全书页导航；setReadingMode |
 | 样式 | ReaderStyle、ReaderStyles、字体/背景、applyStyle、输入/加载/效果选项 |
 | 标注 | AnnotationSnapshot/ReaderAnnotation、书签/高亮/划线增删改、有效性状态 |
 | 交互 | ReaderListener/Adapter、ReaderActionHandler、SelectionActions及工具栏SPI |
 | 页面 | ReaderPageFactory/Template、DecorationFactory/Decoration、PlaceholderFactory |
+| 分页缓存 | `setPageCacheMode(ReaderPageCacheMode)` / `pageCacheMode`；文本与EPUB默认三页，可切单页，见[缓存策略](PAGE_CACHE.md) |
 | 默认模板 | ReaderPageChrome/Slot、setPageChrome/setPageChromeProvider/refreshPageChrome |
 | 内容/呈现 | BlockLayoutProvider/Layout/Fragment、BookPresentation与受控Host |
+| 可替换组件 | `setPresentationComponents`、`setBookPresentationFactory`；正文绘制、选区renderer/controller与后端工厂，见[扩展API](EXTENSIONS.md) |
 | 效果 | PageTurnEffectFactory/Effect/Host、PageSurface、PageTurnEffects |
 
 公开包是widget、api、spi、source；internal、编译器桥接和模块后缀方法不因JVM可见而成为支持接口。宿主不装配库内Coordinator、Scope或控制器。
@@ -44,7 +47,7 @@ ReaderInput每次提供新流，取得流的一方负责关闭。来源负责权
 
 TXT支持编码、标题规则、空前言、逐行规范化和身份策略。规范化会影响输出与修订；空行及段落不能因展示方便改写原文。磁盘索引和可选持久复用遵守预算、取消、完整性及私有文件租约；自定义ID策略需稳定persistentIndexKey才能复用，不以对象身份充当持久键。
 
-轻量EPUB提取spine目录及正文文本，并保留原导航/片段映射；不承诺完整CSS、图片、脚注或固定版式。reloadBook、invalidateChapter、retryChapter显式更新数据和派生缓存，旧任务不可覆盖新代次。
+EpubTextBookSource 默认提取纯文本；EpubBookSource 保留图片和正文链接，仍不承诺完整 CSS、脚注 UI、SVG 或固定版式。setReaderLinkHandler 可拦截任意链接；未拦截的书内链接由 BookLinkSource 解析，外链由宿主处理。资源读取携带书籍 revision 和字节上限。详见[内容与书源](CONTENT_SOURCES.md)。reloadBook、invalidateChapter、retryChapter显式更新数据和派生缓存，旧任务不可覆盖新代次。
 
 ## 生命周期与持久化
 
@@ -71,6 +74,6 @@ LoadingOptions的缓存/并发预算与PageTurnOptions位图预算分别管理�
 
 ## 选择、标注和效果
 
-选区/工具栏动作校验当前源内容及选择代次；不要将旧SelectionActions留到换书后执行。统一标注验证revision/range/quote，失效时报告状态，不猜测搬到其他文字。第三方任意标注类型当前受sealed家族限制。细节见[选择与标注](SELECTION_AND_ANNOTATIONS.md)。
+选区 API 已统一到 ReaderSelection/getSelectedText/copySelectedText/highlightSelection/underlineSelection，以及统一注解分类与 goToAnnotation；普通文本与 EPUB 共用选区 Canvas 手柄绘制和分页拖动控制器。选区/工具栏动作校验当前源内容及选择代次；不要将旧SelectionActions留到换书后执行。统一标注验证revision/range/quote，失效时报告状态，不猜测搬到其他文字。第三方任意标注类型当前受sealed家族限制。细节见[选择与标注](SELECTION_AND_ANNOTATIONS.md)。
 
 效果只绘制，不提交页码或自行驱动时钟。容器控制方向、手势/进度、提交/复位及取消，终态finish或abort恰当清理；失败按既有策略回退而不偷改用户导航决定。静止触点不需要无限重算几何。RTL、前后翻页及配置重入均受事务归属约束，见[渲染专题](RENDERING.md)。

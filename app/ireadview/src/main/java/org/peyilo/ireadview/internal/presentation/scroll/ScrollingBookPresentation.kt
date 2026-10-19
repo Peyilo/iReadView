@@ -26,6 +26,7 @@ import kotlin.math.ceil
 
 /** A bounded chapter window. Items share measured fragments with virtual pagination. */
 internal class ScrollingBookPresentation(context: Context, private val host: BookPresentationHost) : BookPresentation() {
+    override val supportsBlockLayout = true
     private val container = FrameLayout(context)
     override val contentView: View get() = container
     private var scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -49,11 +50,7 @@ internal class ScrollingBookPresentation(context: Context, private val host: Boo
     private var navigationBusy = false
     private var accessibilityJob: Job? = null
     private var draggingStart: Boolean? = null
-    private var dragOffset = PointF()
     private var dragPointer = PointF()
-    private var dragSerial = 0L
-    private var edgeJob: Job? = null
-    private var edgeDirection = 0
     private val reportedFallbacks = HashSet<Pair<String, String>>()
     override fun layoutViewport() = active?.takeIf { it.generation == host.generation }?.viewport
     override fun onNavigationStateChanged(state: ReadNavigationState) {
@@ -76,7 +73,7 @@ internal class ScrollingBookPresentation(context: Context, private val host: Boo
         ?.chapters?.firstOrNull { it.layout.chapterId == chapterId }?.layout?.contentSnapshot
     override fun onDecorationsChanged() {
         val candidate = active ?: return
-        if (host.selection == null && draggingStart != null) stopDrag()
+        if (host.selection == null && selectionInteraction.isDragging) stopDrag()
         val missing = candidate.chapters.flatMap { host.validHighlights(it.layout.chapterId) }.filter { it.styleId !in host.style.highlightStyles.styles }.map { it.id to it.styleId }.toSet()
         reportedFallbacks.retainAll(missing)
         if (candidate.decorationPending) return
@@ -85,7 +82,7 @@ internal class ScrollingBookPresentation(context: Context, private val host: Boo
             candidate.decorationPending = false
             if (active === candidate && candidate.generation == host.generation) {
                 candidate.refreshDecorations()
-                if (draggingStart == null && host.selection != null) {
+                if (!selectionInteraction.isDragging && host.selection != null) {
                     if (selectionBounds() == null) host.clearSelection() else host.reportSelectionGeometryChanged()
                 }
             }
@@ -95,7 +92,7 @@ internal class ScrollingBookPresentation(context: Context, private val host: Boo
         val candidate = active ?: return null
         var result: RectF? = null
         for (index in 0 until candidate.list.childCount) {
-            val body = candidate.list.getChildAt(index) as? ReaderBodyView ?: continue
+            val body = candidate.list.getChildAt(index) as? TextReaderBodyView ?: continue
             val rect = body.selectionBounds() ?: continue
             val offset = Rect(); container.offsetDescendantRectToMyCoords(body, offset)
             rect.offset(offset.left.toFloat(), offset.top.toFloat())
@@ -106,10 +103,21 @@ internal class ScrollingBookPresentation(context: Context, private val host: Boo
         }
         return result
     }
-    private fun bodyAt(x: Float, y: Float): Pair<ReaderBodyView, Row.Text>? {
+    override fun selectionHandleBounds(start: Boolean): RectF? {
+        val candidate = active ?: return null
+        for (index in 0 until candidate.list.childCount) {
+            val body = candidate.list.getChildAt(index) as? TextReaderBodyView ?: continue
+            val bounds = body.selectionHandleBounds(start) ?: continue
+            val offset = Rect(); container.offsetDescendantRectToMyCoords(body, offset)
+            bounds.offset(offset.left.toFloat(), offset.top.toFloat())
+            return bounds
+        }
+        return null
+    }
+    private fun bodyAt(x: Float, y: Float): Pair<TextReaderBodyView, Row.Text>? {
         val candidate = active?.takeIf { it.generation == host.generation } ?: return null
         for (index in 0 until candidate.list.childCount) {
-            val body = candidate.list.getChildAt(index) as? ReaderBodyView ?: continue
+            val body = candidate.list.getChildAt(index) as? TextReaderBodyView ?: continue
             val rect = Rect(0, 0, body.width, body.height); container.offsetDescendantRectToMyCoords(body, rect)
             if (rect.contains(x.toInt(), y.toInt())) {
                 val row = candidate.adapter.rows.getOrNull(candidate.list.getChildAdapterPosition(body)) as? Row.Text ?: return null
@@ -124,11 +132,13 @@ internal class ScrollingBookPresentation(context: Context, private val host: Boo
     }
     override fun onTap(xPx: Float, yPx: Float): Boolean {
         if (host.selection != null) { host.clearSelection(); return true }
-        val (body, _) = bodyAt(xPx, yPx) ?: return false
+        val (body, row) = bodyAt(xPx, yPx) ?: return false
         val (x, y) = local(body, xPx, yPx)
+        body.linkAt(x, y)?.let { return host.reportLinkTapped(it, row.chapter.layout.chapterId, host.generation) }
         return body.highlightAt(x, y)?.let(host::reportHighlightTapped) ?: false
     }
     override fun onLongPress(xPx: Float, yPx: Float): Boolean {
+        selectionInteraction.onLongPress(xPx, yPx)?.let { return it }
         val (body, row) = bodyAt(xPx, yPx) ?: return false
         val (x, y) = local(body, xPx, yPx)
         val content = row.chapter.layout.contentSnapshot ?: return false
@@ -141,56 +151,82 @@ internal class ScrollingBookPresentation(context: Context, private val host: Boo
         }
         return host.reportSelection(selection, host.generation) is ReaderResult.Success
     }
-    private fun stopDrag() {
-        dragSerial++
-        edgeDirection = 0
-        edgeJob?.cancel(); edgeJob = null
-        if (draggingStart != null) {
-            draggingStart = null; host.reportSelectionDrag(false)
-            val candidate = active
-            candidate?.list?.post { if (active === candidate) candidate.reportAndLoad() }
+    private fun findSelectionHandle(x: Float, y: Float): Pair<Boolean, PointF>? {
+        val candidate = active ?: return null
+        val selection = host.selection ?: return null
+        for (index in 0 until candidate.list.childCount) {
+            val body = candidate.list.getChildAt(index) as? TextReaderBodyView ?: continue
+            val row = candidate.adapter.rows.getOrNull(candidate.list.getChildAdapterPosition(body)) as? Row.Text ?: continue
+            if (row.chapter.layout.chapterId != selection.range.chapterId) continue
+            val (bx, by) = local(body, x, y)
+            val start = body.selectionHandleAt(bx, by) ?: continue
+            return start to (body.selectionDragOffset(start, bx, by) ?: PointF())
         }
+        return null
     }
-    override fun onSelectionTouch(action: Int, xPx: Float, yPx: Float): Boolean {
-        val candidate = active ?: return false
-        val selection = host.selection
-        if (navigationBusy || candidate.generation != host.generation || selection == null) {
-            val consumed = draggingStart != null; stopDrag(); return consumed
-        }
-        if (action == MotionEvent.ACTION_DOWN) {
-            stopDrag()
-            for (index in 0 until candidate.list.childCount) {
-                val body = candidate.list.getChildAt(index) as? ReaderBodyView ?: continue
-                val row = candidate.adapter.rows.getOrNull(candidate.list.getChildAdapterPosition(body)) as? Row.Text ?: continue
-                if (row.chapter.layout.chapterId != selection.range.chapterId) continue
-                val (x, y) = local(body, xPx, yPx)
-                val start = body.selectionHandleAt(x, y) ?: continue
+    private val selectionInteraction = host.presentationComponents.selectionControllerFactory.create(container.context,
+        object : org.peyilo.ireadview.spi.selection.ReaderSelectionDelegate() {
+            override fun ready() = !detached && !navigationBusy && active?.generation == host.generation && host.selection != null
+            override fun handleAt(x: Float, y: Float): Boolean? = findSelectionHandle(x, y)?.first
+            override fun grabOffset(start: Boolean, x: Float, y: Float) = findSelectionHandle(x, y)?.second
+            override suspend fun extend(start: Boolean, point: PointF, current: () -> Boolean): Boolean {
+                val candidate = active ?: return false
+                if (!current()) return false
                 draggingStart = start
-                dragPointer = PointF(xPx, yPx)
-                dragOffset = body.selectionDragOffset(start, x, y) ?: PointF()
-                candidate.list.stopScroll(); host.reportSelectionDrag(true)
-                return true
+                dragPointer = PointF(point.x, point.y)
+                return updateDraggedSelection(candidate)
             }
-            return false
-        }
-        draggingStart ?: return false
-        if (action == MotionEvent.ACTION_MOVE || action == MotionEvent.ACTION_UP) {
-            dragPointer = PointF(xPx, yPx)
-            updateDraggedSelection(candidate)
-            if (action == MotionEvent.ACTION_MOVE) updateEdgeScroll(candidate)
-        }
-        if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL || action == MotionEvent.ACTION_POINTER_DOWN) stopDrag()
-        return true
-    }
+            override fun scrollSpeed(point: PointF): Float {
+                val list = active?.list ?: return 0f
+                val (_, y) = local(list, point.x, point.y)
+                return org.peyilo.ireadview.spi.selection.ReaderSelectionScrollPolicy.speed(y,
+                    list.paddingTop.toFloat(), (list.height-list.paddingBottom).toFloat(), list.resources.displayMetrics.density)
+            }
+            override fun edgeDirection(point: PointF): Int = scrollSpeed(point).let { if (it<0) -1 else if (it>0) 1 else 0 }
+            override suspend fun movePage(direction: Int, start: Boolean, current: () -> Boolean) = false
+            override suspend fun nextScrollFrame() = active?.list?.awaitAnimationFrame() ?: 0L
+            override suspend fun scrollBy(pixels: Int, start: Boolean, point: PointF, current: () -> Boolean): Boolean {
+                val candidate = active ?: return false
+                if (!current()) return false
+                draggingStart = start
+                val step = candidate.selectionScrollStep(pixels, point.y)
+                if (step == 0) return false
+                val before = candidate.selectedChapterTop() ?: return false
+                candidate.list.scrollBy(0, step)
+                currentCoroutineContext().ensureActive()
+                if (!current() || active !== candidate) return false
+                val after = candidate.selectedChapterTop() ?: return false
+                return kotlin.math.abs(before.second-after.second) >= .5f
+            }
+            override fun reportDragging(active: Boolean) {
+                if (active) this@ScrollingBookPresentation.active?.list?.stopScroll() else draggingStart = null
+                host.reportSelectionDrag(active)
+                if (!active) this@ScrollingBookPresentation.active?.let { candidate ->
+                    candidate.list.post { if (this@ScrollingBookPresentation.active === candidate) candidate.reportAndLoad() }
+                }
+            }
+            override fun reportError(error: Exception) = host.reportError(ReaderError(ReaderStage.SELECTION,
+                "SelectionScrollFailed", error.message ?: "Cannot extend selection while scrolling", cause=error))
+        })
+    private fun stopDrag() = selectionInteraction.reset()
+    override fun onSelectionTouch(action: Int, xPx: Float, yPx: Float) = selectionInteraction.onTouch(action, xPx, yPx)
     private fun updateDraggedSelection(candidate: ScrollCandidate): Boolean {
         val start = draggingStart ?: return false
         val selection = host.selection ?: return false
         if (active !== candidate || candidate.generation != host.generation || navigationBusy) return false
+        // Controllers supply the caret position including the handle's grab offset.
+        // Keep hit testing inside the visible viewport, as DOM caretAt already does;
+        // the unbounded pointer still drives edge speed and automatic scrolling.
+        val viewport = Rect(0, 0, candidate.list.width, candidate.list.height)
+        container.offsetDescendantRectToMyCoords(candidate.list, viewport)
+        val hitX = dragPointer.x.coerceIn(viewport.left + 1f, maxOf(viewport.left + 1f, viewport.right - 1f))
+        val hitY = dragPointer.y.coerceIn(viewport.top + candidate.list.paddingTop + 1f,
+            maxOf(viewport.top + candidate.list.paddingTop + 1f, viewport.bottom - candidate.list.paddingBottom - 1f))
         val candidates = (0 until candidate.list.childCount).mapNotNull { index ->
-            val body = candidate.list.getChildAt(index) as? ReaderBodyView ?: return@mapNotNull null
+            val body = candidate.list.getChildAt(index) as? TextReaderBodyView ?: return@mapNotNull null
             val row = candidate.adapter.rows.getOrNull(candidate.list.getChildAdapterPosition(body)) as? Row.Text ?: return@mapNotNull null
             if (row.chapter.layout.chapterId != selection.range.chapterId) return@mapNotNull null
-            val (x, y) = local(body, dragPointer.x + dragOffset.x, dragPointer.y + dragOffset.y)
+            val (x, y) = local(body, hitX, hitY)
             Triple(body, row, PointF(x, y))
         }
         val nearest = candidates.minByOrNull { (body, _, point) -> when { point.y < 0f -> -point.y; point.y > body.height -> point.y - body.height; else -> 0f } }
@@ -205,59 +241,8 @@ internal class ScrollingBookPresentation(context: Context, private val host: Boo
         }
         return false
     }
-    private fun edgeSpeed(candidate: ScrollCandidate): Float {
-        val (_, y) = local(candidate.list, dragPointer.x + dragOffset.x, dragPointer.y + dragOffset.y)
-        val density = candidate.list.resources.displayMetrics.density
-        val edge = 28f * density
-        val top = candidate.list.paddingTop.toFloat()
-        val bottom = (candidate.list.height - candidate.list.paddingBottom).toFloat()
-        if (bottom - top < edge * 2f) return 0f
-        val depth = when { y < top + edge -> -(top + edge - y) / edge; y > bottom - edge -> (y - bottom + edge) / edge; else -> 0f }
-        return depth.coerceIn(-1f, 1f) * 420f * density
-    }
-    private fun updateEdgeScroll(candidate: ScrollCandidate) {
-        val speed = edgeSpeed(candidate)
-        val direction = when { speed < 0 -> -1; speed > 0 -> 1; else -> 0 }
-        if (direction == edgeDirection && edgeJob?.isActive == true) return
-        edgeJob?.cancel(); edgeJob = null; edgeDirection = direction
-        if (direction == 0) return
-        val serial = dragSerial
-        val task = scope.launch(start = CoroutineStart.LAZY) {
-            try {
-                delay(350)
-                var previousFrame = candidate.list.awaitAnimationFrame()
-                var remainder = 0f
-                while (active === candidate && serial == dragSerial && draggingStart != null && !navigationBusy && candidate.generation == host.generation) {
-                    val frame = candidate.list.awaitAnimationFrame()
-                    val velocity = edgeSpeed(candidate)
-                    if (velocity == 0f || velocity * direction <= 0f) break
-                    if (!updateDraggedSelection(candidate)) break
-                    val delta = velocity * (frame - previousFrame).coerceIn(0L, 40L) / 1000f + remainder
-                    previousFrame = frame
-                    val requested = delta.toInt()
-                    remainder = delta - requested
-                    if (requested == 0) continue
-                    val step = candidate.selectionScrollStep(requested, dragPointer.y + dragOffset.y)
-                    if (step == 0) break
-                    val before = candidate.selectedChapterTop() ?: break
-                    candidate.list.scrollBy(0, step)
-                    currentCoroutineContext().ensureActive()
-                    if (serial != dragSerial || candidate.generation != host.generation || active !== candidate) break
-                    val after = candidate.selectedChapterTop() ?: break
-                    if (kotlin.math.abs(before.second - after.second) < 0.5f) break
-                    if (!updateDraggedSelection(candidate)) break
-                }
-            } catch (cancelled: CancellationException) { throw cancelled }
-            catch (error: Exception) {
-                if (active === candidate && serial == dragSerial && candidate.generation == host.generation) host.reportError(ReaderError(ReaderStage.SELECTION, "SelectionScrollFailed", error.message ?: "Cannot extend selection while scrolling", cause = error))
-            }
-        }
-        edgeJob = task
-        task.invokeOnCompletion { if (edgeJob === task) edgeJob = null }
-        task.start()
-    }
-
     override suspend fun prepare(target: ReadNavigation<ReadingPosition>): ReadPreparation<ReadingPosition> {
+        if (target is ReadNavigation.Position && target.location.documentLocator != null) return ReadPreparation.Rejected(ReaderRejection.Unsupported)
         active?.list?.stopScroll()
         val book = host.book ?: return ReadPreparation.Rejected(ReaderRejection.NoBook)
         if (book.chapters.isEmpty()) return ReadPreparation.Rejected(ReaderRejection.AtBoundary)
@@ -424,7 +409,7 @@ internal class ScrollingBookPresentation(context: Context, private val host: Boo
     override fun detach() {
         val old = active
         active = null
-        detached = true; stopDrag(); scope.cancel()
+        detached = true; stopDrag(); selectionInteraction.release(); scope.cancel()
         accessibilityJob = null
         old?.close(); reportedFallbacks.clear()
         container.removeAllViews()
@@ -433,7 +418,7 @@ internal class ScrollingBookPresentation(context: Context, private val host: Boo
     private fun moveAccessibilityOffscreen(candidate: ScrollCandidate, chapter: Chapter, action: Int,
         arguments: Bundle, boundary: AccessibilityTraversalBoundary?, fixed: AccessibilityTraversalAnchor?, valid: () -> Boolean): Boolean {
         if (detached || active !== candidate || candidate.generation != host.generation || navigationBusy ||
-            draggingStart != null || accessibilityJob != null || !valid()) return false
+            selectionInteraction.isDragging || accessibilityJob != null || !valid()) return false
         val forward = when (action) {
             AccessibilityNodeInfoCompat.ACTION_NEXT_AT_MOVEMENT_GRANULARITY -> true
             AccessibilityNodeInfoCompat.ACTION_PREVIOUS_AT_MOVEMENT_GRANULARITY -> false
@@ -448,7 +433,7 @@ internal class ScrollingBookPresentation(context: Context, private val host: Boo
         val selectionBefore = host.selection
         lateinit var job: Job
         fun sourceCurrent() = !detached && active === candidate && candidate.generation == host.generation &&
-            host.book === book && draggingStart == null && valid() &&
+            host.book === book && !selectionInteraction.isDragging && valid() &&
             (!extend || host.selection == selectionBefore && fixed?.isValid() == true)
         fun current() = !navigationBusy && sourceCurrent()
         job = scope.launch(start = CoroutineStart.LAZY) {
@@ -489,7 +474,7 @@ internal class ScrollingBookPresentation(context: Context, private val host: Boo
                     .sortedBy { shown.list.getChildAdapterPosition(it) }.let { if (forward) it else it.asReversed() }
                 for (view in attached) {
                     if (!shownCurrent()) return@launch
-                    val body = view as? ReaderBodyView ?: continue
+                    val body = view as? TextReaderBodyView ?: continue
                     val row = shown.adapter.rows.getOrNull(shown.list.getChildAdapterPosition(body)) as? Row.Text ?: continue
                     val accepted = when {
                         destination != null -> row.chapter.layout.chapterId == destination.position.chapterId &&
@@ -633,7 +618,7 @@ internal class ScrollingBookPresentation(context: Context, private val host: Boo
         private val manager get() = list.layoutManager as LinearLayoutManager
         fun refreshDecorations() {
             for (index in 0 until list.childCount) {
-                val body = list.getChildAt(index) as? ReaderBodyView ?: continue
+                val body = list.getChildAt(index) as? TextReaderBodyView ?: continue
                 val row = adapter.rows.getOrNull(list.getChildAdapterPosition(body)) as? Row.Text ?: continue
                 adapter.decorate(body, row)
             }
@@ -709,13 +694,13 @@ internal class ScrollingBookPresentation(context: Context, private val host: Boo
             if (active !== this || generation != host.generation || detached || navigationBusy) return
             host.reportNavigationCapabilitiesChanged(generation)
             if (active !== this || generation != host.generation || detached || navigationBusy) return
-            if (draggingStart == null) {
+            if (!selectionInteraction.isDragging) {
                 if (manager.findFirstVisibleItemPosition() <= 2) loadBoundary(true)
                 if (manager.findLastVisibleItemPosition() >= adapter.itemCount - 3) loadBoundary(false)
             }
         }
         fun loadBoundary(before: Boolean, retry: Boolean = false): Boolean {
-            if (closed || active !== this || detached || generation != host.generation || navigationBusy || draggingStart != null) return false
+            if (closed || active !== this || detached || generation != host.generation || navigationBusy || selectionInteraction.isDragging) return false
             val book = host.book ?: return false
             val index = if (before) chapters.first().index - 1 else chapters.last().index + 1
             if (index !in book.chapters.indices || loading[before]?.isActive == true || !retry && index in failed) return false
@@ -735,10 +720,10 @@ internal class ScrollingBookPresentation(context: Context, private val host: Boo
                         is ReaderResult.Success -> Unit
                     }
                     ensureActive()
-                    if (!current() || navigationBusy || draggingStart != null) return@launch
+                    if (!current() || navigationBusy || selectionInteraction.isDragging) return@launch
                     val loaded = loadChapter(index, viewport)
                     ensureActive()
-                    if (!current() || navigationBusy || draggingStart != null) return@launch
+                    if (!current() || navigationBusy || selectionInteraction.isDragging) return@launch
                     val anchor = visible() ?: return@launch
                     if (before) chapters.add(0, loaded) else chapters.add(loaded)
                     if (chapters.size > 3) {
@@ -816,11 +801,12 @@ internal class ScrollingBookPresentation(context: Context, private val host: Boo
         override fun dispose() { if (!retained) close() }
     }
     private inner class RowsAdapter(private val candidate: ScrollCandidate) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+        private val ownedBodies = mutableSetOf<TextReaderBodyView>()
         private inner class PlaceholderHolder(val root: FrameLayout) : RecyclerView.ViewHolder(root) {
             val controller = ReaderPlaceholderController(root) { host.placeholderFactory }
         }
         private val placeholders = HashSet<PlaceholderHolder>()
-        private val boundBodies = HashSet<ReaderBodyView>()
+        private val boundBodies = HashSet<TextReaderBodyView>()
         fun refreshPlaceholders() { placeholders.toList().forEach { holder ->
             val index = holder.bindingAdapterPosition
             if (index in rows.indices) onBindViewHolder(holder, index)
@@ -833,12 +819,16 @@ internal class ScrollingBookPresentation(context: Context, private val host: Boo
         override fun getItemViewType(position: Int) = if (rows[position] is Row.Text) 0 else 1
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
             if (viewType != 0) return PlaceholderHolder(FrameLayout(parent.context))
-            return object : RecyclerView.ViewHolder(ReaderBodyView(parent.context)) {}
+            val body = TextReaderBodyView(parent.context)
+            try { body.configureComponents(host.presentationComponents) }
+            catch (error: Throwable) { body.release(); throw error }
+            ownedBodies.add(body)
+            return object : RecyclerView.ViewHolder(body) {}
         }
         override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
             when (val row = rows[position]) {
                 is Row.Text -> {
-                    val body = holder.itemView as ReaderBodyView
+                    val body = holder.itemView as TextReaderBodyView
                     body.clearContentBinding()
                     boundBodies.add(body)
                     body.layoutParams = RecyclerView.LayoutParams(-1, row.chapter.heights[row.chunkIndex])
@@ -874,7 +864,7 @@ internal class ScrollingBookPresentation(context: Context, private val host: Boo
                             if (fixed == null && originFragment.accessibilityDescribesWholeBlock &&
                                 targetRow.chapter === row.chapter &&
                                 targetRow.chapter.chunks[targetRow.chunkIndex].fragment.blockId == originFragment.blockId) continue
-                            val adjacent = candidate.list.findViewHolderForAdapterPosition(index)?.itemView as? ReaderBodyView ?: continue
+                            val adjacent = candidate.list.findViewHolderForAdapterPosition(index)?.itemView as? TextReaderBodyView ?: continue
                             if (adjacent.accessibilityMoveFromBoundary(action, arguments, fixed)) return@move true
                             if (active !== candidate || detached || candidate.generation != host.generation || navigationBusy ||
                                 !isBound(holder, row)) return@move false
@@ -925,16 +915,15 @@ internal class ScrollingBookPresentation(context: Context, private val host: Boo
         }
         override fun onViewRecycled(holder: RecyclerView.ViewHolder) {
             (holder as? PlaceholderHolder)?.let { it.controller.clear(); placeholders.remove(it) }
-            (holder.itemView as? ReaderBodyView)?.let { body ->
+            (holder.itemView as? TextReaderBodyView)?.let { body ->
                 boundBodies.remove(body)
                 body.clearContentBinding()
             }
             super.onViewRecycled(holder)
         }
         override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) {
-            val bodies = boundBodies.toList()
             boundBodies.clear()
-            bodies.forEach { it.clearContentBinding() }
+            ownedBodies.toList().forEach { it.release() }; ownedBodies.clear()
             placeholders.toList().forEach { it.controller.clear() }; placeholders.clear()
             super.onDetachedFromRecyclerView(recyclerView)
         }
@@ -944,7 +933,7 @@ internal class ScrollingBookPresentation(context: Context, private val host: Boo
             candidate.refreshDecorations()
             return active === candidate && !detached && candidate.generation == host.generation
         }
-        fun decorate(body: ReaderBodyView, row: Row.Text) {
+        fun decorate(body: TextReaderBodyView, row: Row.Text) {
             val highlights = host.validHighlights(row.chapter.layout.chapterId).flatMap { highlight ->
                 if (active === candidate && highlight.styleId !in host.style.highlightStyles.styles && reportedFallbacks.add(highlight.id to highlight.styleId)) {
                     body.post {

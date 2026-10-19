@@ -69,6 +69,16 @@ float blocksLight(vec3 receiver,vec2 slope,vec2 n,float a,float r,float rootX,fl
   return coverage;
 }
 float castShadow(vec3 receiver,vec2 n,float a,float r,float rootX,float rootZ){
+  /* iread-shadow-cull-start */
+  // Every occluder lies below 2*r-rootZ. The finite area light bounds the
+  // distance a ray can travel along n before reaching that height. Reject
+  // receivers beyond this conservative bound before the 48 ray intersections.
+  float remainingHeight=2.*r-rootZ-receiver.z;
+  if(remainingHeight<=.0002)return 0.;
+  float maximumSlope=abs(dot(vec2(-.60,.72),n))+lightSize;
+  float shadowReach=r+remainingHeight*maximumSlope+max(.0012,remainingHeight*lightSize*.20);
+  if(dot(receiver.xy,n)-a+rootX>shadowReach)return 0.;
+  /* iread-shadow-cull-end */
   float occlusion=0.;
   // Deterministic area-light quadrature: no temporal noise, softness grows with height.
   for(int i=0;i<48;i++){

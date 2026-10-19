@@ -19,6 +19,7 @@ import org.peyilo.ireadview.spi.presentation.ReadViewport
 /** Owns the clock and resource leases; renderers cannot commit a reading position. */
 internal class PageTurnEffectManager(
     context: Context,
+    private val hardwareAccelerated: () -> Boolean,
     private val fallback: (String, EffectFallbackReason) -> Unit,
     private val captureConfigurationOwnership: () -> (() -> Boolean),
     private val diagnostic: (ReaderError, Boolean) -> Unit
@@ -46,7 +47,8 @@ internal class PageTurnEffectManager(
             finally { canvas.restoreToCount(save) }
         }
     }.apply { visibility = View.GONE; setWillNotDraw(false) }
-    private val host = object : PageTurnEffectHost {
+    private val host = object : HardwarePageTurnEffectHost {
+        override val hardwareAccelerated get() = this@PageTurnEffectManager.hardwareAccelerated()
         override fun requestRedraw() { if (active != null) overlay.invalidate() }
         override fun borrowBitmap(widthPx: Int, heightPx: Int): BitmapLease? {
             val turn = active?.takeIf { !it.terminal } ?: return null
@@ -107,7 +109,7 @@ internal class PageTurnEffectManager(
         }
     }
     suspend fun <L> transition(current: PageSurface?, target: PageSurface?, viewport: ReadViewport,
-        direction: TurnDirection, showOverlay: () -> Unit, show: suspend () -> L,
+        direction: TurnDirection, showOverlay: (Boolean) -> Unit, show: suspend () -> L,
         gesture: PageTurnGesture? = null, animated: Boolean = true, phaseChanged: (ReadNavigationState) -> Unit = {}): L {
         val sequence = installationSequence
         val owner = captureConfigurationOwnership()
@@ -156,7 +158,7 @@ internal class PageTurnEffectManager(
                 turn.frame = PageTurnFrame(gesture?.progress ?: 0f, if (gesture == null) TurnPhase.SettlingCommit else TurnPhase.Dragging, gesture?.touch)
                 turn.effect.update(turn.frame)
                 ensureTurnActive(turn)
-                showOverlay()
+                showOverlay((turn.effect as? SnapshotPageTurnEffect)?.usesPageSnapshots == true)
                 ensureTurnActive(turn)
                 overlay.visibility = View.VISIBLE
                 while (gesture != null && gesture.decision == null) {

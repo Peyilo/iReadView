@@ -9,6 +9,14 @@ interface PageSurface {
     val heightPx: Int
     fun draw(canvas: Canvas)
 }
+/** Optional rendering policy for surfaces with expensive live compositor work.
+ * Effects may take transaction-scoped snapshots within their existing bitmap budget.
+ */
+interface SnapshotPreferredSurface : PageSurface { val preferSnapshot: Boolean }
+/** Stable recorded drawing commands; draw does not depend on live hierarchy visibility.
+ * The adapter keeps referenced render resources alive until candidate disposal/turn completion.
+ */
+interface RecordedPageSurface : PageSurface { val isRecorded: Boolean }
 /** Optional background-only metadata, excluding text. Null requests snapshot-based estimation.
  * Read once on the UI thread when a turn starts; existing PageSurface implementations need no changes.
  */
@@ -21,6 +29,8 @@ interface PageTurnEffectHost {
     /** Transaction-owned lease; null when dimensions/budget cannot be satisfied. */
     fun borrowBitmap(widthPx: Int, heightPx: Int): BitmapLease?
 }
+/** Optional host capability; software/older hosts retain their existing renderer. */
+interface HardwarePageTurnEffectHost : PageTurnEffectHost { val hardwareAccelerated: Boolean }
 /** Stable nonblank ID; each creation supplies a separately owned renderer with idempotent cleanup. */
 interface PageTurnEffectFactory { val id: String; fun create(): PageTurnEffect }
 interface PageTurnEffect {
@@ -37,6 +47,11 @@ interface PageTurnEffect {
     /** Releases creation/attachment resources, including a failed or superseded attachment. */
     fun detach()
 }
+/** True only after start has captured everything needed to draw the turn.
+ * The Widget may suspend the live content hierarchy until commit/cancel completes.
+ * Effects falling back to live surfaces must report false.
+ */
+interface SnapshotPageTurnEffect : PageTurnEffect { val usesPageSnapshots: Boolean }
 enum class TurnDirection { Forward, Backward }
 enum class TurnOutcome { Committed, Cancelled }
 enum class TurnAbortReason { Cancelled, Superseded, EffectChanged, Detached, Failed }

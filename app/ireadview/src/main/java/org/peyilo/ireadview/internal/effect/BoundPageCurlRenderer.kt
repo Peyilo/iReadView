@@ -12,7 +12,7 @@ import java.nio.ByteOrder
 /** GLES2 page renderer: inverse UV, filtered page textures and shadows in one pass.
  * No SurfaceView, independent clock, or navigation ownership. All calls stay on the UI thread.
  */
-internal class BoundPageCurlRenderer : AutoCloseable {
+internal class BoundPageCurlRenderer(fragmentSource: String = boundPageCurlFragment) : AutoCloseable {
     private val display = sharedDisplay
     private var context = EGL14.EGL_NO_CONTEXT
     private var surface = EGL14.EGL_NO_SURFACE
@@ -41,7 +41,7 @@ internal class BoundPageCurlRenderer : AutoCloseable {
             withCurrent {
                 val vertex = compile(GLES20.GL_VERTEX_SHADER,
                     "attribute vec2 position; varying vec2 screenUv; void main(){screenUv=position*.5+.5;gl_Position=vec4(position,0.,1.);}")
-                val fragment = compile(GLES20.GL_FRAGMENT_SHADER, boundPageCurlFragment)
+                val fragment = compile(GLES20.GL_FRAGMENT_SHADER, fragmentSource)
                 try {
                     program = GLES20.glCreateProgram()
                     GLES20.glAttachShader(program, vertex); GLES20.glAttachShader(program, fragment)

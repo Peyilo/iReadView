@@ -2,6 +2,8 @@
 
 `:app` 是 iReadView 的示例宿主。类名直接描述职责，不再使用 `Demo` 前缀；包根 `org.peyilo.iread.demo` 已表明它们属于 Demo。应用 ID 和资源 namespace 保持该值，源码的子包按职责组织。
 
+EPUB 和 TXT 共用 ReaderActivity 中同一个 ReaderView。可选 `:app:ireadview-epub` 提供 EpubReaderBookSource 与自研 EpubReaderBodyView，使用系统 WebView，无 Readium 运行时和导航 Fragment。整个 Demo minSdk21。默认 EPUB 为用户提供的《The Art of ARM Assembly》，也可导入本地书籍或选择两本原创样例；参见[正文架构](../docs/READER_BODY.md)及[实现边界](../docs/EPUB_ENGINE.md)。
+
 ## 源码目录
 
 以下目录位于 `src/main/java/org/peyilo/iread/demo/`。
@@ -32,6 +34,7 @@
 - `src/main/AndroidManifest.xml` 使用 Activity 的完整类名注册入口。
 - `src/main/res` 放 Demo 页面与样式；子包使用根 namespace 的 `R`。
 - `src/main/assets/txts` 放真实小说样本，仅打包进 Demo APK。
+- `src/main/assets/epubs` 放仓库编写的流式/固定版式 EPUB，生成源在 `tools/Generate-EpubSamples.py`。本地 EPUB 导入宿主私有 `filesDir/epub-books`（单本上限128 MiB），按内容 SHA-256 命名避免覆盖活动资源；清除应用数据会删除导入副本。EPUB 位置与 native ReaderSnapshot 分开保存。
 - `src/androidTest` 保留既有集成测试，入口引用随源码移动同步更新。
 - Demo 通过 `:app:ireadview` 的公开 API/SPI 使用阅读器，来源、持久化、授权和示例界面属于宿主。
 

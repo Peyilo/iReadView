@@ -1,12 +1,33 @@
 # 选择、菜单与统一标注
 
-更新：2026-10-18；精确签名见widget.BookReadView、api.model.Annotations、spi.selection与api.style.TextLineStyle/Styles。
+更新：2026-10-19；精确签名见widget.BookReadView、api.model.Annotations、spi.selection与api.style.TextLineStyle/Styles。
 
 ## 长按与范围
 
 默认按源段落选择完整文本，包括当前页不可见的续段。分页和滚动长按先用实际高亮路径命中ID，在宿主有效记录中找到高亮，验证书籍/章节/可选修订及完整range/quote后恢复整条选区；跨段跨页部分保留。未命中、记录失效或无法恢复时选择段落。重叠记录按逆绘制顺序命中最上层，不自动合并。
 
-选区基于同章TextRange与源UTF-16字符边界，不是屏幕矩形；当前不支持跨章。换书、版本变化或选区失效后，旧动作不得生效。
+选区使用格式无关的 ReaderSelection：普通文本为 TextSelection（同章 TextRange），EPUB 为 DocumentTextSelection（同一 spine 文档的规范文本节点路径与 UTF-16 偏移）。屏幕矩形只是几何，不是选择范围；两种正文都不支持跨章节选区。换书、版本变化或选区失效后，旧动作不得生效。
+
+EPUB 不使用浏览器的长按、DOM Selection、系统 ActionMode 或 CSS ::selection 来控制活动选区。触摸先经过 Widget 的长按时钟；正文只查询段落、字符命中与可见几何。TextReaderBodyView 和 EpubReaderBodyView 共用 ReaderSelectionPainter 的 Canvas 填色、竖条、圆点、命中范围和抓取偏移，分页共用 ReaderSelectionInteraction 的 touchSlop/550ms 页边停留策略。滚动共用 ReaderSelectionScrollPolicy 的350ms停留、28dp边缘带和逐帧420dp/s上限。
+
+## 对外 API 与 Demo
+
+以下 API 均由 ReaderView/BookReadView 提供，不需要宿主解析 EPUB DOM：
+
+| 操作 | 统一接口 |
+|---|---|
+| 获取选区/文字 | `getSelection(): ReaderSelection?`、`getSelectedText(): String?` |
+| 选区/手柄几何 | `getSelectionBounds()`、`getSelectionHandleBounds(start)`；返回 Widget 局部物理像素的副本 |
+| 复制/清除 | `copySelectedText()`、`clearSelection()` |
+| 新增高亮/划线 | `highlightSelection(styleId)`、`underlineSelection(style)`；也有指定 id 的重载 |
+| 添加/取消 | `toggleSelectionHighlight()`、`toggleSelectionUnderline()` |
+| 绑定当前选区的动作 | `getSelectionActions()`；失效后拒绝执行 |
+| 标注与跳转 | `exportAnnotations/replaceAnnotations`、`add/update/removeAnnotation`、`getAnnotationPosition/goToAnnotation` |
+| 统一分类 | `AnnotationSnapshot.allHighlights/allUnderlines` 与 `HighlightAnnotation/UnderlineAnnotation` |
+
+`getTextSelection()`、原生 Highlight/Underline 和 snapshot.highlights/underlines 保留给显式需要文本锚点的调用者；格式无关调用使用上述统一接口。`SelectionActions.highlight/underline` 和 `onHighlightTapped` 现在返回/接收统一注解接口，这属于当前开发版 API 的签名调整。
+
+Demo 的 ReaderSelectionMenus 分享、查看和字数动作调用 reader.getSelectedText；复制、高亮、划线使用库提供的代次绑定动作。AnnotationPanel 用统一分类和 goToAnnotation 展示、跳转、删除两种格式的注解。AnnotationCodecs 将文档注解放入原有版本2 items 记录中保存，不另建 EPUB 注解仓库。
 
 ## 绘制与拖动
 
@@ -16,7 +37,7 @@
 - 边缘拖动沿统一导航延迟翻页并继续源锚点扩选；滚动复用行不重复生成分页代理手柄。
 - 软换行处平台横向命中可能停在末字前，TextBlockLayoutProvider普通/最近命中共用补充映射：末尾文字方向与段落方向一致时，以最后可命中caret与行边的中点映射到getLineVisibleEnd；RTL反向，混合方向相反尾run仍用平台映射。正文横坐标可到达右边界。
 
-最近这些交互修补仅构建通过，尚未设备确认，不应当作所有Unicode/方向情况的数学证明。
+验证范围：同一设备用例同时覆盖文本和 EPUB 的整段长按、代理手柄、缩短范围、边缘翻页后继续扩选且固定端点不变、过期动作拒绝、高亮持久化/恢复/跳转/取消。同一用例还验证了波浪划线、复制清除、重新打开后的注解恢复，以及滚动模式的边缘自动扩选；最新结果见状态文档。该证据不是所有 Unicode、RTL、固定版式或无障碍输入组合的完整验收。
 
 ## 紧凑图文菜单
 
@@ -33,9 +54,21 @@ reader.setSelectionToolbarFactory(SelectionToolbars.menu(items,
 
 工厂复制item列表，id必须唯一；空列表隐藏菜单。设置null恢复原工具栏路径；完全自定义View继续使用SelectionToolbarFactory并在unbind撤销监听。宿主提供分享/查询等业务，库不内置网络服务。
 
+## EPUB滚动时活动选区同步
+
+活动底色与手柄仍由原生Canvas绘制。连续滚动时，WebView的 `onScrollChanged` 根据实际像素位移同步平移已有选区路径、端点和可见边界，不等待JS重新查询或100 ms阅读位置上报。DOM几何返回时携带同一次查询的CSS滚动原点；原生收到后根据当前WebView滚动位置重定位，避免延迟返回的几何把底色拉回旧位置。
+
+滚动模式保留完整选区行矩形及实际端点，在绘制时裁剪到正文视口，确保原先在屏幕外的选中文字滚入后仍有底色。分页仍使用可见行和代理手柄。此改动针对活动选区；持久划线等其他装饰不作为本次同步验收范围。
+
+`UnifiedSelectionIntegrationTest.epubSelectionTracksNativeScrollBeforeJavascriptReply` 长按后保持手指按下，在同一UI调用中连续正反向滚动30次，每次立即验证填色路径同步位移且高度不变，再注入旧滚动原点的选区快照检查不会回跳。检查期间JS回调无法穿插执行，因此不会把“等待异步最终正确”误判为同步跟随。
+
+2026-10-19，API36模拟器最终联合选区运行 `OK (3 tests)`（46.051秒），含该同步用例及原文本/EPUB两套跨页、滚动、复制、标注回归，日志 `app/build/selection-scroll-final.log`。Debug/AndroidTest APK与EPUB Release AAR构建成功。此前联合翻页/选区运行在两项翻页测试通过后模拟器断开，整轮不计通过；旧WebView和API21真机尚未验收。
+
 ## 统一标注
 
-ReaderAnnotation包含id/bookId；RangedAnnotation包含range/quote。当前类型为Bookmark、Highlight、Underline，统一存入AnnotationSnapshot.items，分类视图bookmarks/highlights/underlines及旧构造保留。
+ReaderAnnotation 包含 id/bookId；原生 RangedAnnotation 包含 range/quote；DocumentRangedAnnotation 包含实际文档选区。Bookmark、Highlight、Underline、DocumentHighlight、DocumentUnderline 都存入 AnnotationSnapshot.items。allHighlights/allUnderlines 是格式无关分类，原有文本分类和构造仍保留。文档范围由渲染层依据原始路径、UTF-16 偏移、内容版本与原始 DOM 文本核验；异步校验必须携带原注解对象，已更新/删除的记录拒收旧结果。
+
+EPUB 持久高亮使用临时 span 包装原始文本切片；包装前保存规范地址，拆分的文本节点保留原始路径与偏移，因此新增/删除/重叠高亮不会把进度或选区锚定到临时 span。活动选区始终由 Canvas 绘制。文档划线通过同一个 ReaderUnderlinePainter/UnderlinePainter 绘制五种线型，坐标来自实际文字行，排除图片框和行距。
 
 BookReadView提供addAnnotation/updateAnnotation/removeAnnotation、exportAnnotations/replaceAnnotations和类型便利方法；更新不得以同一id偷换类型。AnnotationStore统一处理书籍绑定、全书唯一ID、范围/quote/版本及状态。PendingValidation不等于有效，失效标注不应错误绘制。
 

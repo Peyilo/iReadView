@@ -9,7 +9,7 @@ import org.peyilo.ireadview.spi.content.*
 
 /** One shared geometry transform for pagination, continuous flow, selection and accessibility. */
 internal fun measurePaddedBlock(provider: BlockLayoutProvider, block: ContentBlock, context: BlockLayoutContext): BlockLayout {
-    val padding = if (block is HeadingBlock) context.style.title.padding else context.style.body.blockPadding
+    val padding = if (block is HeadingBlock || block is org.peyilo.ireadview.api.model.LinkedTextBlock && block.headingLevel > 0) context.style.title.padding else context.style.body.blockPadding
     if (padding.startDp == 0f && padding.topDp == 0f && padding.endDp == 0f && padding.bottomDp == 0f)
         return provider.measure(block, context)
     val density = context.viewport.density
@@ -47,6 +47,9 @@ internal fun measurePaddedBlock(provider: BlockLayoutProvider, block: ContentBlo
                 override fun anchorAt(xPx: Float, yPx: Float) =
                     if (xPx < left || xPx >= left + width || yPx < insetTop || yPx >= insetTop + inner.heightPx) null
                     else inner.anchorAt(xPx - left, yPx - insetTop)
+                override fun linkAt(xPx: Float, yPx: Float) =
+                    if (xPx < left || xPx >= left + width || yPx < insetTop || yPx >= insetTop + inner.heightPx) null
+                    else inner.linkAt(xPx - left, yPx - insetTop)
                 override fun nearestAnchorAt(xPx: Float, yPx: Float) = inner.nearestAnchorAt(
                     (xPx - left).coerceIn(0f, maxOf(0f, width.toFloat() - 1f)), (yPx - insetTop).coerceIn(0f, maxOf(0f, inner.heightPx - 1f)))
                 override fun anchorForVerticalOffset(yPx: Float) = inner.anchorForVerticalOffset(

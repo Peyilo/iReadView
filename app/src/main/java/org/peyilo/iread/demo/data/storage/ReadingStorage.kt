@@ -24,6 +24,7 @@ internal class ReadingStorage(context: Context) {
             .put("mode", snapshot.modeId).put("effect", snapshot.builtInEffectId)
             .put("chapter", position.chapterId).put("revision", position.contentRevision)
             .put("page", position.pageNumberHint).put("chapterNumber", position.chapterNumberHint)
+            .put("documentLocator", position.documentLocator)
         position.anchor?.let { data.put("block", it.blockId).put("offset", it.offset) }
         val boundedTitle = title?.replace('\n', ' ')?.replace('\r', ' ')?.trim()?.take(256)?.let {
             if (it.lastOrNull()?.isHighSurrogate() == true) it.dropLast(1) else it
@@ -42,7 +43,7 @@ internal class ReadingStorage(context: Context) {
         require(data.getInt("version") == 1 && data.getString("book") == bookId)
         val anchor = data.optionalString("block")?.let { ContentAnchor(it, data.getInt("offset")) }
         ReaderSnapshot(bookId, ReadingPosition(bookId, data.getString("chapter"), anchor,
-            data.optionalString("revision"), data.optionalInt("page"), data.optionalInt("chapterNumber")),
+            data.optionalString("revision"), data.optionalInt("page"), data.optionalInt("chapterNumber"), data.optionalString("documentLocator")),
             data.getString("mode"), builtInEffectId = data.optionalString("effect"))
     }.getOrNull()
 

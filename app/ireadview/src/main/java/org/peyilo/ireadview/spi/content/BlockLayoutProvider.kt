@@ -13,6 +13,8 @@ data class BlockLayoutUnit(val heightPx: Float, val startOffset: Int?, val endOf
 }
 
 interface BlockLayoutFragment {
+    /** Optional action hit at fragment-local geometry; must not perform navigation itself. */
+    fun linkAt(xPx: Float, yPx: Float): org.peyilo.ireadview.api.model.LinkTarget? = null
     val blockId: String
     /** Optional half-open source endpoints; for TextContentBlock these index its unchanged text. */
     val startOffset: Int?

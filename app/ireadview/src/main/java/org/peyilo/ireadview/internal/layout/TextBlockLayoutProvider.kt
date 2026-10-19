@@ -17,13 +17,13 @@ import org.peyilo.ireadview.spi.content.*
 
 internal class TextBlockLayoutProvider : BlockLayoutProvider {
     override val id = "iread.text"
-    override val version = "2"
+    override val version = "3"
     override fun supports(block: ContentBlock): Boolean = block is TextContentBlock
 
     @Suppress("DEPRECATION")
     override fun measure(block: ContentBlock, context: BlockLayoutContext): BlockLayout {
         context.checkCancellation()
-        val heading = block is HeadingBlock
+        val heading = block is HeadingBlock || block is LinkedTextBlock && block.headingLevel > 0
         val text = (block as? TextContentBlock)?.text ?: error("Unsupported text block")
         val style = context.style
         val paint = TextPaint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG).apply {
@@ -34,11 +34,14 @@ internal class TextBlockLayoutProvider : BlockLayoutProvider {
             val fixedSpacing = if (heading) style.title.letterSpacingDp else style.body.letterSpacingDp
             if (fixedSpacing != null) letterSpacing = fixedSpacing * context.viewport.density / textSize
         }
-        val source = if (!heading && text.isNotEmpty() && style.body.firstLineIndentEm > 0) {
-            SpannableString(text).apply {
+        val source = SpannableString(text).apply {
+            if (!heading && text.isNotEmpty() && style.body.firstLineIndentEm > 0) {
                 setSpan(LeadingMarginSpan.Standard((style.body.firstLineIndentEm * paint.textSize).toInt(), 0), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
-        } else text
+            (block as? LinkedTextBlock)?.links?.forEach { link ->
+                setSpan(android.text.style.UnderlineSpan(), link.startOffset, link.endExclusive, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
+        }
         val alignment = if (!heading) Layout.Alignment.ALIGN_NORMAL else when (style.title.alignment) {
             TitleAlignment.START -> Layout.Alignment.ALIGN_NORMAL
             TitleAlignment.CENTER -> Layout.Alignment.ALIGN_CENTER
@@ -65,7 +68,7 @@ internal class TextBlockLayoutProvider : BlockLayoutProvider {
         }
         val frozenUnits = immutableList(units)
         context.checkCancellation()
-        return TextBlockLayout(block.blockId, layout, gap, heading, frozenUnits)
+        return TextBlockLayout(block.blockId, layout, gap, heading, frozenUnits, (block as? LinkedTextBlock)?.links ?: emptyList())
     }
 }
 
@@ -74,7 +77,8 @@ private class TextBlockLayout(
     private val layout: StaticLayout,
     override val spacingAfterPx: Float,
     private val heading: Boolean,
-    override val units: List<BlockLayoutUnit>
+    override val units: List<BlockLayoutUnit>,
+    private val links: List<TextLink>
 ) : BlockLayout {
     override val estimatedRetainedBytes: Long = 1536L + layout.text.length.toLong() * 2 + layout.lineCount.toLong() * 128
 
@@ -141,6 +145,19 @@ private class TextBlockLayout(
                 val line = layout.getLineForVertical((top + yPx).toInt())
                 if (xPx < minOf(layout.getLineLeft(line), layout.getLineRight(line)) || xPx > maxOf(layout.getLineLeft(line), layout.getLineRight(line))) return null
                 return ContentAnchor(blockId, offsetForHorizontal(line, xPx).coerceIn(this.startOffset ?: 0, this.endOffset ?: 0))
+            }
+            override fun linkAt(xPx: Float, yPx: Float): LinkTarget? {
+                if (yPx < 0 || yPx >= heightPx) return null
+                // Use actual glyph selection geometry rather than nearest caret rounding at link edges.
+                for (link in links) {
+                    val path = selectionPath(link.startOffset, link.endExclusive) ?: continue
+                    val bounds = android.graphics.RectF()
+                    path.computeBounds(bounds, true)
+                    val clip = android.graphics.Region(kotlin.math.floor(bounds.left).toInt(), kotlin.math.floor(bounds.top).toInt(),
+                        kotlin.math.ceil(bounds.right).toInt(), kotlin.math.ceil(bounds.bottom).toInt())
+                    if (android.graphics.Region().apply { setPath(path, clip) }.contains(xPx.toInt(), yPx.toInt())) return link.target
+                }
+                return null
             }
             override fun nearestAnchorAt(xPx: Float, yPx: Float): ContentAnchor? {
                 val y = yPx.coerceIn(0f, maxOf(0f, heightPx - 1f))

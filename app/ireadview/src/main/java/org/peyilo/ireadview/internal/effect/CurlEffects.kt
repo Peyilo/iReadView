@@ -8,7 +8,8 @@ import kotlin.math.*
 internal class EffectResourceUnavailable : RuntimeException("No bitmap lease available for page curl")
 
 /** Capture both pages once so every animation frame uses the same prepared content. */
-internal abstract class SnapshotCurlEffect : PageTurnEffect {
+internal abstract class SnapshotCurlEffect : SnapshotPageTurnEffect {
+    override val usesPageSnapshots get() = true
     protected var turn: PageTurnContext? = null
     private var host: PageTurnEffectHost? = null
     private val snapshots = PageTurnSnapshots()
@@ -41,11 +42,11 @@ internal abstract class SnapshotCurlEffect : PageTurnEffect {
             canvas.drawBitmap(bitmap, null, pageRect, texture)
         }
         if (frame.progress <= 0f) {
-            if (context.direction == TurnDirection.Forward) flatSheet() else canvas.drawBitmap(background, null, pageRect, texture)
+            context.current.draw(canvas)
             return
         }
         if (frame.progress >= 1f) {
-            if (context.direction == TurnDirection.Forward) canvas.drawBitmap(background, null, pageRect, texture) else flatSheet()
+            context.target.draw(canvas)
             return
         }
         canvas.drawBitmap(background, null, pageRect, texture)

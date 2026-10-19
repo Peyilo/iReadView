@@ -6,7 +6,7 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import org.peyilo.ireadview.api.model.TextSelection
+import org.peyilo.ireadview.api.model.ReaderSelection
 import org.peyilo.ireadview.api.state.ReaderResult
 import org.peyilo.ireadview.api.style.ReaderStyle
 import org.peyilo.ireadview.spi.selection.SelectionActions
@@ -34,7 +34,7 @@ internal class CustomSelectionToolbarFactory(private val style: () -> ReaderStyl
         }
     }
 
-    override fun create(context: Context, selection: TextSelection, actions: SelectionActions): View {
+    override fun create(context: Context, selection: ReaderSelection, actions: SelectionActions): View {
         val appearance = style()
         return Toolbar(context).apply {
             setBackgroundColor(appearance.page.backgroundColor)

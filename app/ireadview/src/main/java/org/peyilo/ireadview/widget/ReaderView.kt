@@ -4,8 +4,6 @@ import android.content.Context
 import android.util.AttributeSet
 import org.peyilo.ireadview.R
 import org.peyilo.ireadview.internal.style.ReaderStyleAttributes
-import org.peyilo.ireadview.internal.presentation.paged.PagedBookPresentation
-import org.peyilo.ireadview.internal.presentation.scroll.ScrollingBookPresentation
 import org.peyilo.ireadview.api.model.ReadingMode
 import org.peyilo.ireadview.api.input.PagingAxis
 import org.peyilo.ireadview.api.input.ReaderInputOptions
@@ -50,9 +48,6 @@ open class ReaderView @JvmOverloads constructor(
             setInitialStyle(ReaderStyleAttributes.read(context, values, style))
         } finally { values.recycle() }
     }
-    override fun createPresentation(mode: ReadingMode, host: BookPresentationHost): BookPresentation = when (mode) {
-        ReadingMode.PAGED -> PagedBookPresentation(context, host)
-        ReadingMode.CONTINUOUS_SCROLL -> ScrollingBookPresentation(context, host)
-        else -> error("Unsupported reading mode: ${mode.id}")
-    }
+    override fun createPresentation(mode: ReadingMode, host: BookPresentationHost): BookPresentation =
+        org.peyilo.ireadview.spi.presentation.BookPresentations.createNative(context, mode, host)
 }

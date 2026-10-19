@@ -15,7 +15,7 @@ import kotlin.math.ceil
 import kotlin.math.floor
 
 /** Virtual text nodes reuse fragment geometry; no second pagination or source lookup. */
-internal class BodyAccessibilityHelper(private val body: ReaderBodyView) : ExploreByTouchHelper(body) {
+internal class BodyAccessibilityHelper(private val body: TextReaderBodyView) : ExploreByTouchHelper(body) {
     private val nodes = LinkedHashMap<Int, BlockLayoutFragment>()
     private val failed = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<BlockLayoutFragment, Boolean>())
     private var nextId = 1

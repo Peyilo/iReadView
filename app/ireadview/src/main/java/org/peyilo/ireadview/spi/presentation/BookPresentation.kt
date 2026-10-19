@@ -45,6 +45,14 @@ data class ContinuousFragment(val fragment: BlockLayoutFragment, val spacingAfte
 }
 
 interface BookPresentationHost : ReadContentHost<ReadingPosition> {
+    val presentationComponents: ReaderPresentationComponents get() = ReaderPresentationComponents.DEFAULT
+    val pageCacheMode: ReaderPageCacheMode get() = ReaderPageCacheMode.THREE_PAGE
+    val inputOptions: org.peyilo.ireadview.api.input.ReaderInputOptions get() = org.peyilo.ireadview.api.input.ReaderInputOptions()
+    /** Body-owned surfaces may transfer a drag to the Widget's existing page-gesture controller. */
+    fun reportBodyTouch(event: android.view.MotionEvent): Boolean = false
+    /** Document text selections use the same custom toolbar factory as native block selections. */
+    fun reportDocumentSelection(selection: DocumentTextSelection?, actions: org.peyilo.ireadview.spi.selection.DocumentSelectionHandle?,
+        bounds: RectF?, generation: Long): Boolean = false
     val book: BookDescriptor?
     val style: ReaderStyle
     val pageChromeProvider: org.peyilo.ireadview.spi.page.ReaderPageChromeProvider? get() = null
@@ -53,11 +61,14 @@ interface BookPresentationHost : ReadContentHost<ReadingPosition> {
     suspend fun retryChapter(chapterId: String): ReaderResult<Unit> = ReaderResult.Rejected(ReaderRejection.Unsupported)
     fun requestReaderAction(action: org.peyilo.ireadview.api.event.ReaderAction, position: ReadingPosition, generation: Long): Boolean = false
     val selection: TextSelection? get() = null
+    val documentSelection: DocumentTextSelection? get() = null
     fun reportSelection(selection: TextSelection, generation: Long): ReaderResult<Unit> = ReaderResult.Rejected(ReaderRejection.Unsupported)
     fun clearSelection() {}
     fun clearAccessibilitySelection(generation: Long): Boolean = false
     fun reportSelectionDrag(active: Boolean) {}
     suspend fun requestSelectionPage(chapterId: String, pageNumber: Int, generation: Long): NavigationResult<ReadingPosition> = NavigationResult.Rejected(ReaderRejection.Unsupported)
+    suspend fun requestSelectionPage(chapterId: String, pageNumber: Int, generation: Long, isCurrent: () -> Boolean): NavigationResult<ReadingPosition> =
+        if (isCurrent()) requestSelectionPage(chapterId, pageNumber, generation) else NavigationResult.Superseded
     /** Reader-initiated text traversal shares navigation commits. The Widget disables page animation;
      * the default delegates to an existing custom host's navigation implementation.
      */
@@ -71,8 +82,12 @@ interface BookPresentationHost : ReadContentHost<ReadingPosition> {
         if (isCurrent()) requestAccessibilityNavigation(target, generation) else NavigationResult.Superseded
     fun validHighlights(chapterId: String): List<Highlight> = emptyList()
     fun validUnderlines(chapterId: String): List<Underline> = emptyList()
+    fun documentAnnotations(chapterId: String): List<DocumentRangedAnnotation> = emptyList()
+    /** Renderer must supply the exact annotation object it validated; replacements reject stale results. */
+    fun reportDocumentAnnotationStatus(annotation: DocumentRangedAnnotation, status: AnnotationStatus, generation: Long) {}
     fun reportHighlightStyleFallback(id: String, styleId: String) {}
     fun reportHighlightTapped(id: String): Boolean = false
+    fun reportLinkTapped(target: LinkTarget, chapterId: String, generation: Long): Boolean = false
     /** Coordinates relative to the presentation root, for a child-owned touch surface. */
     fun reportTap(xPx: Float, yPx: Float) {}
     fun reportSelectionGeometryChanged() {}
@@ -80,11 +95,24 @@ interface BookPresentationHost : ReadContentHost<ReadingPosition> {
     suspend fun layoutChapter(chapterId: String, viewport: ReadViewport): ReaderResult<ChapterLayout>
 }
 
-abstract class BookPresentation : ReadContentAdapter<ReadingPosition> {
+abstract class BookPresentation : ReadContentAdapter<ReadingPosition>, ReadVisualHandoff<ReadingPosition> {
+    /** Opt in only when native ChapterLayout pagination describes this engine's pages.
+     * Source block availability alone does not prove that a replacement engine uses it.
+     */
+    open val supportsBlockLayout: Boolean get() = false
+    override suspend fun prepareVisualHandoff(candidate: PreparedRead<ReadingPosition>) {}
+    /** Synchronous range containment query against a document renderer's locator grammar. */
+    open fun documentSelectionCoveredBy(selected: DocumentTextSelection, outer: DocumentTextSelection): Boolean = selected == outer
+    open fun positionForDocumentSelection(selection: DocumentTextSelection): ReadingPosition? = null
+    open fun positionForSelectionPage(chapterId: String, pageNumber: Int): ReadingPosition? = null
+    open val currentPageCount: Int? get() = null
+    /** False only when a backend cannot provide prepared surfaces for Widget-owned effects. */
+    open val supportsPageTurnEffects: Boolean get() = true
     open val needsTimeUpdates: Boolean get() = false
     open fun onTimeChanged(timeMillis: Long) {}
     open fun onPageChromeChanged() {}
     open fun onNavigationStateChanged(state: org.peyilo.ireadview.api.state.ReadNavigationState) {}
+    open fun onPageCacheModeChanged() {}
     /** Data/style decorations changed; retain text layout and the committed location. */
     open fun onDecorationsChanged() {}
     open fun onPlaceholdersChanged() {}
@@ -99,4 +127,5 @@ abstract class BookPresentation : ReadContentAdapter<ReadingPosition> {
     open fun onSelectionTouch(action: Int, xPx: Float, yPx: Float): Boolean = false
     /** Visible selection geometry relative to contentView, for toolbar placement. */
     open fun selectionBounds(): RectF? = null
+    open fun selectionHandleBounds(start: Boolean): RectF? = null
 }

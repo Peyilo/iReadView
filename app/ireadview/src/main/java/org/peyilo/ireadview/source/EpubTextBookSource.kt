@@ -15,9 +15,14 @@ import org.peyilo.ireadview.api.model.TocEntry
 import org.peyilo.ireadview.api.model.ReadingPosition
 import org.peyilo.ireadview.api.source.BookSource
 import org.peyilo.ireadview.api.source.ReaderInput
+import org.peyilo.ireadview.api.source.BookResourceSource
+import org.peyilo.ireadview.api.source.BookLinkSource
+import org.peyilo.ireadview.api.model.LinkTarget
 import org.peyilo.ireadview.internal.source.*
 
 /** Budgets bound input and parser work, not total JVM heap usage. */
+enum class EpubContentMode { TextOnly, Flow }
+
 data class EpubTextBookOptions(
     val fallbackTitle: String = "EPUB book",
     val maxArchiveBytes: Long = 64L * 1024 * 1024,
@@ -27,7 +32,8 @@ data class EpubTextBookOptions(
     val maxXmlDepth: Int = 64,
     val maxXmlElements: Int = 100000,
     val maxXmlCharacters: Int = 32 * 1024 * 1024,
-    val maxFallbackDepth: Int = 64
+    val maxFallbackDepth: Int = 64,
+    val contentMode: EpubContentMode = EpubContentMode.TextOnly
 ) {
     init {
         require(maxArchiveBytes > 0 && maxEntryBytes > 0 && maxExpandedBytes > 0 && maxEntries > 0)
@@ -56,7 +62,7 @@ class EpubTextBookSource @JvmOverloads constructor(
     private val input: ReaderInput,
     private val cacheDirectory: File,
     private val options: EpubTextBookOptions = EpubTextBookOptions()
-) : BookSource, AutoCloseable {
+) : BookResourceSource, BookLinkSource, AutoCloseable {
     private class Snapshot(
         val archive: EpubArchive,
         val book: BookDescriptor,
@@ -122,7 +128,7 @@ class EpubTextBookSource @JvmOverloads constructor(
     }
 
     private suspend fun readDocument(current: Snapshot, path: String): EpubTextDocument {
-        val document = EpubXhtmlParser.load(current.archive, path, xmlLimits)
+        val document = EpubXhtmlParser.load(current.archive, path, xmlLimits, options.contentMode == EpubContentMode.Flow)
         currentCoroutineContext().ensureActive()
         synchronized(lifecycle) {
             checkOpen()
@@ -144,6 +150,41 @@ class EpubTextBookSource @JvmOverloads constructor(
         old?.archive?.close()
     }
 
+    override suspend fun loadResource(resourceId: String, bookRevision: String?, maxBytes: Int): ByteArray = withContext(Dispatchers.IO) {
+        require(maxBytes > 0)
+        mutex.withLock {
+            val current = synchronized(lifecycle) { checkOpen(); snapshot } ?: error("EPUB is not open")
+            require(bookRevision == current.book.revision) { "Stale EPUB resource revision" }
+            current.archive.read(resourceId) { stream ->
+                val output = java.io.ByteArrayOutputStream()
+                val buffer = ByteArray(8192)
+                while (true) {
+                    val count = stream.read(buffer)
+                    if (count < 0) break
+                    if (count > maxBytes - output.size()) throw java.io.IOException("EPUB image exceeds resource budget")
+                    output.write(buffer, 0, count)
+                }
+                output.toByteArray()
+            }.also {
+                currentCoroutineContext().ensureActive()
+                synchronized(lifecycle) { checkOpen(); check(snapshot === current) }
+            }
+        }
+    }
+
+    override suspend fun resolveLink(target: LinkTarget.Internal, bookRevision: String?): ReadingPosition? = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            val current = synchronized(lifecycle) { checkOpen(); snapshot } ?: return@withLock null
+            if (bookRevision != current.book.revision) return@withLock null
+            val chapterId = current.paths.entries.firstOrNull { it.value == target.resourceId }?.key ?: return@withLock null
+            val fragment = target.fragment?.takeIf { it.isNotEmpty() }
+            val anchor = if (fragment != null) readDocument(current, target.resourceId).anchors[fragment] ?: return@withLock null else null
+            currentCoroutineContext().ensureActive()
+            synchronized(lifecycle) { checkOpen(); check(snapshot === current) }
+            ReadingPosition(bookId, chapterId, anchor, current.book.revision)
+        }
+    }
+
     private fun checkOpen() { check(!closed) { "EpubTextBookSource is closed" } }
 
     private suspend fun install(fresh: Snapshot) {
@@ -163,10 +204,11 @@ class EpubTextBookSource @JvmOverloads constructor(
             val metadata = EpubPackageParser.load(archive, xmlLimits)
             val navigation = EpubNavigationParser.load(archive, metadata, xmlLimits)
             val labels = navigation.chapterLabels()
+            val revision = if (options.contentMode == EpubContentMode.Flow) "${archive.revision}:flow-v1" else archive.revision
             val paths = LinkedHashMap<String, String>()
             val catalogue = metadata.readingOrder.map { item ->
                 paths[item.id] = item.path
-                TocEntry.Chapter(ChapterDescriptor(item.id, labels[item.path] ?: item.id, archive.revision))
+                TocEntry.Chapter(ChapterDescriptor(item.id, labels[item.path] ?: item.id, revision))
             }
             fun convert(entries: List<EpubNavigationEntry>): List<EpubTocEntry> = entries.map {
                 EpubTocEntry(it.label, it.resource?.path, it.resource?.fragment, convert(it.children))
@@ -175,7 +217,7 @@ class EpubTextBookSource @JvmOverloads constructor(
                 EpubDiagnostic("CatalogueUsesSpineOrder", metadata.path, "The Widget catalogue follows spine order; original navigation groups and fragments are available separately")
             currentCoroutineContext().ensureActive()
             synchronized(lifecycle) { checkOpen() }
-            return Snapshot(archive, BookDescriptor(bookId, metadata.title ?: options.fallbackTitle, archive.revision, catalogue),
+            return Snapshot(archive, BookDescriptor(bookId, metadata.title ?: options.fallbackTitle, revision, catalogue),
                 Collections.unmodifiableMap(paths), Collections.unmodifiableList(convert(navigation.entries)), diagnostics)
         } catch (failure: Throwable) { archive.close(); throw failure }
     }

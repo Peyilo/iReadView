@@ -47,8 +47,8 @@ import org.peyilo.ireadview.api.style.HighlightStyle
 import org.peyilo.ireadview.api.style.HighlightStyles
 import org.peyilo.ireadview.api.style.ReaderStyle
 import org.peyilo.ireadview.source.MemoryBookSource
-import org.peyilo.ireadview.source.EpubTextBookSource
-import org.peyilo.ireadview.source.EpubTocEntry
+import org.peyilo.ireadview.epub.EpubReaderBookSource
+import org.peyilo.ireadview.api.source.BookNavigationEntry
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -70,6 +70,7 @@ class ReaderActivity : Activity() {
         const val EXTRA_ENTRY = "readerEntry"
         const val ENTRY_BUILTIN = "builtin"
         const val ENTRY_LOCAL_TXT = "local-txt"
+        const val ENTRY_EPUB = "epub"
     }
     private lateinit var reader: ReaderView
     private lateinit var importPanel: View
@@ -106,9 +107,9 @@ class ReaderActivity : Activity() {
     private var placeholderRecovery: Pair<BookSource, FileInput?>? = null
     private val ownedFileSources = LinkedHashSet<AutoCloseable>()
     private val hostScope = MainScope()
-    private var epubNavigationJob: Job? = null
-    private var epubNavigationSequence = 0L
-    private var epubNavigationDialog: AlertDialog? = null
+    private var contentsNavigationJob: Job? = null
+    private var contentsNavigationSequence = 0L
+
     private val saveProgress = Runnable { persistProgress() }
     private var annotationsRestored = false
     private val navigationCallback = ReaderCallback<NavigationResult<ReadingPosition>> { outcome ->
@@ -166,7 +167,7 @@ class ReaderActivity : Activity() {
         if (customPlaceholder) reader.setPlaceholderFactory(CustomPlaceholderFactory())
         customSelectionToolbar = savedInstanceState?.getBoolean("customSelectionToolbar") ?: coldSettings?.customSelectionToolbar ?: false
         reader.setSelectionToolbarFactory(if (customSelectionToolbar) CustomSelectionToolbarFactory { reader.style }
-            else org.peyilo.iread.demo.reader.ReaderSelectionMenus.factory(this))
+            else org.peyilo.iread.demo.reader.ReaderSelectionMenus.factory(this, reader))
         source = sampleBook()
         readingStorage = ReadingStorage(this)
         uriGrants = UriGrantStore.get(this)
@@ -197,13 +198,14 @@ class ReaderActivity : Activity() {
             when (intent.getStringExtra(EXTRA_ENTRY)) {
                 ENTRY_BUILTIN -> fileInput = sampleFileInput()
                 ENTRY_LOCAL_TXT -> fileInput = null
+                ENTRY_EPUB -> fileInput = sampleEpubInput()
             }
         }
         reader.addReaderListener(object : ReaderListener {
             override fun onEffectFallback(view: BookReadView, requestedId: String, appliedId: String, reason: EffectFallbackReason) {
                 Toast.makeText(this@ReaderActivity, "翻页效果已回退为无动画（$reason）", Toast.LENGTH_SHORT).show()
             }
-            override fun onHighlightTapped(view: BookReadView, highlight: Highlight) {
+            override fun onHighlightTapped(view: BookReadView, highlight: HighlightAnnotation) {
                 annotationPanel.showHighlight(highlight.id)
             }
             override fun onBookChanged(view: BookReadView, book: BookDescriptor?) {
@@ -211,7 +213,7 @@ class ReaderActivity : Activity() {
                 contentsSheet.dismiss(); typographySheet.dismiss(); settingsSheet.dismiss()
                 annotationPanel.dismiss()
                 pageIndexPanel.dismiss()
-                cancelEpubNavigation()
+                cancelContentsNavigation()
                 if (book == null) { annotationsRestored = false; return }
                 if (!annotationsRestored) {
                     annotationsRestored = true
@@ -252,6 +254,13 @@ class ReaderActivity : Activity() {
                 ReaderAction.ExitReader -> { finish(); true }
             }
         })
+        reader.setReaderLinkHandler { _, _, target ->
+            if (target is LinkTarget.External) {
+                try { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(target.uri))) }
+                catch (_: ActivityNotFoundException) { Toast.makeText(this, "没有可打开此链接的应用", Toast.LENGTH_SHORT).show() }
+                true
+            } else false
+        }
         reader.setReaderTapListener(ReaderTapListener { tap ->
             val coordinate = if (reader.inputOptions.pagingAxis == PagingAxis.Vertical) tap.y else tap.x
             val edge = reader.inputOptions.tapEdgeFraction
@@ -317,11 +326,12 @@ class ReaderActivity : Activity() {
 
     private fun showBookActions() {
         AlertDialog.Builder(this).setTitle("书籍")
-            .setItems(arrayOf("选择 TXT 文件", "选择 EPUB 文件", "最近阅读", "内置书籍")) { _, index ->
+            .setItems(arrayOf("选择 TXT 文件", "选择 EPUB 文件", "The Art of ARM Assembly", "最近阅读", "内置书籍")) { _, index ->
                 when (index) {
                     0 -> chooseFile("txt")
                     1 -> chooseFile("epub")
-                    2 -> showRecentBooks()
+                    2 -> sampleEpubInput().let { openSource(fileSource(it), it) }
+                    3 -> showRecentBooks()
                     else -> showSampleBooks()
                 }
             }.setNegativeButton("取消", null).show()
@@ -344,8 +354,7 @@ class ReaderActivity : Activity() {
         if (requestCode !in 40..41 || resultCode != RESULT_OK) return
         val uri = data?.data ?: return
         if (requestCode == 41) {
-            val selection = FileInput(uri, sourceType = "epub")
-            openSelectedFile(selection, data.flags)
+            openSelectedFile(FileInput(uri, sourceType = "epub"), data.flags)
             return
         }
         openSelectedFile(FileInput(uri), data.flags)
@@ -380,13 +389,19 @@ class ReaderActivity : Activity() {
     }
 
     private fun sampleFileInput() = FileInput(TextFiles.sampleUri, title = TextFiles.SAMPLE_TITLE)
+    private fun sampleEpubInput(name: String = "the-art-of-arm-assembly.epub", title: String = "The Art of ARM Assembly") =
+        FileInput(Uri.parse("iread-demo://epub/$name"), sourceType = "epub", title = title)
 
     private fun showSampleBooks() {
-        AlertDialog.Builder(this).setTitle("示例书籍").setItems(arrayOf("妖精之诗 · 真实 TXT 小说", "Widget API 演示短文")) { _, index ->
-            if (index == 0) {
-                val selected = sampleFileInput()
-                openSource(fileSource(selected), selected)
-            } else openSource(source, null)
+        AlertDialog.Builder(this).setTitle("示例书籍").setItems(arrayOf("妖精之诗 · 真实 TXT 小说", "Widget API 演示短文",
+            "EPUB · 图文与链接", "EPUB · 固定版式")) { _, index ->
+            val selected = when (index) {
+                0 -> sampleFileInput()
+                2 -> sampleEpubInput("illustrated-flow.epub", "山间来信")
+                3 -> sampleEpubInput("fixed-layout.epub", "山间画册")
+                else -> null
+            }
+            if (selected != null) openSource(fileSource(selected), selected) else openSource(source, null)
         }.setNegativeButton("取消", null).show()
     }
 
@@ -420,11 +435,17 @@ class ReaderActivity : Activity() {
         val uriIdentity = MessageDigest.getInstance("SHA-256").digest(selection.uri.toString().toByteArray(Charsets.UTF_8))
             .joinToString("") { "%02x".format(it.toInt() and 255) }
         // Encoding changes alter decoded anchors, so this host uses a separate identity per encoding.
-        return if (selection.sourceType == "epub") "epub-$uriIdentity" else "txt-$uriIdentity-${selection.charset}"
+        return if (selection.sourceType == "epub") "epub-dom-$uriIdentity" else "txt-$uriIdentity-${selection.charset}"
     }
     private fun fileSource(selection: FileInput): BookSource {
         val created = if (selection.sourceType == "epub")
-            EpubTextBookSource(fileBookId(selection), ReaderInput.fromUri(this, selection.uri), File(cacheDir, "reader-epub"))
+            EpubReaderBookSource(fileBookId(selection),
+                if (selection.uri.scheme == "iread-demo") {
+                    val name = selection.uri.lastPathSegment
+                    require(selection.uri.host == "epub" && name in setOf("the-art-of-arm-assembly.epub", "illustrated-flow.epub", "fixed-layout.epub"))
+                    ReaderInput.fromAsset(this, "epubs/$name")
+                }
+                else ReaderInput.fromUri(this, selection.uri), File(cacheDir, "reader-epub"))
         else {
             val bookId = fileBookId(selection)
             lateinit var trackedSource: ProgressTextBookSource
@@ -467,7 +488,7 @@ class ReaderActivity : Activity() {
         if (selected?.sourceType == "txt") showImportProgress("正在打开 ${selected.title ?: "TXT 小说"} · ${selected.charset}")
         else importPanel.visibility = View.GONE
         placeholderRecovery = null
-        cancelEpubNavigation()
+        cancelContentsNavigation()
         persistProgress()
         reader.removeCallbacks(saveProgress)
         val previousBookId = committedBookId
@@ -556,72 +577,36 @@ class ReaderActivity : Activity() {
     }
 
     private fun showContents() {
-        val current = currentEpubSource()
-        if (current != null && current.navigation.isNotEmpty()) showEpubContents(current)
-        else showSpineContents()
-    }
-
-    private fun currentEpubSource(): EpubTextBookSource? = ownedFileSources.filterIsInstance<EpubTextBookSource>()
-        .firstOrNull { it.bookId == reader.currentBook?.bookId }
-
-    private fun showEpubContents(current: EpubTextBookSource) {
+        cancelContentsNavigation()
         val book = reader.currentBook ?: return
-        val entries = ArrayList<EpubTocEntry>()
-        val labels = ArrayList<String>()
-        fun visit(items: List<EpubTocEntry>, depth: Int) {
-            items.forEach { item ->
-                entries.add(item)
-                labels.add("  ".repeat(depth) + item.title.ifBlank { "未命名目录项" } + if (item.resourcePath == null) "（无正文目标）" else "")
-                visit(item.children, depth + 1)
-            }
-        }
-        visit(current.navigation, 0)
-        contentsSheet.show(labels, enabled = { entries[it].resourcePath != null }) { index ->
-            if (reader.currentBook === book && !isFinishing && !isDestroyed) navigateEpubEntry(current, entries[index])
-        }
-    }
-    private fun cancelEpubNavigation() {
-        epubNavigationSequence++
-        epubNavigationJob?.cancel()
-        epubNavigationJob = null
-        epubNavigationDialog?.dismiss()
-        epubNavigationDialog = null
-    }
-
-    private fun navigateEpubEntry(current: EpubTextBookSource, entry: EpubTocEntry) {
-        cancelEpubNavigation()
-        val book = reader.currentBook ?: return
-        val sequence = epubNavigationSequence
-        val openSequence = fileOpenSequence
-        fun active() = sequence == epubNavigationSequence && openSequence == fileOpenSequence &&
-            reader.currentBook === book && !isFinishing && !isDestroyed
-        val dialog = AlertDialog.Builder(this).setTitle("定位目录内容").setMessage("正在读取目标章节…")
-            .setNegativeButton("取消") { _, _ -> cancelEpubNavigation() }.create()
-        dialog.setOnCancelListener { cancelEpubNavigation() }
-        epubNavigationDialog = dialog
-        dialog.show()
-        epubNavigationJob = hostScope.launch {
-            try {
-                val position = current.resolveNavigation(entry)
-                if (!active()) return@launch
-                if (position == null) Toast.makeText(this@ReaderActivity, "该目录目标不存在或未保留在文字内容中", Toast.LENGTH_LONG).show()
-                else {
-                    val result = reader.goToPosition(position)
-                    if (active()) navigationCallback.onComplete(ReaderCompletion.Completed(result))
+        val sequence = contentsNavigationSequence
+        contentsNavigationJob = hostScope.launch {
+            when (val result = reader.getNavigation()) {
+                is ReaderResult.Success -> {
+                    if (sequence != contentsNavigationSequence || reader.currentBook !== book || isFinishing || isDestroyed) return@launch
+                    val entries = ArrayList<BookNavigationEntry>()
+                    val labels = ArrayList<String>()
+                    fun visit(items: List<BookNavigationEntry>, depth: Int) {
+                        if (depth > 32) return
+                        items.forEach { entry ->
+                            entries.add(entry); labels.add("  ".repeat(depth) + entry.title)
+                            visit(entry.children, depth + 1)
+                        }
+                    }
+                    visit(result.value, 0)
+                    contentsSheet.show(labels, enabled = { entries[it].position != null }) { index ->
+                        if (reader.currentBook === book) entries[index].position?.let { reader.goToPosition(it, navigationCallback) }
+                    }
                 }
-            } catch (cancelled: CancellationException) { throw cancelled }
-            catch (failure: Exception) {
-                if (active()) Toast.makeText(this@ReaderActivity, "无法读取目录目标：${failure.message ?: "读取失败"}", Toast.LENGTH_LONG).show()
-            } finally {
-                dialog.dismiss()
-                if (sequence == epubNavigationSequence) {
-                    epubNavigationDialog = null
-                    epubNavigationJob = null
-                }
+                is ReaderResult.Failure -> if (reader.currentBook === book) showMessage(result.error.message)
+                else -> Unit
             }
         }
     }
-
+    private fun cancelContentsNavigation() {
+        contentsNavigationSequence++
+        contentsNavigationJob?.cancel(); contentsNavigationJob = null
+    }
     private fun showSpineContents() {
         val book = reader.currentBook ?: return
         val chapters = book.chapters
@@ -632,36 +617,14 @@ class ReaderActivity : Activity() {
     }
     private fun showCurrentBookDetails() {
         val book = reader.currentBook ?: return
-        if (fileInput?.sourceType == "epub") { showEpubDetails(); return }
+
         val selected = fileInput
         AlertDialog.Builder(this).setTitle(book.title)
-            .setMessage(if (selected != null) "TXT · ${selected.charset}\n已解析 ${book.chapters.size} 章" else "${book.chapters.size} 章")
+            .setMessage(if (selected != null) "${if (selected.sourceType == "epub") "EPUB" else "TXT · ${selected.charset}"}\n已解析 ${book.chapters.size} 章" else "${book.chapters.size} 章")
             .setPositiveButton("确定", null)
-            .setNeutralButton(if (selected == null) "重新读取" else "更换编码") { _, _ ->
-                if (reader.currentBook === book) { if (selected == null) showUpdateOptions() else chooseTextEncoding(selected) }
+            .setNeutralButton(if (selected == null || selected.sourceType == "epub") "重新读取" else "更换编码") { _, _ ->
+                if (reader.currentBook === book) { if (selected == null || selected.sourceType == "epub") showUpdateOptions() else chooseTextEncoding(selected) }
             }.setNegativeButton("正文目录") { _, _ -> if (reader.currentBook === book) showSpineContents() }.show()
-    }
-    private fun showEpubDetails() {
-        val book = reader.currentBook ?: return
-        val current = currentEpubSource() ?: return
-        val notes = current.diagnostics.map { diagnostic ->
-            val description = when {
-                diagnostic.code == "TextPresentationOnly" -> "按文字阅读呈现，未保留原书样式和链接行为"
-                diagnostic.code == "ImagesAsAlternativeText" -> "图片仅显示已有的替代文字"
-                diagnostic.code == "TableStructureFlattened" -> "表格转为连续文字"
-                diagnostic.code == "PreformattedTextOnly" -> "保留预格式空白，字体使用阅读设置"
-                diagnostic.code.startsWith("ContentOmitted:") -> "省略了当前文字阅读不支持的内容"
-                diagnostic.code == "CatalogueUsesSpineOrder" -> "阅读目录按书籍正文顺序排列"
-                diagnostic.code == "NavigationFallbackToNcx" -> "主目录不可用，已使用备用目录"
-                diagnostic.code == "NavigationUnavailable" -> "书籍未提供可用目录名称"
-                diagnostic.code == "NonLinearItemsIncluded" -> "补充内容保留在原有阅读顺序中"
-                else -> "部分书籍信息或资源未能完整呈现"
-            }
-            "${diagnostic.resourcePath}\n$description"
-        }.distinct()
-        AlertDialog.Builder(this).setTitle("EPUB 提取说明")
-            .setMessage("这里显示目录和已读取章节的说明，继续阅读后可能增加。\n\n${notes.joinToString("\n\n")}")
-            .setPositiveButton("确定", null).setNeutralButton("重新读取目录") { _, _ -> if (reader.currentBook === book) showUpdateOptions() }.show()
     }
     private fun showInputOptions() {
         val input = reader.inputOptions
@@ -671,7 +634,8 @@ class ReaderActivity : Activity() {
             "分页方向：${if (input.pagingAxis == PagingAxis.Horizontal) "横向" else "纵向（无动画）"}",
             "翻页间隔：${reader.pageTurnOptions.minimumTurnIntervalMs} 毫秒",
             "加载提示：${if (customPlaceholder) "自定义示例" else "默认"}", "排版设置", "阅读主题",
-            "选区工具栏：${if (customSelectionToolbar) "自定义视图示例" else "图文分页菜单"}")
+            "选区工具栏：${if (customSelectionToolbar) "自定义视图示例" else "图文分页菜单"}",
+            "页面缓存：${if (reader.pageCacheMode == org.peyilo.ireadview.api.model.ReaderPageCacheMode.THREE_PAGE) "三页" else "单页"}")
         AlertDialog.Builder(this).setTitle("阅读输入").setItems(labels) { _, index ->
             when (index) {
                 0 -> reader.setInputOptions(input.copy(gesturePagingEnabled = !input.gesturePagingEnabled))
@@ -691,7 +655,13 @@ class ReaderActivity : Activity() {
                 9 -> {
                     customSelectionToolbar = !customSelectionToolbar
                     reader.setSelectionToolbarFactory(if (customSelectionToolbar) CustomSelectionToolbarFactory { reader.style }
-                        else org.peyilo.iread.demo.reader.ReaderSelectionMenus.factory(this))
+                        else org.peyilo.iread.demo.reader.ReaderSelectionMenus.factory(this, reader))
+                }
+                10 -> {
+                    val mode = if (reader.pageCacheMode == org.peyilo.ireadview.api.model.ReaderPageCacheMode.THREE_PAGE)
+                        org.peyilo.ireadview.api.model.ReaderPageCacheMode.SINGLE_PAGE else org.peyilo.ireadview.api.model.ReaderPageCacheMode.THREE_PAGE
+                    val result = reader.setPageCacheMode(mode)
+                    if (result is ReaderResult.Rejected) Toast.makeText(this, "当前无法切换页面缓存：${result.reason}", Toast.LENGTH_SHORT).show()
                 }
             }
             persistReaderPreferences()
@@ -744,7 +714,7 @@ class ReaderActivity : Activity() {
     }
 
     private fun showUpdateOptions() {
-        cancelEpubNavigation()
+        cancelContentsNavigation()
         val book = reader.currentBook ?: return
         if (book.bookId != source.bookId) {
             reader.reloadBook { outcome ->
@@ -800,7 +770,7 @@ class ReaderActivity : Activity() {
         if (::typographySheet.isInitialized) typographySheet.dismiss()
         if (::contentsSheet.isInitialized) contentsSheet.dismiss()
         if (::settingsSheet.isInitialized) settingsSheet.dismiss()
-        cancelEpubNavigation()
+        cancelContentsNavigation()
         hostScope.cancel()
         reader.removeCallbacks(saveProgress)
         fileOpenSequence++
@@ -817,7 +787,7 @@ class ReaderActivity : Activity() {
         if (::typographySheet.isInitialized) typographySheet.dismiss()
         if (::contentsSheet.isInitialized) contentsSheet.dismiss()
         if (::settingsSheet.isInitialized) settingsSheet.dismiss()
-        cancelEpubNavigation()
+        cancelContentsNavigation()
         reader.removeCallbacks(saveProgress)
         persistProgress()
         persistReaderPreferences()

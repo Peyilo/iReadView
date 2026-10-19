@@ -13,13 +13,14 @@ internal object SnapshotState {
         ReaderSnapshot(book, ReadingPosition(book, requireNotNull(it.getString("chapter")),
             it.getString("block")?.let { block -> ContentAnchor(block, it.getInt("offset")) }, it.getString("revision"),
             if (it.containsKey("page")) it.getInt("page") else null,
-            if (it.containsKey("chapterNumber")) it.getInt("chapterNumber") else null),
+            if (it.containsKey("chapterNumber")) it.getInt("chapterNumber") else null, it.getString("documentLocator")),
             requireNotNull(it.getString("mode")), builtInEffectId = it.getString("effect"))
     }.getOrNull() }
 
     fun write(saved: ReaderSnapshot) = Bundle().apply {
         putInt("version", 1); putString("book", saved.bookId); putString("mode", saved.modeId); putString("effect", saved.builtInEffectId)
         putString("chapter", saved.position.chapterId); putString("revision", saved.position.contentRevision)
+        putString("documentLocator", saved.position.documentLocator)
         saved.position.anchor?.let { putString("block", it.blockId); putInt("offset", it.offset) }
         saved.position.pageNumberHint?.let { putInt("page", it) }
         saved.position.chapterNumberHint?.let { putInt("chapterNumber", it) }

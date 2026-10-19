@@ -23,12 +23,28 @@
 
 - 已有内容：`MemoryBookSource(BookDescriptor, Collection<ChapterContent>)`。
 - TXT：`TextBookSource(bookId, ReaderInput, TextBookOptions)`；可配置字符集、标题规则、逐行规范化、稳定 ID 和磁盘记录目录。
-- 轻量 EPUB：`EpubTextBookSource` 提取目录/文字并按需读取，提供原目录及片段定位；完整 CSS/图片呈现不属于已实现文本闭环。
+- EPUB 原书显示：依赖 `:app:ireadview-epub`，用 `EpubReaderBookSource(bookId, input, cacheDirectory)` 调用同一个 `reader.openBook(source)`。内部 EpubReaderBodyView 使用系统 WebView 和自研排版；普通 Activity 即可。目录用 reader.getNavigation，跳转、样式、菜单仍由 Widget 控制，详见[接入说明与边界](EPUB_ENGINE.md)。
+- EPUB 简化适配：`EpubBookSource(bookId, input, cacheDirectory)` 提供文字、独立图片块与正文链接。旧 `EpubTextBookSource` 默认继续纯文本。这两个来源不解释完整 CSS/SVG/固定版式；不要用于要求原书排版的入口。
 - 网络或业务数据：宿主实现 `BookSource`，负责权限、认证、请求和重试策略。不同章可能并发读取；返回不可变模型，不在来源中访问 View。
 
 bookId/章节ID/块ID应稳定，重复 ID 被拒绝。revision 需涵盖实际输出原文、标题和结构的变化，不能只取与输出无关的远程字段。锚点 offset 为输出文字的 UTF-16 偏移，合法字符边界由平台文本规则判定。
 
 `ReaderInput` 每次返回新流，内置来源关闭其取得的流。URI授权由宿主取得/保留；库不请求权限，也不上传内容。TextBookSource/EPUB 来源由宿主关闭，`closeBook()` 不替宿主关闭 BookSource。不要在仍被其他阅读器共享的来源上直接 close。
+
+```kotlin
+// 以下示例是简化块模型适配；原书 EPUB 请使用上面的可选模块。
+val source = EpubBookSource("stable-book-id", ReaderInput.fromUri(context, uri), File(context.cacheDir, "epub"))
+reader.setReaderLinkHandler { _, _, target ->
+    if (target is LinkTarget.External) {
+        // 由宿主选择浏览器、应用内预览等处理方式。
+        openExternalLink(target.uri)
+        true
+    } else false // 使用库的书内跳转
+}
+// 在主线程的宿主协程中调用：reader.openBook(source)
+```
+
+新增格式只需将内容解析为 ChapterContent，网络小说按章实现 BookSource；返回图片时另外实现 BookResourceSource，返回书内链接时实现 BookLinkSource。图片引用使用来源内资源 ID；读取须遵守 maxBytes、revision 和取消。自定义块继续注册 BlockLayoutProvider。设计及资源预算见[内容与书源架构](CONTENT_SOURCES.md)。
 
 ## 3. 打开、结果与取消
 

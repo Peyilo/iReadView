@@ -8,17 +8,17 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.util.Log
-import org.peyilo.ireadview.api.model.TextSelection
+import org.peyilo.ireadview.api.model.ReaderSelection
 import org.peyilo.ireadview.spi.selection.*
 import kotlin.math.min
 import kotlin.math.roundToInt
 
 /** Fixed-width pages instead of clipping or shrinking items when the window is narrow. */
 internal class PagedSelectionMenu(context: Context, private val items: List<SelectionMenuItem>,
-    private val options: SelectionMenuOptions, selection: TextSelection, actions: SelectionActions
+    private val options: SelectionMenuOptions, selection: ReaderSelection, actions: SelectionActions
 ) : LinearLayout(context) {
     private val density = resources.displayMetrics.density
-    private var selected: TextSelection? = selection
+    private var selected: ReaderSelection? = selection
     private var activeActions: SelectionActions? = actions
     private var page = 0
     private var capacity = -1
