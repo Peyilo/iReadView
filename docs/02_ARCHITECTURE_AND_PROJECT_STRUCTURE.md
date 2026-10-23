@@ -1,6 +1,6 @@
 # 当前架构与职责
 
-更新：2026-10-18。只描述当前实现和必须维持的边界；接入见[宿主指南](08_HOST_INTEGRATION_GUIDE.md)，状态见[验证清单](07_REQUIREMENT_IMPLEMENTATION_AUDIT.md)。
+更新：2026-10-23。只描述当前实现和必须维持的边界；接入见[宿主指南](08_HOST_INTEGRATION_GUIDE.md)，状态见[验证清单](07_REQUIREMENT_IMPLEMENTATION_AUDIT.md)。
 
 ## 模块与依赖
 
@@ -8,6 +8,7 @@
 - `:app`：示例宿主，包根`org.peyilo.iread.demo`；使用公开API，负责书源、权限、界面和业务持久化。
 - `:app:ireadview-epub`：自研 EPUB 正文模块，系统 WebView + 自有分页/DOM 定位，minSdk21，无 Readium 运行时或 Fragment 要求。TextReaderBodyView 与 EpubReaderBodyView 共同继承 ReaderBodyView，挂载同一页面模板，详见[正文抽象](READER_BODY.md)与[EPUB 接入](EPUB_ENGINE.md)。
 - `examples/maven-host`：独立Kotlin/Java/XML消费工程，不复制库源码。
+- `examples/maven-epub-host`：只声明EPUB Maven坐标，由元数据引入核心；同一ReaderView切换两个来源并验证公开绘制SPI和重建恢复。
 - 核心依赖为Android View/Canvas/StaticLayout、AndroidX Core/CustomView/RecyclerView与协程。宿主不必使用AppCompat、LifecycleOwner、数据库或Compose。
 
 ## 分层
@@ -52,7 +53,29 @@ Widget保存配置提供器并协调刷新，不解释六个位置；呈现层�
 
 具体接入及Demo行为见[页眉页脚](PAGE_CHROME.md)。
 
-## 关键边界
+## 可替换性审查与实际场景
+
+以“数据、呈现、视觉、交互和业务独立组合”为目标，不能只因存在接口就认定替换可用。当前边界如下，具体安装和生命周期见[扩展契约](EXTENSIONS.md)。
+
+| 场景/职责 | 当前公开入口 | 边界与仍需收敛的部分 |
+|---|---|---|
+| TXT、网络分章或自定义数据 | BookSource、ReaderInput | 来源负责 IO、鉴权和 revision；Widget 不保存账号/网络协议 |
+| 图片、附件和书内链接 | BookResourceSource、BookLinkSource、ReaderLinkHandler、ReaderImageLoader | 资源能力可选；原生图片IO/解码及预算通过setImageLoadingOptions替换；文档引擎另有资源管线 |
+| 自定义块排版 | BlockLayoutProvider、setBlockLayoutProviders、BlockLayoutProviders.text | 自定义优先，内置兜底；默认文字策略可公开委托，保留源几何 |
+| 全新格式和排版引擎 | BookPresentationFactory、PresentationBookSource | 引擎提供配套坐标、选择和 PageSurface；不能只宣称来源有块就使用原生页索引 |
+| 水印/正文装饰 | ReaderBodyRendererFactory | 不改变坐标；需要重排时替换完整引擎 |
+| 选区底色/手柄/命中 | ReaderSelectionRendererFactory | 几何与命中由同一组件提供；后端解释源范围 |
+| 长按和拖选策略 | ReaderSelectionControllerFactory | 内置三路径共享；格式特有范围语法留给后端 |
+| 持久划线外观 | ReaderUnderlineRendererFactory | 本轮去除文本/EPUB 各自固定创建，正文统一管理实例 |
+| 菜单和业务动作 | SelectionToolbarFactory、SelectionActions | 宿主实现分享/笔记等业务，不保留过期 SelectionActions |
+| 页眉页脚或整页结构 | ReaderPageDecorationFactory、ReaderPageFactory | 六位置只是默认模板，任意 View 仍可用 |
+| 翻页视觉和输入配置 | PageTurnEffectFactory、ReaderInputOptions、ReaderTapListener | 效果不提交位置；自定义点击可接管默认区域，原始通用拖动识别由容器维护 |
+| 缓存、加载和占位 | setPageCacheMode、setLoadingOptions、ReaderPlaceholderFactory | 单/三页策略与加载预算可配，缓存实现及导航事务保留在组件内部 |
+| 标注、快照与应用存储 | 统一标注 API、ReaderSnapshot、getSelectionPosition | 宿主笔记可保存原生选区位置；内置sealed标注类型不承诺任意业务对象的校验/绘制 |
+
+默认块排版组合与原生资源加载/解码现已开放，线程、预算和所有权见[内容扩展](CONTENT_EXTENSIONS.md)。Widget现通过ReaderContentCapabilities公布引擎能力，避免格式判断；宿主点击和笔记接入边界见[场景API](HOST_API_SCENARIOS.md)。后续按实际替换场景核对API与生命周期，不为每个私有辅助类增加无行为的接口。导航事务、提交位置和资源所有权属于必须维持的核心不变量，不允许插件各存一份相互冲突的状态。
+
+## 必须维持的不变量
 
 - 持久位置使用书/章/块身份和UTF-16源偏移；页码是版式派生结果。全书未知页数不能用章页数或加载窗口代替。
 - 分页/滚动共享来源、样式、原文范围和标注；模式切换按源锚点恢复，不按scrollY恢复。

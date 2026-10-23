@@ -9,6 +9,7 @@ object SampleBooks {
         val book = BookDescriptor("maven-host", "iReadView 示例", "1", listOf(TocEntry.Chapter(chapter)))
         val blocks = buildList<ContentBlock> {
             add(HeadingBlock("heading", chapter.title))
+            add(ImageBlock("host-image", "host-cover", "宿主生成的示例图片"))
             repeat(30) { index ->
                 add(HostTextBlock("paragraph-$index",
                     "阅读器由宿主通过公开接口创建。原文排版、选择和阅读位置由组件处理；来源标签属于宿主元数据。".repeat(6), "section-$index"))

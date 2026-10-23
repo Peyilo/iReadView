@@ -80,7 +80,11 @@ class ReaderWidgetIntegrationTest {
                 val root = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
                 root.addView(first, LinearLayout.LayoutParams(-1, 0, 1f))
                 root.addView(second, LinearLayout.LayoutParams(-1, 0, 1f))
-                activity.setContentView(root)
+                // Keep the host's root: its system-bar/lifecycle policy still owns that View.
+                // Both widgets above are opened before either is attached or measured.
+                val host = activity.findViewById<android.view.ViewGroup>(R.id.reader_root)
+                host.removeAllViews()
+                host.addView(root, android.view.ViewGroup.LayoutParams(-1, -1))
             }
             assertTrue(value(await(firstQueue)) is OpenResult.Opened)
             assertTrue(value(await(secondQueue)) is OpenResult.Opened)

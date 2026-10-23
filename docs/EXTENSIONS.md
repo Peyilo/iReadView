@@ -6,6 +6,7 @@ Widget拥有导航事务、已提交位置和页面生命周期。正文引擎�
 |---|---|---|
 | 内容绘制，保留已有排版/命中 | ReaderBodyRenderer / Factory | setPresentationComponents |
 | 选区底色、手柄和匹配的命中几何 | ReaderSelectionRenderer / Factory | setPresentationComponents |
+| 持久划线装饰，保留原文范围和选择算法 | ReaderUnderlineRenderer / Factory | setPresentationComponents |
 | 初始长按拦截、手柄拖动及边缘翻页/滚动 | ReaderSelectionController / Factory、ReaderSelectionDelegate | setPresentationComponents |
 | 完整排版/正文引擎与坐标模型 | BookPresentationFactory、ReaderBodyView | setBookPresentationFactory |
 | 翻页视觉效果 | PageTurnEffectFactory / Effect、PageSurface | setPageTurnEffect |
@@ -52,6 +53,29 @@ reader.setPresentationComponents(components)
 原生文本把块内容绘制放入该回调，活动选区在它之后绘制；EPUB把WebView子内容绘制放入该回调，活动选区仍由原生层覆盖。外层保存/恢复Canvas状态，避免绘制策略污染后续选区层。`drawDefault`只在本次调用有效，不可异步保存后使用。
 
 原生块正文额外实现可选 `BlockReaderBodyContent`，可读取只读fragments使用其公开布局SPI；EPUB不实现此能力，不需要伪造文本块。修改绘制时应保持已有坐标映射：如果更换HTML引擎、重排、字形布局或命中规则，应通过下面的完整后端工厂提供匹配的ReaderBodyView/BookPresentation，不能只平移文字而继续使用旧选区坐标。
+
+## 独立替换划线绘制
+
+```kotlin
+reader.setPresentationComponents(reader.presentationComponents.copy(
+    underlineRendererFactory = ReaderUnderlineRendererFactory {
+        val standard = ReaderUnderlinePainter()
+        object : ReaderUnderlineRenderer {
+            override fun draw(canvas: Canvas, segments: List<TextLineSegment>,
+                              style: TextLineStyle, density: Float) {
+                standard.draw(canvas, segments, style.copy(color = Color.MAGENTA), density)
+            }
+            override fun close() = standard.close()
+        }
+    }
+))
+```
+
+该组件同时用于文本分页、文本滚动和 EPUB 的持久划线；无需替换正文引擎、活动选区控制器或标注存储。segments 是借用的局部物理像素坐标，TextLineStyle 尺寸单位仍是 dp。底层正文在对应片段处变换 Canvas，renderer 只消费提供的线段。自定义绘制有 Canvas 状态隔离，不能保存参数异步绘制；默认 ReaderUnderlinePainter 保持原有直接路径。
+
+每个正文独立创建并持有实例，clearContentBinding 不关闭它，最终 release 关闭一次。创建划线组件失败时，先关闭本次已创建的绘制/选区实例，保留原始异常并附加清理异常，正文可重试配置。最终清理中一个组件抛出普通异常也会继续清理其他组件。工厂须返回新实例，close 须幂等且不抛异常。
+
+ReaderPresentationComponents 新字段有默认值，既有 Kotlin 命名参数和 Java 三参数构造继续可用；data class 的 copy 等 JVM 签名变化仍要求扩展库与核心共同重新编译，不能据此声称二进制兼容。
 
 ## 替换选区交互
 
@@ -107,6 +131,8 @@ Effect仅消费PageSurface、视口、方向和进度，不识别TXT、EPUB、�
 - 原有setPageTurnEffect、菜单API、ReaderSelectionPainter默认外观和统一选择API保持；自定义ReaderBodyView若原来覆盖release，应迁移到onRelease。扩展库与核心需一起重新编译，不能把本次SPI调整当成旧AAR二进制兼容保证。
 
 ## 验证
+
+2026-10-23 划线扩展收敛：Debug/AndroidTest APK、核心与 EPUB Release AAR 构建成功，核心27项JVM测试通过。API36设备专项3项通过，日志 `app/build/architecture-extensions-device-final.log`；`ReaderExtensionIntegrationTest`在文本/EPUB × 分页/滚动四种组合中分别重置计数并验证自定义划线真正绘制，恢复默认后检查划线实例创建/关闭相等。新增 `ReaderBodyComponentLifecycleTest` 验证工厂创建失败回滚、附加清理异常、重试，以及组件关闭异常下继续释放和重复release幂等。首次设备运行因测试先调用结束选区的工具栏动作，导致后续手柄断言失败；已改用公开addAnnotation保留选区，失败日志不计入通过。未在本轮复测全效果性能或API21设备矩阵。
 
 `ReaderExtensionIntegrationTest`对文本/EPUB的分页和滚动注入三个组件工厂及完整后端工厂，同时替换翻页Effect，检查绘制/长按/触摸调用、真实整段选择、运行时恢复默认、不重复loadBook，以及旧renderer/controller的创建与关闭数量相等。其他默认行为由统一选区、缓存、双页可见性、手势/交接与整章分页用例回归。
 

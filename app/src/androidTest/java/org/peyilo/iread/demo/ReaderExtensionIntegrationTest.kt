@@ -31,6 +31,7 @@ class ReaderExtensionIntegrationTest {
     private class Counts {
         var bodies=0;var bodyClosed=0;var selection=0;var selectionClosed=0;var controls=0;var controlClosed=0
         var draw=0;var fill=0;var longPress=0;var touch=0;var starts=0;var effectDraw=0
+        var underlines=0;var underlineClosed=0;var underlineDraw=0
     }
     @Test fun replaceComponentsForTextAndEpubWithoutReopeningTheSource() {
         ActivityScenario.launch(ReaderActivity::class.java).use { scenario ->
@@ -64,6 +65,16 @@ class ReaderExtensionIntegrationTest {
                     for(mode in listOf(ReadingMode.PAGED,ReadingMode.CONTINUOUS_SCROLL)) {
                         request<ReaderResult<ModeChange>>(scenario) { r,c -> r.setReadingMode(mode,c) }
                         request<NavigationResult<ReadingPosition>>(scenario) { r,c -> r.firstPage(c) }
+                        scenario.onActivity {
+                            val reader=it.findViewById<ReaderView>(R.id.reader)
+                            val features=reader.contentCapabilities
+                            assertEquals(if(epub) ReaderSelectionModel.Document else ReaderSelectionModel.Text,features.selectionModel)
+                            assertEquals(ReaderFeatureSupport.Supported,features.links)
+                            assertEquals(ReaderFeatureSupport.Supported,features.rangedAnnotations)
+                            assertEquals(if(epub) ReaderFeatureSupport.Unsupported else ReaderFeatureSupport.Supported,features.wholeBookPageIndex)
+                            assertEquals(if(mode==ReadingMode.PAGED) ReaderFeatureSupport.Supported else ReaderFeatureSupport.Unsupported,features.pageTurnEffects)
+                            assertEquals(features,reader.readerState.contentCapabilities)
+                        }
                         await(scenario) { counts.draw>0 }
                         val press=PointF()
                         scenario.onActivity {
@@ -79,7 +90,25 @@ class ReaderExtensionIntegrationTest {
                             assertEquals(paragraph,it.findViewById<ReaderView>(R.id.reader).getSelectedText())
                             assertTrue(counts.longPress>0)
                             assertTrue(counts.touch>0)
+                            val reader=it.findViewById<ReaderView>(R.id.reader)
+                            val selected=reader.getSelection()!!
+                            val selectedPosition=requireNotNull(reader.getSelectionPosition())
+                            assertEquals(selected.bookId,selectedPosition.bookId)
+                            assertEquals(selected.chapterId,selectedPosition.chapterId)
+                            if(epub) assertNotNull(selectedPosition.documentLocator) else assertNotNull(selectedPosition.anchor)
+                            assertEquals(selected,reader.getSelection())
+                            val bookmark=Bookmark("selection-bookmark-$mode",selectedPosition,selected.text.take(40))
+                            assertTrue(reader.addBookmark(bookmark) is ReaderResult.Success)
+                            assertEquals(selectedPosition,reader.getAnnotationPosition(bookmark.id))
+                            val annotation=when(selected) {
+                                is TextSelection -> Underline("line-$mode",selected.range,selected.text)
+                                is DocumentTextSelection -> DocumentUnderline("line-$mode",selected)
+                                else -> error("Unexpected selection type")
+                            }
+                            counts.underlineDraw=0
+                            assertTrue(reader.addAnnotation(annotation) is ReaderResult.Success)
                         }
+                        await(scenario) { counts.underlineDraw>0 }
                         val handle=PointF()
                         scenario.onActivity {
                             val r=it.findViewById<ReaderView>(R.id.reader)
@@ -94,6 +123,7 @@ class ReaderExtensionIntegrationTest {
                                 val r=it.findViewById<ReaderView>(R.id.reader)
                                 assertEquals(ReaderResult.Rejected(ReaderRejection.Busy),r.setPresentationComponents(ReaderPresentationComponents.DEFAULT))
                                 assertEquals(ReaderResult.Rejected(ReaderRejection.Busy),r.setBookPresentationFactory(null))
+                                assertEquals(ReaderResult.Rejected(ReaderRejection.Busy),r.setImageLoadingOptions(org.peyilo.ireadview.spi.content.ReaderImageLoadingOptions()))
                             }
                         } finally { pointer(grabbing,MotionEvent.ACTION_UP,handle) }
                         if(mode==ReadingMode.PAGED) {
@@ -133,15 +163,98 @@ class ReaderExtensionIntegrationTest {
                         assertEquals(counts.bodies,counts.bodyClosed)
                         assertEquals(counts.selection,counts.selectionClosed)
                         assertEquals(counts.controls,counts.controlClosed)
+                        assertEquals(counts.underlines,counts.underlineClosed)
                         assertTrue(factoryCalls>=2)
                         assertTrue(r.setBookPresentationFactory(null) is ReaderResult.Success)
                     }
                     await(scenario) { it.readerState.phase==ReaderPhase.Ready && it.navigationState==ReadNavigationState.Idle }
                     assertEquals(1,loads)
                 } finally {
-                    scenario.onActivity { val r=it.findViewById<ReaderView>(R.id.reader);r.closeBook();r.setPageTurnEffect(PageTurnEffects.fromId("none")!!) }
+                    scenario.onActivity {
+                        val r=it.findViewById<ReaderView>(R.id.reader);r.closeBook();r.setPageTurnEffect(PageTurnEffects.fromId("none")!!)
+                        assertEquals(ReaderContentCapabilities(),r.contentCapabilities)
+                        assertNull(r.getSelectionPosition())
+                    }
                     owned?.close()
                 }
+            }
+        }
+    }
+    @Test fun undeclaredCustomEngineDoesNotInheritNativeCapabilities() {
+        ActivityScenario.launch(ReaderActivity::class.java).use { scenario ->
+            await(scenario) { it.readerState.phase==ReaderPhase.Ready }
+            request<ReaderResult<ModeChange>>(scenario) { r,c -> r.setReadingMode(ReadingMode.PAGED,c) }
+            scenario.onActivity {
+                val reader=it.findViewById<ReaderView>(R.id.reader)
+                reader.closeBook()
+                reader.setBookPresentationFactory(BookPresentationFactory { context,mode,_,host ->
+                    val native=BookPresentations.createNative(context,mode,host)
+                    object:BookPresentation(),ReadContentAdapter<ReadingPosition> by native {}
+                })
+            }
+            val id="unknown-features-${System.nanoTime()}"
+            val source=MemoryBookSource(BookDescriptor(id,"Custom engine","v1",listOf(TocEntry.Chapter(ChapterDescriptor("chapter","Chapter","v1")))),
+                listOf(ChapterContent(id,"chapter","v1",listOf(TextBlock("p",paragraph)))))
+            assertTrue(request<OpenResult>(scenario) { r,c -> r.openBook(source,callback=c) } is OpenResult.Opened)
+            scenario.onActivity {
+                val reader=it.findViewById<ReaderView>(R.id.reader)
+                assertEquals(ReaderSelectionModel.Unknown,reader.contentCapabilities.selectionModel)
+                assertEquals(ReaderFeatureSupport.Unknown,reader.contentCapabilities.links)
+                assertEquals(ReaderFeatureSupport.Unknown,reader.contentCapabilities.rangedAnnotations)
+                assertEquals(ReaderFeatureSupport.Unsupported,reader.contentCapabilities.wholeBookPageIndex)
+                assertEquals(reader.contentCapabilities,reader.readerState.contentCapabilities)
+            }
+            assertEquals(ReaderResult.Rejected(ReaderRejection.Unsupported),
+                request<ReaderResult<BookPageIndex>>(scenario) { r,c -> r.buildBookPageIndex(c) })
+            scenario.onActivity {
+                val reader=it.findViewById<ReaderView>(R.id.reader)
+                reader.closeBook();reader.setBookPresentationFactory(null);reader.release()
+                assertEquals(ReaderContentCapabilities(),reader.contentCapabilities)
+                assertNull(reader.getSelectionPosition())
+            }
+        }
+    }
+    @Test fun replaceNativeImageLoadingWithoutReopeningBook() {
+        ActivityScenario.launch(ReaderActivity::class.java).use { scenario ->
+            await(scenario) { it.readerState.phase==ReaderPhase.Ready }
+            val first=java.util.concurrent.atomic.AtomicInteger()
+            val second=java.util.concurrent.atomic.AtomicInteger()
+            val loads=java.util.concurrent.atomic.AtomicInteger()
+            fun options(calls:java.util.concurrent.atomic.AtomicInteger)=org.peyilo.ireadview.spi.content.ReaderImageLoadingOptions(
+                loader=org.peyilo.ireadview.spi.content.ReaderImageLoader {
+                    assertFalse(android.os.Looper.myLooper()==android.os.Looper.getMainLooper())
+                    calls.incrementAndGet()
+                    Bitmap.createBitmap(8,8,Bitmap.Config.ARGB_8888)
+                })
+            val firstOptions=options(first)
+            val secondOptions=options(second)
+            scenario.onActivity {
+                val reader=it.findViewById<ReaderView>(R.id.reader)
+                reader.closeBook()
+                assertTrue(reader.setImageLoadingOptions(firstOptions) is ReaderResult.Success)
+            }
+            val id="image-strategy-${System.nanoTime()}"
+            val backend=MemoryBookSource(BookDescriptor(id,"Image strategies","v1",listOf(TocEntry.Chapter(ChapterDescriptor("chapter","Chapter","v1")))),
+                listOf(ChapterContent(id,"chapter","v1",listOf(ImageBlock("image","cover"),TextBlock("p",paragraph)))))
+            val source=object:BookSource by backend {
+                override suspend fun loadBook():BookDescriptor { loads.incrementAndGet();return backend.loadBook() }
+            }
+            assertTrue(request<OpenResult>(scenario) { r,c -> r.openBook(source,callback=c) } is OpenResult.Opened)
+            assertTrue(first.get()>0)
+            var before:ReadingPosition?=null
+            scenario.onActivity {
+                val reader=it.findViewById<ReaderView>(R.id.reader)
+                before=reader.currentPosition
+                assertTrue(reader.setImageLoadingOptions(secondOptions) is ReaderResult.Success)
+            }
+            await(scenario) { it.readerState.phase==ReaderPhase.Ready && it.navigationState==ReadNavigationState.Idle && second.get()>0 }
+            scenario.onActivity {
+                val reader=it.findViewById<ReaderView>(R.id.reader)
+                assertEquals(before?.anchor,reader.currentPosition?.anchor)
+                assertEquals(before?.chapterId,reader.currentPosition?.chapterId)
+                assertEquals(secondOptions,reader.imageLoadingOptions)
+                assertEquals(1,loads.get())
+                reader.closeBook()
             }
         }
     }
@@ -167,6 +280,17 @@ class ReaderExtensionIntegrationTest {
                 override fun onLongPress(x:Float,y:Float):Boolean? { counts.longPress++;return null }
                 override fun onTouch(action:Int,x:Float,y:Float):Boolean { counts.touch++;return control.onTouch(action,x,y) }
                 override fun release() { counts.controlClosed++;control.release() }
+            }
+        },
+        underlineRendererFactory=ReaderUnderlineRendererFactory {
+            counts.underlines++
+            val standard=ReaderUnderlinePainter()
+            object:ReaderUnderlineRenderer {
+                override fun draw(canvas:Canvas,segments:List<org.peyilo.ireadview.spi.content.TextLineSegment>,
+                    style:org.peyilo.ireadview.api.style.TextLineStyle,density:Float) {
+                    counts.underlineDraw++;standard.draw(canvas,segments,style,density)
+                }
+                override fun close() { counts.underlineClosed++;standard.close() }
             }
         })
     private fun shownBody(view:View):ReaderBodyView? {

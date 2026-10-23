@@ -7,7 +7,8 @@ import org.peyilo.ireadview.spi.selection.*
 data class ReaderPresentationComponents @JvmOverloads constructor(
     val bodyRendererFactory: ReaderBodyRendererFactory = ReaderBodyRendererFactory { DefaultReaderBodyRenderer },
     val selectionRendererFactory: ReaderSelectionRendererFactory = ReaderSelectionRendererFactory { ReaderSelectionPainter() },
-    val selectionControllerFactory: ReaderSelectionControllerFactory = ReaderSelectionControllerFactory { context, delegate -> ReaderSelectionInteraction(context, delegate) }
+    val selectionControllerFactory: ReaderSelectionControllerFactory = ReaderSelectionControllerFactory { context, delegate -> ReaderSelectionInteraction(context, delegate) },
+    val underlineRendererFactory: ReaderUnderlineRendererFactory = ReaderUnderlineRendererFactory { ReaderUnderlinePainter() }
 ) {
     companion object { @JvmField val DEFAULT = ReaderPresentationComponents() }
 }

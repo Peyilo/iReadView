@@ -9,7 +9,6 @@ import org.peyilo.ireadview.api.style.HighlightStyles
 import org.peyilo.ireadview.api.style.SelectionStyle
 import org.peyilo.ireadview.internal.cache.ByteBudgetCache
 import org.peyilo.ireadview.internal.layout.PaginationEngine
-import org.peyilo.ireadview.internal.layout.TextBlockLayoutProvider
 import org.peyilo.ireadview.internal.layout.ImageBlockLayoutProvider
 import org.peyilo.ireadview.spi.content.*
 import org.peyilo.ireadview.spi.presentation.*
@@ -34,11 +33,12 @@ internal class ReaderCoordinator(
     var loadingOptions = LoadingOptions()
         private set
     var providers: List<BlockLayoutProvider> = emptyList()
+    var imageLoadingOptions = ReaderImageLoadingOptions()
     private var repository: ChapterRepository? = null
     private var sessionScope: CoroutineScope? = null
     private var workGeneration = 0L
     private val paginator = PaginationEngine()
-    private val textProvider = TextBlockLayoutProvider()
+    private val textProvider = BlockLayoutProviders.text()
     private val paginationStates = HashMap<String, ChapterPaginationState>()
     private val paginationOwners = HashMap<String, Any>()
     private val layouts = ByteBudgetCache<LayoutKey, ChapterLayout>(loadingOptions.layoutCacheBytes) { it.estimatedRetainedBytes }
@@ -64,7 +64,7 @@ internal class ReaderCoordinator(
         val book = book ?: return ReaderResult.Rejected(ReaderRejection.NoBook)
         val scope = sessionScope ?: return ReaderResult.Rejected(ReaderRejection.NotReady)
         if (!viewport.isValid) return ReaderResult.Rejected(ReaderRejection.NotReady)
-        val input = IndexInput(sessionId, catalogueVersion, IndexLayoutInput(viewport, indexStyle(style), bodyPx, titlePx, providerInputs()))
+        val input = IndexInput(sessionId, catalogueVersion, IndexLayoutInput(viewport, indexStyle(style), bodyPx, titlePx, providerInputs(), imageLoadingOptions))
         indexInput = input
         return pageIndexBuilder.build(book, input, catalogueVersion, scope) { id ->
             awaitForeground()
@@ -173,7 +173,7 @@ internal class ReaderCoordinator(
     suspend fun layoutChapter(id: String, viewport: ReadViewport, style: ReaderStyle, bodyTextSizePx: Float, titleTextSizePx: Float, background: Boolean = false): ReaderResult<ChapterLayout> {
         if (!viewport.isValid) return ReaderResult.Failure(ReaderError(ReaderStage.VIEWPORT, "InvalidViewport", "No usable body area", id))
         if (!background) {
-            val actual = IndexLayoutInput(viewport, indexStyle(style), bodyTextSizePx, titleTextSizePx, providerInputs())
+            val actual = IndexLayoutInput(viewport, indexStyle(style), bodyTextSizePx, titleTextSizePx, providerInputs(), imageLoadingOptions)
             if (paginationInput != null && paginationInput != actual) invalidateLayouts()
             paginationInput = actual
             indexInput?.let { previous ->
@@ -192,7 +192,7 @@ internal class ReaderCoordinator(
         val inputs = providerInputs()
         val identity = content.takeIf { fingerprint == null || inputs.isNotEmpty() }
         val key = LayoutKey(content.bookId, content.chapterId, content.revision, fingerprint,
-            identity, viewport, style, bodyTextSizePx, titleTextSizePx, inputs)
+            identity, viewport, style, bodyTextSizePx, titleTextSizePx, inputs, imageLoadingOptions)
         layouts[key]?.let { cached ->
             val session = sessionId
             val invalidation = invalidationSerial
@@ -218,7 +218,7 @@ internal class ReaderCoordinator(
             publishPagination(id, ChapterPaginationState.Calculating)
             try {
                 val resolvedStyle = withContext(Dispatchers.IO) { resolveFonts(style) }
-                val imageProvider = ImageBlockLayoutProvider.prepare(content, resourceSource, resourceRevision, viewport, key.providers.map { it.provider })
+                val imageProvider = ImageBlockLayoutProvider.prepare(content, resourceSource, resourceRevision, viewport, key.providers.map { it.provider }, key.images)
                 val layout = withContext(Dispatchers.Default) {
                     val computation = currentCoroutineContext()
                     paginator.paginate(content, BlockLayoutContext(viewport, resolvedStyle, bodyTextSizePx, titleTextSizePx) { computation.ensureActive() }, key.providers.map { it.provider } + listOf(imageProvider, textProvider), opaqueKey)
@@ -390,7 +390,7 @@ internal class ReaderCoordinator(
     }
     private data class LayoutKey(val bookId: String, val chapterId: String, val revision: String?, val fingerprint: String?,
         val customContentIdentity: ChapterContent?, val viewport: ReadViewport, val style: ReaderStyle,
-        val bodyTextSizePx: Float, val titleTextSizePx: Float, val providers: List<ProviderInput>)
+        val bodyTextSizePx: Float, val titleTextSizePx: Float, val providers: List<ProviderInput>, val images: ReaderImageLoadingOptions)
     private data class IndexInput(val session: Long, val catalogue: Long, val layout: IndexLayoutInput)
-    private data class IndexLayoutInput(val viewport: ReadViewport, val style: ReaderStyle, val bodyPx: Float, val titlePx: Float, val providers: List<ProviderInput>)
+    private data class IndexLayoutInput(val viewport: ReadViewport, val style: ReaderStyle, val bodyPx: Float, val titlePx: Float, val providers: List<ProviderInput>, val images: ReaderImageLoadingOptions)
 }

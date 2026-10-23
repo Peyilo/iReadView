@@ -31,7 +31,8 @@ data class ReaderState(
     val globalPageNumber: Long? = null,
     val totalPageCount: Long? = null,
     val navigationState: ReadNavigationState = ReadNavigationState.Idle,
-    val navigationCapabilities: ReadNavigationCapabilities = ReadNavigationCapabilities()
+    val navigationCapabilities: ReadNavigationCapabilities = ReadNavigationCapabilities(),
+    val contentCapabilities: ReaderContentCapabilities = ReaderContentCapabilities()
 )
 
 /** force replaces pending navigation and bypasses the turn interval; boundaries remain enforced. */

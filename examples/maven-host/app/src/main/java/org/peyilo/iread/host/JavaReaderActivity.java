@@ -58,6 +58,7 @@ public final class JavaReaderActivity extends Activity {
         status.setMinLines(2);
         status.setMaxLines(2);
         reader = new ReaderView(this);
+        HostContentStrategies.install(reader);
         reader.setId(R.id.programmatic_reader);
         reader.setPageFactory(ReaderPageFactories.withDecorations(context -> {
             LinearLayout group = new LinearLayout(context);

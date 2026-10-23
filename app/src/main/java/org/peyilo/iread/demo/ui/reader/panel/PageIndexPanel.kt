@@ -59,6 +59,10 @@ internal class PageIndexPanel(
         dismiss()
         val book = reader.currentBook ?: return
         if (!alive(book)) return
+        if (reader.contentCapabilities.wholeBookPageIndex == ReaderFeatureSupport.Unsupported) {
+            message("当前正文引擎不支持原生全书页索引")
+            return
+        }
         reader.bookPageIndex?.let { showPages(book, it); return }
         val token = serial
         val progress = AlertDialog.Builder(activity).setTitle("计算全书页数")

@@ -1,6 +1,6 @@
 # 当前状态与验证边界
 
-更新：2026-10-19。完整行为目标保留在[原始需求](01_PRODUCT_REQUIREMENTS.md)，以下不是全部验收通过声明。最近多书源改动的证据范围见下文。
+更新：2026-10-23。完整行为目标保留在[原始需求](01_PRODUCT_REQUIREMENTS.md)，以下不是全部验收通过声明。最近多书源改动的证据范围见下文。
 
 ## 功能现状
 
@@ -16,6 +16,14 @@
 | 发布/Demo | AAR、本地Maven ZIP、Kotlin/Java/XML消费；真实TXT/网络、模板配置UI | 当前改动下的独立宿主回归、正式发布/升级流程与完整设备矩阵 |
 
 ## 保留的有限证据
+
+- 2026-10-23 架构收尾：补齐EPUB模块本地Maven发布、sources与仓库ZIP，以及只消费发布坐标的独立EPUB宿主；Debug/AndroidTest/R8 Release及1项API36设备测试通过。联合回归修正双实例测试的宿主根布局误移除后18/18通过（145.867秒），覆盖Widget、组件/能力、缓存、统一选区、EPUB整章及手势交接；原失败整轮没有计入通过。新增Gradle依赖边界检查，正向、两项故意违规和check任务连接均已核对。主要模块可替换及宿主API架构目标完成；原有产品兼容/性能边界保留，逐项证据见[架构审计](ARCHITECTURE_AUDIT.md)。
+
+- 2026-10-23 宿主场景API：新增BookPresentationFeatures与Widget的ReaderContentCapabilities，分别负责引擎声明和来源/模式派生能力；ReaderState发布同一快照，关闭/释放不残留。新增getSelectionPosition供原生/文档选区捕获定位，Demo据此保存选区起点书签，并在索引面板使用能力预检。27项核心JVM、Debug/AndroidTest、两库Release及本地Maven发布成功；API36设备专项5项通过（15.713秒设备用时），覆盖四路径能力与书签捕获、未知第三方引擎、图片切换和清理。输入现有扩展与应用笔记存储边界已审查并记录，未宣称原始拖动识别或任意业务标注对象均可插件化。详见[宿主场景API](HOST_API_SCENARIOS.md)。
+
+- 2026-10-23 内容策略开放：BlockLayoutProviders.text供默认排版组合，ReaderImageLoader/ReaderImageLoadingOptions替换原生图片IO与解码并配置单图/章节预算，运行时安装拒绝Busy并按锚点重排，布局/索引键包含配置快照。Debug/AndroidTest、两库Release、27项核心JVM通过；API36内容策略4项和组件/宿主集成4项设备测试通过。独立Maven宿主Debug及R8 Release构建成功；Debug的XML/Kotlin与代码/Java Activity均实际显示首章及宿主图片描述。未运行未签名Release或API21矩阵，见[内容扩展](CONTENT_EXTENSIONS.md)。
+
+- 2026-10-23 架构审查与划线解耦：在当前架构文档列出13类宿主场景、公开安装入口与尚未开放的策略边界。新增 ReaderUnderlineRenderer/Factory，通过 ReaderPresentationComponents 在文本分页/滚动与EPUB统一安装，基类管理失败回滚、Canvas隔离和最终释放。Debug/AndroidTest与两库Release构建成功，27项核心JVM测试通过；API36设备专项3项通过，包括四路径真实绘制、替换后完整清理及两项异常生命周期检查。证据与首次测试顺序失败见[扩展契约](EXTENSIONS.md)。整体架构目标继续推进；本次不代表全部可替换性或全部设备已验收。
 
 - 2026-10-19 正文/选区/动画扩展：新增ReaderBodyRenderer、ReaderSelectionRenderer、ReaderSelectionController及工厂，通过ReaderPresentationComponents注入；新增宿主BookPresentationFactory覆盖书源/默认后端，翻页继续独立消费PageSurface。三个内置呈现路径共用选区控制器SPI；配置版本变化真正替换Presentation，纯绘制配置保留章节布局，基类最终release保证组件关闭。最终27项JVM测试、Debug/AndroidTest和两库Release构建通过，扩展与选区设备专项 `OK (4 tests)`（32.353秒）；手势/双页独立复测 `OK (2 tests)`（58.881秒）。早期联合测试出现156.5 ms卷页首帧和已修复的原生滚动边界失效，没有将失败整轮计为通过。API、生命周期迁移和证据见[扩展契约](EXTENSIONS.md)。
 

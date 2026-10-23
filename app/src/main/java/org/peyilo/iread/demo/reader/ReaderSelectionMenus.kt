@@ -13,6 +13,16 @@ internal object ReaderSelectionMenus {
     fun factory(activity: Activity, reader: ReaderView): SelectionToolbarFactory {
         val delegate = SelectionToolbars.menu(
         SelectionToolbars.defaultItems() + listOf(
+            SelectionMenuItem("bookmark-selection", "书签", android.R.drawable.ic_menu_save) { selection, actions ->
+                if (actions.isValid()) reader.getSelectionPosition()?.let { position ->
+                    val result = reader.addBookmark(org.peyilo.ireadview.api.model.Bookmark(
+                        java.util.UUID.randomUUID().toString(), position, selection.text.take(40)))
+                    if (result is org.peyilo.ireadview.api.state.ReaderResult.Success) {
+                        actions.clearSelection()
+                        Toast.makeText(activity, "已保存选区起点书签", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            },
             SelectionMenuItem("share", "分享", R.drawable.ic_selection_share) { selection, actions ->
                 if (actions.isValid()) reader.getSelectedText()?.let { text ->
                     val intent = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text)

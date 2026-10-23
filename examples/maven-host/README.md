@@ -2,6 +2,8 @@
 
 这是独立 Gradle 工程，只包含一个宿主应用，以 Maven 坐标消费 iReadView。没有 project 依赖、includeBuild、源码复制或直接添加 AAR，也没有手写库的运行依赖。
 
+2026-10-23新增公开API示例：HostContentStrategies通过BlockLayoutProviders.text包装默认排版，增加块间距并保留选区/无障碍几何；ReaderImageLoader生成示例封面，其他资源交给默认loader。Kotlin/XML及Java/代码宿主均在开书前安装。同日重新发布本地Maven后，Debug和R8压缩Release构建通过，Debug两种Activity实际显示正文及图片描述；命令、日志及限制见主工程[内容扩展](../../docs/CONTENT_EXTENSIONS.md)。这不是未签名Release运行或API21真机验收。
+
 ## 构建
 
 从 iReadView 根目录运行，使用 JDK 17，并设置 Android SDK（例如 ANDROID_HOME）：

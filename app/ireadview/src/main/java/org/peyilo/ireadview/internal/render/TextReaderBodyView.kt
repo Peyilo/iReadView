@@ -81,7 +81,6 @@ internal class TextReaderBodyView(context: Context) : org.peyilo.ireadview.spi.b
     private var highlights: List<ColoredTextRange> = emptyList()
     private var underlines: List<LineTextRange> = emptyList()
     private var underlinePaths: List<UnderlinePath> = emptyList()
-    private val underlinePainter = UnderlinePainter()
     private var paths: List<HighlightPath> = emptyList()
     private val highlightPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private var selectionRanges: List<ColoredTextRange> = emptyList()
@@ -270,7 +269,7 @@ internal class TextReaderBodyView(context: Context) : org.peyilo.ireadview.spi.b
             val save = canvas.save()
             canvas.translate(paddingLeft + underline.fragment.leftPx, paddingTop + underline.fragment.topPx)
             canvas.clipRect(0f, 0f, (width - paddingLeft - paddingRight).toFloat(), underline.fragment.heightPx)
-            underlinePainter.draw(canvas, underline.segments, underline.style, resources.displayMetrics.density)
+            drawUnderlines(canvas, underline.segments, underline.style, resources.displayMetrics.density)
             canvas.restoreToCount(save)
         }
         canvas.restoreToCount(bodySave)

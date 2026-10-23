@@ -28,6 +28,8 @@ import org.peyilo.ireadview.spi.presentation.*
 
 internal class PagedBookPresentation(context: Context, private val bookHost: BookPresentationHost) : BookPresentation() {
     override val supportsBlockLayout = true
+    override val contentFeatures = BookPresentationFeatures(ReaderSelectionModel.Text,
+        ReaderFeatureSupport.Supported, ReaderFeatureSupport.Supported)
     private val container = FrameLayout(context)
     override val contentView: View get() = container
     private var active: PageCandidate? = null

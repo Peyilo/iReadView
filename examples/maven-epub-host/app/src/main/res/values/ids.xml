@@ -1,0 +1,5 @@
+<resources>
+    <item name="reader" type="id" />
+    <item name="text_source" type="id" />
+    <item name="epub_source" type="id" />
+</resources>

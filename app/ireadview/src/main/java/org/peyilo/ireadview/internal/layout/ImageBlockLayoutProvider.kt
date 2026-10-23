@@ -3,7 +3,6 @@ package org.peyilo.ireadview.internal.layout
 import android.graphics.*
 import kotlinx.coroutines.*
 import org.peyilo.ireadview.api.model.*
-import org.peyilo.ireadview.api.source.BookResourceSource
 import org.peyilo.ireadview.api.source.BookSource
 import org.peyilo.ireadview.spi.content.*
 import org.peyilo.ireadview.spi.presentation.ReadViewport
@@ -33,36 +32,22 @@ internal class ImageBlockLayoutProvider private constructor(private val images: 
          * A failed image is represented by a stable alt placeholder; cancellation always propagates.
          */
         suspend fun prepare(content: ChapterContent, source: BookSource?, bookRevision: String?, viewport: ReadViewport,
-            custom: List<BlockLayoutProvider>): ImageBlockLayoutProvider = withContext(Dispatchers.IO) {
+            custom: List<BlockLayoutProvider>, options: ReaderImageLoadingOptions): ImageBlockLayoutProvider = withContext(Dispatchers.IO) {
             val images = LinkedHashMap<String, Bitmap>()
             val attempted = HashSet<String>()
-            var remaining = 16L * 1024 * 1024
-            val resources = source as? BookResourceSource
-            if (resources != null) for (block in content.blocks) {
+            var remaining = options.maxDecodedChapterBytes
+            for (block in content.blocks) {
                 ensureActive()
                 if (block !is ImageBlock || custom.any { it.supports(block) } || !attempted.add(block.resourceId)) continue
                 if (remaining < 4) break
                 try {
-                    val bytes = resources.loadResource(block.resourceId, bookRevision, 4 * 1024 * 1024)
-                    require(bytes.size <= 4 * 1024 * 1024) { "Source exceeded resource byte budget" }
-                    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                    BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
-                    require(bounds.outWidth > 0 && bounds.outHeight > 0) { "Unsupported image" }
-                    var sample = 1
-                    val budget = minOf(remaining, 4L * 1024 * 1024)
-                    fun sampled(size: Int) = (size.toLong() + sample - 1) / sample
-                    while (sampled(bounds.outWidth) * sampled(bounds.outHeight) > budget / 4 ||
-                        sampled(bounds.outWidth) > viewport.widthPx * 2L || sampled(bounds.outHeight) > viewport.heightPx * 2L) {
-                        require(sample <= (1 shl 28)) { "Image dimensions exceed decode limits" }
-                        sample *= 2
-                    }
+                    val budget = minOf(remaining, options.maxDecodedImageBytes)
                     ensureActive()
-                    val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, BitmapFactory.Options().apply {
-                        inSampleSize = sample
-                        inPreferredConfig = Bitmap.Config.ARGB_8888
-                    }) ?: continue
+                    val bitmap = options.loader.load(ReaderImageRequest(block.resourceId, source, bookRevision,
+                        viewport, options.maxEncodedImageBytes, budget)) ?: continue
                     ensureActive()
-                    if (bitmap.allocationByteCount.toLong() <= budget) {
+                    if (!bitmap.isRecycled && bitmap.allocationByteCount.toLong() <= budget &&
+                        (android.os.Build.VERSION.SDK_INT < 26 || bitmap.config != Bitmap.Config.HARDWARE)) {
                         images[block.resourceId] = bitmap
                         remaining -= bitmap.allocationByteCount
                     }

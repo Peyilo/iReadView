@@ -28,7 +28,6 @@ import org.peyilo.ireadview.api.model.*
 import org.peyilo.ireadview.api.style.*
 import org.peyilo.ireadview.source.EpubPublication
 import org.peyilo.ireadview.spi.body.ReaderBodyView
-import org.peyilo.ireadview.spi.body.ReaderUnderlinePainter
 import org.peyilo.ireadview.spi.content.TextLineSegment
 
 /** Project-owned EPUB body. WebView is only the HTML/CSS layout surface. Main-thread lifecycle. */
@@ -58,7 +57,6 @@ class EpubReaderBodyView(context: Context) : ReaderBodyView(context) {
     var onGeometryChanged: (() -> Unit)? = null
     private var underlineStyles: Map<String, TextLineStyle> = emptyMap()
     private var underlineLines: List<Pair<List<TextLineSegment>, TextLineStyle>> = emptyList()
-    private val underlinePainter = ReaderUnderlinePainter()
     var onScrollLocation: ((JSONObject) -> Unit)? = null
     val hasSelection: Boolean get() = selected != null
     internal val isBound: Boolean get() = initialized && !released
@@ -343,7 +341,7 @@ class EpubReaderBodyView(context: Context) : ReaderBodyView(context) {
         canvas.clipRect(web.left, web.top, web.right, web.bottom)
         canvas.translate(web.left.toFloat(), web.top.toFloat())
         selectionPainter.drawFill(canvas, selectionPath, appearance)
-        underlineLines.forEach { (segments, style) -> underlinePainter.draw(canvas, segments, style, resources.displayMetrics.density) }
+        underlineLines.forEach { (segments, style) -> drawUnderlines(canvas, segments, style, resources.displayMetrics.density) }
         canvas.restoreToCount(save)
         val handleSave = canvas.save()
         if (!clampHandles) canvas.clipRect(web.left, web.top, web.right, web.bottom)

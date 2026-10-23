@@ -12,9 +12,12 @@
 |---|---|
 | 原始行为基线、FR编号和完整验收场景 | [产品需求](01_PRODUCT_REQUIREMENTS.md) |
 | 公共 API、线程、生命周期与所有权 | [API 契约](04_WIDGET_API_DESIGN.md) |
+| 能力查询、点击策略、选区定位和宿主笔记/书签 | [宿主场景API](HOST_API_SCENARIOS.md) |
 | 当前功能状态、已知缺口和证据 | [状态与验证](07_REQUIREMENT_IMPLEMENTATION_AUDIT.md) |
+| 组件可替换性、依赖边界和外部消费的审计 | [架构审计](ARCHITECTURE_AUDIT.md) |
 | 创建 Widget、来源、恢复、本地 Maven 接入 | [宿主接入](08_HOST_INTEGRATION_GUIDE.md) |
 | 多书源、TXT/EPUB/网络小说、图片和正文链接 | [内容与书源架构](CONTENT_SOURCES.md) |
+| 默认文字排版组合、图片加载/解码、预算和运行时切换 | [内容扩展](CONTENT_EXTENSIONS.md) |
 | 正文 View 抽象、文本/EPUB 的职责边界 | [正文层设计](READER_BODY.md) |
 | 独立替换正文绘制、选区交互/绘制、完整引擎与翻页 | [组件扩展API](EXTENSIONS.md) |
 | 文本/EPUB共用的三页缓存、所有权和切换API | [分页缓存](PAGE_CACHE.md) |

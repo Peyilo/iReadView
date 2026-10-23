@@ -243,8 +243,21 @@ abstract class BookReadView @JvmOverloads constructor(
     }
     fun getNavigation(callback: ReaderCallback<ReaderResult<List<BookNavigationEntry>>>): ReaderRequest = submit(callback) { getNavigation() }
     val bookPageIndex: BookPageIndex? get() = coordinator.pageIndex
+    /** Main-thread feature snapshot of the current engine. Closed/released readers return
+     * Unknown, not stale features from a previously opened book. Does not load or lay out data.
+     */
+    val contentCapabilities: ReaderContentCapabilities get() {
+        checkMainThread()
+        val engine = presentation?.takeIf { !isReleased && currentBook != null } ?: return ReaderContentCapabilities()
+        val features = engine.contentFeatures
+        return ReaderContentCapabilities(features.selectionModel, features.links, features.rangedAnnotations,
+            wholeBookPageIndex = if (presentationSource?.supportsBlockLayout != false && engine.supportsBlockLayout)
+                ReaderFeatureSupport.Supported else ReaderFeatureSupport.Unsupported,
+            pageTurnEffects = if (isPageTurnEffectActive()) ReaderFeatureSupport.Supported else ReaderFeatureSupport.Unsupported
+        )
+    }
     val readerState: ReaderState get() = ReaderState(phase, currentBook?.bookId, currentPosition, presentation?.currentPageCount ?: currentPosition?.let { (coordinator.paginationState(it.chapterId) as? ChapterPaginationState.Ready)?.pageCount }, chapterCount, lastError, readingMode,
-        coordinator.pageIndexState, globalPageNumber(), coordinator.pageIndex?.totalPageCount, navigationState, navigationCapabilities)
+        coordinator.pageIndexState, globalPageNumber(), coordinator.pageIndex?.totalPageCount, navigationState, navigationCapabilities, contentCapabilities)
     override fun onNavigationCapabilitiesChanged(capabilities: ReadNavigationCapabilities) { publishState() }
     private fun globalPageNumber(): Long? {
         val position = currentPosition ?: return null
@@ -947,6 +960,24 @@ abstract class BookReadView @JvmOverloads constructor(
         coordinator.providers = providers.toList()
         refreshLayoutConfiguration()
     }
+    val imageLoadingOptions: org.peyilo.ireadview.spi.content.ReaderImageLoadingOptions
+        get() = coordinator.imageLoadingOptions
+
+    /** Native ImageBlock pipeline only; document engines own their resource loading.
+     * Main thread. Replacing the strategy invalidates native layouts and the whole-book index,
+     * then restores the source anchor without reopening the source. Host owns loader lifetime.
+     */
+    fun setImageLoadingOptions(options: org.peyilo.ireadview.spi.content.ReaderImageLoadingOptions): ReaderResult<Unit> {
+        checkMainThread()
+        if (isReleased) return ReaderResult.Rejected(ReaderRejection.Released)
+        if (navigationState != ReadNavigationState.Idle || draggingSelection || requestedMode != null || phase == ReaderPhase.LoadingBook)
+            return ReaderResult.Rejected(ReaderRejection.Busy)
+        if (coordinator.imageLoadingOptions != options) {
+            coordinator.imageLoadingOptions = options
+            refreshLayoutConfiguration()
+        }
+        return if (isReleased || coordinator.imageLoadingOptions != options) ReaderResult.Superseded else ReaderResult.Success(Unit)
+    }
     private fun refreshLayoutConfiguration() = refreshPresentationConfiguration(invalidateLayouts = true)
     private fun refreshPresentationConfiguration(invalidateLayouts: Boolean) {
         val generation = contentGeneration + 1
@@ -1046,6 +1077,20 @@ abstract class BookReadView @JvmOverloads constructor(
     /** Current selection for TXT, network text and EPUB alike. Main thread; null after clearing. */
     fun getSelection(): ReaderSelection? { checkMainThread(); return if (isReleased) null else currentSelection }
     fun getSelectedText(): String? = getSelection()?.text
+    /** Capture a source-native navigation target for host-owned notes, sharing or bookmarks.
+     * Main thread. Does not clear selection, create an annotation or move the reader.
+     * Null for no active selection or an engine without a matching locator conversion.
+     * Persist the selected text separately when the host needs quote validation on restore.
+     */
+    fun getSelectionPosition(): ReadingPosition? {
+        checkMainThread()
+        return when (val selected = getSelection()) {
+            is TextSelection -> ReadingPosition(selected.bookId, selected.chapterId,
+                selected.range.start, selected.range.contentRevision)
+            is DocumentTextSelection -> presentation?.positionForDocumentSelection(selected)
+            else -> null
+        }
+    }
     /** Defensive copy in Widget-local physical pixels. */
     fun getSelectionBounds(): android.graphics.RectF? {
         checkMainThread()

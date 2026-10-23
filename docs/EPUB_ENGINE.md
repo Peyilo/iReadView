@@ -16,6 +16,8 @@ reader.openBook(source)
 
 包名 `org.peyilo.ireadview.epub`，模块 `:app:ireadview-epub`。宿主可以是普通 Activity。ReaderInput 也可来自 asset、文件或宿主提供的网络流；URI 授权、HTTP 协议和重试由宿主负责。
 
+Maven开发坐标为`org.peyilo.ireadview:ireadview-epub:0.1.0-SNAPSHOT`，由POM/Gradle metadata传递依赖核心。`:app:ireadview-epub:bundleReleaseRepository`生成模块仓库ZIP；宿主同时提供核心仓库并启用coreLibraryDesugaring与项目固定版本desugar_jdk_libs_nio。完整依赖配置和公开SPI消费见[独立EPUB宿主](../examples/maven-epub-host/README.md)。该工程用同一个ReaderView切换文本/EPUB，不引入独立正文Activity。
+
 Demo 默认使用用户提供的 `app/src/main/assets/epubs/the-art-of-arm-assembly.epub`，原文件未修改，SHA256：`f751f1d8bc8fa034788e26410540189b0d22f59a239e934894aee586b63b380e`。另外两本原创小样用于重排/固定版式开发。
 
 ## 当前结构

@@ -11,6 +11,8 @@ import android.widget.FrameLayout
  */
 abstract class ReaderBodyView(context: Context) : FrameLayout(context) {
     private var renderer: ReaderBodyRenderer = DefaultReaderBodyRenderer
+    protected var underlinePainter: ReaderUnderlineRenderer = ReaderUnderlinePainter()
+        private set
     protected var selectionPainter: org.peyilo.ireadview.spi.selection.ReaderSelectionRenderer = org.peyilo.ireadview.spi.selection.ReaderSelectionPainter()
         private set
     private var componentsReleased = false
@@ -28,8 +30,15 @@ abstract class ReaderBodyView(context: Context) : FrameLayout(context) {
             try { drawing.close() } catch (cleanup: Throwable) { error.addSuppressed(cleanup) }
             throw error
         }
-        renderer.close(); selectionPainter.close()
-        renderer = drawing; selectionPainter = selection
+        val underline = try { components.underlineRendererFactory.create(context) }
+        catch (error: Throwable) {
+            for (component in listOf(selection, drawing)) {
+                try { component.close() } catch (cleanup: Throwable) { error.addSuppressed(cleanup) }
+            }
+            throw error
+        }
+        closeComponents(listOf(renderer, selectionPainter, underlinePainter))
+        renderer = drawing; selectionPainter = selection; underlinePainter = underline
         componentsConfigured = true
     }
     protected fun drawBodyContent(canvas: android.graphics.Canvas, drawDefault: (android.graphics.Canvas) -> Unit) {
@@ -42,10 +51,25 @@ abstract class ReaderBodyView(context: Context) : FrameLayout(context) {
     private fun releaseComponents() {
         if (componentsReleased) return
         componentsReleased = true
-        for (component in listOf(renderer, selectionPainter)) {
+        closeComponents(listOf(renderer, selectionPainter, underlinePainter))
+    }
+    private fun closeComponents(components: List<AutoCloseable>) {
+        for (component in components) {
             try { component.close() }
             catch (error: Exception) { android.util.Log.w("iReadView", "Body extension cleanup failed", error) }
         }
+    }
+    /** Invoke the owned decoration renderer with isolated Canvas state. */
+    protected fun drawUnderlines(canvas: android.graphics.Canvas,
+        segments: List<org.peyilo.ireadview.spi.content.TextLineSegment>,
+        style: org.peyilo.ireadview.api.style.TextLineStyle, density: Float) {
+        if (underlinePainter is ReaderUnderlinePainter) {
+            underlinePainter.draw(canvas, segments, style, density)
+            return
+        }
+        val save = canvas.save()
+        try { underlinePainter.draw(canvas, segments, style, density) }
+        finally { canvas.restoreToCount(save) }
     }
     /** Visible selection bounds in body-local physical pixels, or null. */
     abstract fun selectionBounds(): RectF?

@@ -4,6 +4,8 @@ import android.graphics.RectF
 
 import org.peyilo.ireadview.api.model.*
 import org.peyilo.ireadview.api.state.ReaderResult
+import org.peyilo.ireadview.api.state.ReaderSelectionModel
+import org.peyilo.ireadview.api.state.ReaderFeatureSupport
 import org.peyilo.ireadview.api.style.ReaderStyle
 import org.peyilo.ireadview.spi.content.BlockLayoutFragment
 import org.peyilo.ireadview.spi.content.BlockTextRange
@@ -95,7 +97,18 @@ interface BookPresentationHost : ReadContentHost<ReadingPosition> {
     suspend fun layoutChapter(chapterId: String, viewport: ReadViewport): ReaderResult<ChapterLayout>
 }
 
+/** Engine-declared features only. Index/effect support uses the separate existing flags. */
+data class BookPresentationFeatures @JvmOverloads constructor(
+    val selectionModel: ReaderSelectionModel = ReaderSelectionModel.Unknown,
+    val links: ReaderFeatureSupport = ReaderFeatureSupport.Unknown,
+    val rangedAnnotations: ReaderFeatureSupport = ReaderFeatureSupport.Unknown
+)
+
 abstract class BookPresentation : ReadContentAdapter<ReadingPosition>, ReadVisualHandoff<ReadingPosition> {
+    /** Defaults are Unknown for third-party engines. Keep declarations stable for this
+     * presentation's lifetime; replace the engine to change them. Must be fast and pure.
+     */
+    open val contentFeatures: BookPresentationFeatures get() = BookPresentationFeatures()
     /** Opt in only when native ChapterLayout pagination describes this engine's pages.
      * Source block availability alone does not prove that a replacement engine uses it.
      */

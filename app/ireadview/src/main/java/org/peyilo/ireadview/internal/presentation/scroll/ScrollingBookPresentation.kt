@@ -27,6 +27,8 @@ import kotlin.math.ceil
 /** A bounded chapter window. Items share measured fragments with virtual pagination. */
 internal class ScrollingBookPresentation(context: Context, private val host: BookPresentationHost) : BookPresentation() {
     override val supportsBlockLayout = true
+    override val contentFeatures = BookPresentationFeatures(ReaderSelectionModel.Text,
+        ReaderFeatureSupport.Supported, ReaderFeatureSupport.Supported)
     private val container = FrameLayout(context)
     override val contentView: View get() = container
     private var scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)

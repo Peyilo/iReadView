@@ -1,6 +1,8 @@
 # 当前API契约
 
-更新：2026-10-18。本文概括已实现入口与约束，不复制整份类声明。精确重载、默认值和Java签名以生产源码KDoc及按需生成的[发布清单](09_RELEASE_JVM_API_REFERENCE.md)为准。未实现能力见[状态](07_REQUIREMENT_IMPLEMENTATION_AUDIT.md)。
+更新：2026-10-23。本文概括已实现入口与约束，不复制整份类声明。精确重载、默认值和Java签名以生产源码KDoc及按需生成的[发布清单](09_RELEASE_JVM_API_REFERENCE.md)为准。未实现能力见[状态](07_REQUIREMENT_IMPLEMENTATION_AUDIT.md)。
+
+组件替换入口、实例所有权和失败回滚见[扩展契约](EXTENSIONS.md)；默认排版委托及可替换图片IO/解码见[内容扩展](CONTENT_EXTENSIONS.md)。`contentCapabilities`与`ReaderState.contentCapabilities`公布当前引擎能力，`getSelectionPosition()`将活动选区转换为原生定位，配合自定义点击/选区菜单支撑宿主书签和笔记；三者均主线程使用，具体语义和示例见[宿主场景API](HOST_API_SCENARIOS.md)。这些新增契约不承诺旧AAR二进制兼容，核心与扩展应一起重新编译。
 
 ## 公开面
 

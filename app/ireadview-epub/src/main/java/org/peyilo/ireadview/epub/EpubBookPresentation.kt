@@ -130,6 +130,8 @@ internal class EpubBookPresentation(private val context: Context, private val so
     override val contentView: View get() = root
     override val currentSurface get() = active?.surface
     override val supportsPageTurnEffects get() = mode == ReadingMode.PAGED
+    override val contentFeatures = BookPresentationFeatures(ReaderSelectionModel.Document,
+        ReaderFeatureSupport.Supported, ReaderFeatureSupport.Supported)
     override val currentPageCount get() = active?.pageCount
     override val needsTimeUpdates get() = active?.template?.needsTimeUpdates == true
     override fun onTimeChanged(timeMillis: Long) {

@@ -32,6 +32,7 @@ class MainActivity : Activity() {
         snapshot = SnapshotBundles.read(savedInstanceState?.getBundle("readerSnapshot"))
         setContentView(R.layout.activity_main)
         reader = findViewById(R.id.reader)
+        HostContentStrategies.install(reader)
         val status = findViewById<TextView>(R.id.status)
         val previous = findViewById<Button>(R.id.previous)
         val next = findViewById<Button>(R.id.next)
