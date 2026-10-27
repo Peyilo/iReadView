@@ -70,7 +70,7 @@ class CurlActivity : Activity() {
         org.peyilo.iread.demo.reader.ReaderSystemBars.apply(this, window, fullScreenContent = false)
         snapshot = SnapshotState.read(savedInstanceState?.getBundle("curlNovelSnapshot"))
         val layout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        status = TextView(this).apply { minLines = 2; maxLines = 2; text = "Apple：斜折边 · Google：波浪透视；从不同高度拖动，反向松手可复位" }
+        status = TextView(this).apply { minLines = 2; maxLines = 2; text = "iOSCurl 与 GoogleCurl；拖动翻页，反向松手可复位" }
         reader = ReaderView(this, defStyleRes = R.style.ReaderDefaultStyle)
         reader.addReaderListener(object : ReaderListener {
             override fun onEffectFallback(view: BookReadView, requestedId: String, appliedId: String,
@@ -137,37 +137,31 @@ class CurlActivity : Activity() {
                 }
             }
         ))
-        reader.setPageTurnEffect(PageTurnEffects.iBookCurl())
-        if (intent.getBooleanExtra("pageCurl", false)) {
-            reader.setPageTurnEffect(PageTurnEffects.pageCurl())
-            reader.setPageTurnOptions(PageTurnOptions(durationMs = 650))
-            status.text = "卷页：固定装订、平滑卷边；左右拖动，松手完成或复位"
-        }
+        reader.setPageTurnEffect(PageTurnEffects.iosCurl())
+        status.text = "iOSCurl：拖动翻页、反向复位、边缘点按；背面取当前纸页镜像与背景色"
         fun button(text: String, action: () -> Unit) = Button(this).apply { this.text = text; setOnClickListener { action() } }
         fun applyCurl() {
-            val baseOptions = if (!customized) CurlOptions() else CurlOptions(
-                radiusFraction = 0.12f, shadowWidthDp = 30f, shadowAlpha = 0.35f,
-                backTintColor = 0xffe0eff5.toInt(), backContentAlpha = 0.15f,
-                controlPointPolicy = CurlControlPointPolicy { frame ->
-                    val point = frame.defaultControlPoint
-                    val originY = frame.touchOrigin?.yPx ?: frame.viewport.heightPx * 0.65f
+            if (!google) {
+                reader.setPageTurnEffect(PageTurnEffects.iosCurl())
+                status.text = "iOSCurl · 背面纸张色采样自正面页面"
+                return
+            }
+            val baseOptions = if (!customized) GoogleCurlOptions() else GoogleCurlOptions(
+                radiusFraction = .12f, shadowWidthDp = 30f, shadowAlpha = .35f,
+                controlPointPolicy = GoogleCurlControlPointPolicy { frame ->
                     val t = frame.sheetProgress
                     val eased = t * t * (3f - 2f * t)
-                    TurnPoint(frame.viewport.widthPx * (1f - 2f * eased),
-                        originY + (point.yPx - originY) * 0.5f)
+                    TurnPoint(frame.viewport.widthPx * (1f - 2f * eased), frame.defaultControlPoint.yPx)
                 }
             )
-            val options = if (google && strongGoogleCurl) baseOptions.copy(radiusFraction = 0.3f) else baseOptions
-            reader.setPageTurnEffect(if (google) PageTurnEffects.googleCurl(options)
-                else PageTurnEffects.iBookCurl(options))
-            val name = if (google) "Google · 波浪透视${if (strongGoogleCurl) " · 强卷曲" else ""}"
-                else "Apple · 装订锥面"
-            status.text = "$name · ${if (customized) "自定义参数" else "默认参数"}${if (fullResolutionPreview) " · 清晰预览" else ""}"
+            val options = if (strongGoogleCurl) baseOptions.copy(radiusFraction = .3f) else baseOptions
+            reader.setPageTurnEffect(PageTurnEffects.googleCurl(options))
+            status.text = "GoogleCurl · ${if (customized) "自定义参数" else "默认参数"}${if (strongGoogleCurl) " · 强卷曲" else ""}"
         }
         val effects = LinearLayout(this)
         listOf(
-            button("Apple") { google = false; applyCurl() },
-            button("Google") { google = true; applyCurl() }.apply {
+            button("iOSCurl") { google = false; applyCurl() },
+            button("GoogleCurl") { google = true; applyCurl() }.apply {
                 setOnLongClickListener {
                     google = true; strongGoogleCurl = !strongGoogleCurl; applyCurl()
                     true
@@ -180,16 +174,11 @@ class CurlActivity : Activity() {
         listOf(
             button("视差滑动") { reader.setPageTurnEffect(PageTurnEffects.iBookSlide()); status.text = "视差滑动" },
             button("无动画") { reader.setPageTurnEffect(PageTurnEffects.none()); status.text = "无动画" },
-            button("卷页") {
-                reader.setPageTurnEffect(PageTurnEffects.pageCurl())
-                reader.setPageTurnOptions(PageTurnOptions(durationMs = 650))
-                status.text = "卷页：左右拖动，松手完成或复位"
-            },
             button("左右方向") {
                 reader.layoutDirection = if (reader.layoutDirection == View.LAYOUT_DIRECTION_RTL) View.LAYOUT_DIRECTION_LTR else View.LAYOUT_DIRECTION_RTL
                 status.text = if (reader.layoutDirection == View.LAYOUT_DIRECTION_RTL) "向右拖动前翻" else "向左拖动前翻"
             },
-            button("仿真参数") { customized = !customized; applyCurl() }.apply {
+            button("Google参数") { google = true; customized = !customized; applyCurl() }.apply {
                 setOnLongClickListener {
                     val requested = !fullResolutionPreview
                     val result = reader.setPageTurnOptions(PageTurnOptions(

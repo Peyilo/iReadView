@@ -11,7 +11,7 @@
 | 导航 | 统一位置提交、前后页/章节/边界、快照恢复、显式全书页索引 | 全书索引取消/失效、多消费者、目录更新、不同输入的一致性 |
 | 样式/模板 | 多层边距、字体/字距/行段距、背景；任意View SPI与六位置默认模板 | 六位置、按钮、电量、可见性、重建及自定义组合的设备验收 |
 | 选择/标注 | 段落选择、同章跨页拖动/代理、已有高亮整范围重选、紧凑菜单、统一书签/高亮/划线 | 最近行首/行尾修补未设备验收；Unicode、RTL、重叠与边缘翻页系统回归 |
-| 翻页 | none、slide、cover、iBookSlide、iBookCurl、googleCurl、pageCurl及自定义效果 | 用户视觉认可、所有极值/尺寸/方向、硬件帧率与长期资源趋势 |
+| 翻页 | none、slide、cover、iBookSlide、iosCurl、googleCurl及自定义效果 | 用户视觉认可、所有极值/尺寸/方向、硬件帧率与长期资源趋势 |
 | 无障碍 | 源映射、可见/离屏遍历、同章扩选及动作 | 复杂局部自定义语义未完成，TalkBack/SwitchAccess未完成实测 |
 | 发布/Demo | AAR、本地Maven ZIP、Kotlin/Java/XML消费；真实TXT/网络、模板配置UI | 当前改动下的独立宿主回归、正式发布/升级流程与完整设备矩阵 |
 
@@ -35,7 +35,6 @@
 
 - 2026-10-19 手势响应与EPUB交接：保持240 ms动画配置，加入空闲邻页准备、API29+硬件显示列表、API33+GPU直接卷页和可选视觉交接SPI；避免INVISIBLE停止WebView绘制，目标正文就绪后撤除动画遮罩。最终联合设备运行 `OK (6 tests)`（193.17秒），覆盖21组性能、42次提交/取消探测、18组按住/反拖与416帧无白闪采样、GPU材质对照、ARM102页往返及统一选区；核心24项JVM测试、Debug/AndroidTest与两库Release构建通过。复杂卷页长帧与快速连翻准备等待仍存在，当前结果及原始数据见[手势响应及正文交接](GESTURE_AND_EPUB_HANDOFF.md)，不是全部问题或API21真机矩阵已经完成的结论。
 
-- 2026-10-19 多效果性能对照：同原文文本/EPUB及ARM后半章共21组，全部7种效果均测prepare、start、update、draw与Window FrameMetrics；含42次真实拖动提交/取消。针对WebView重复合成/查询、章首DOM扫描、快照预算回退和pageCurl回读/阴影工作量优化。性能用例通过，最终45组GPU阴影像素对照+整章分页+两套选区回归 `OK (4 tests)`（37.934秒），核心24项JVM测试及两库Release构建通过。原始数据、方法和仍偏高的cover/iBook/pageCurl长帧见[完整性能对照](EPUB_TURN_PERFORMANCE.md)，不能宣称EPUB全部效果已追平文本或达到60fps。
 
 - 2026-10-19 EPUB 翻页稳定性与复用：真实 ARM EPUB 第一章曾因 WebView 自动缩小视口卡在99/102页。固定缩放与分页舍入后，新增设备用例逐页走完102页、进入下一章、返回章尾并逐页退回章首；同时验证章内两份 WebView 复用、动画翻页、取消导航后继续翻页。与两套统一选区用例联合运行 `OK (3 tests)`（41.657秒），核心24项 JVM 测试通过，Debug/AndroidTest APK 与 EPUB Release AAR 构建通过。本机模拟器无动画正向翻页中位数51 ms，首个备用文档加载317 ms、跨章467 ms；这是导航调用耗时，不是帧率或真机性能结论。日志 `app/build/pagination-selection-device-tests.log`，用例：[EPUB 分页设备回归](../app/src/androidTest/java/org/peyilo/iread/demo/EpubPaginationIntegrationTest.kt)。API21/22帧同步兼容路径尚未经真实设备验收。
 

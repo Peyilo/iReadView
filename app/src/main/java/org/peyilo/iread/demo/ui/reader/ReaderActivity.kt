@@ -274,7 +274,8 @@ class ReaderActivity : Activity() {
                 coldSettings?.let { settings ->
                     settings.input?.let { reader.setInputOptions(it) }
                     settings.turn?.let { reader.setPageTurnOptions(it) }
-                    settings.effectId?.let { ReaderEffects.fromId(it) }?.let { reader.setPageTurnEffect(it) }
+                    settings.effectId?.let { ReaderEffects.fromId(it) ?: PageTurnEffects.iosCurl() }
+                        ?.let { reader.setPageTurnEffect(it) }
                     settings.mode?.let { reader.setReadingMode(it) }
                     settings.style?.let { if (reader.applyStyle(it) is ReaderResult.Success) committedStyle = it }
                 }

@@ -34,6 +34,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":app:pagecurl-core"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.recyclerview)
     implementation(libs.androidx.customview)
@@ -66,9 +67,33 @@ publishing {
 }
 
 /** A folder repository includes the dependency metadata absent from a standalone AAR. */
+val stagePageCurlRepository = tasks.register<Copy>("stagePageCurlRepository") {
+    dependsOn(":app:pagecurl-core:publishReleasePublicationToLocalRepository")
+    from(project(":app:pagecurl-core").layout.buildDirectory.dir("repository"))
+    into(layout.buildDirectory.dir("repository"))
+}
+tasks.withType<PublishToMavenRepository>().configureEach {
+    if (name == "publishReleasePublicationToLocalRepository") dependsOn(stagePageCurlRepository)
+}
 tasks.register<Zip>("bundleReleaseRepository") {
     dependsOn("publishReleasePublicationToLocalRepository")
     from(layout.buildDirectory.dir("repository"))
+    // A reused local Maven repository retains old timestamped snapshots. Distribute only
+    // snapshots referenced by the current metadata, so removed renderers cannot ride along.
+    val snapshotPrefixes = mutableMapOf<File, List<String>>()
+    eachFile {
+        val versionFolder = file.parentFile
+        if (!isDirectory && versionFolder.name.endsWith("-SNAPSHOT") && !name.startsWith("maven-metadata.xml")) {
+            val prefixes = snapshotPrefixes.getOrPut(versionFolder) {
+                val metadata = javax.xml.parsers.DocumentBuilderFactory.newInstance().newDocumentBuilder()
+                    .parse(File(versionFolder, "maven-metadata.xml"))
+                val versions = metadata.getElementsByTagName("value")
+                (0 until versions.length).map { "${versionFolder.parentFile.name}-${versions.item(it).textContent}" }.distinct()
+                    .also { check(it.isNotEmpty()) { "Missing snapshot versions in $versionFolder" } }
+            }
+            if (prefixes.none { name.startsWith("$it.") || name.startsWith("$it-") }) exclude()
+        }
+    }
     into("ireadview-maven")
     archiveBaseName.set("ireadview-maven")
     archiveVersion.set(project.version.toString())

@@ -43,15 +43,15 @@ class HomeActivity : Activity() {
         }
         findViewById<View>(R.id.more_examples).setOnClickListener {
             AlertDialog.Builder(this).setTitle("更多 Widget 示例")
-                .setItems(arrayOf("翻页与页眉页脚", "卷页翻页", "非书籍容器", "自定义正文块", "TXT 来源配置", "Java 宿主")) { _, index ->
+                .setItems(arrayOf("翻页与页眉页脚", "非书籍容器", "自定义正文块", "TXT 来源配置", "Java 宿主")) { _, index ->
                     val target = when (index) {
-                        0, 1 -> CurlActivity::class.java
-                        2 -> ContainerActivity::class.java
-                        3 -> CustomContentActivity::class.java
-                        4 -> TextSourceActivity::class.java
+                        0 -> CurlActivity::class.java
+                        1 -> ContainerActivity::class.java
+                        2 -> CustomContentActivity::class.java
+                        3 -> TextSourceActivity::class.java
                         else -> JavaReaderActivity::class.java
                     }
-                    startActivity(Intent(this, target).putExtra("pageCurl", index == 1))
+                    startActivity(Intent(this, target))
                 }.setNegativeButton("取消", null).show()
         }
     }

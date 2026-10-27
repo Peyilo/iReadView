@@ -14,6 +14,7 @@ import org.peyilo.ireadview.api.state.ReadNavigationState
 import org.peyilo.ireadview.internal.container.NavigationReset
 import org.peyilo.ireadview.internal.container.SupersededNavigation
 import org.peyilo.ireadview.internal.render.awaitAnimationFrame
+import org.peyilo.ireadview.internal.effect.input.EffectInputProvider
 import org.peyilo.ireadview.spi.presentation.ReadViewport
 
 /** Owns the clock and resource leases; renderers cannot commit a reading position. */
@@ -31,6 +32,7 @@ internal class PageTurnEffectManager(
     var effectId: String = "none"
         private set
     private var effect = factory.create()
+    val inputProvider get() = effect as? EffectInputProvider
     private var attached = false
     private var installationSequence = 0L
     private var serial = 0L
@@ -110,7 +112,8 @@ internal class PageTurnEffectManager(
     }
     suspend fun <L> transition(current: PageSurface?, target: PageSurface?, viewport: ReadViewport,
         direction: TurnDirection, showOverlay: (Boolean) -> Unit, show: suspend () -> L,
-        gesture: PageTurnGesture? = null, animated: Boolean = true, phaseChanged: (ReadNavigationState) -> Unit = {}): L {
+        gesture: PageTurnGesture? = null, animated: Boolean = true, vertical: Boolean = false,
+        phaseChanged: (ReadNavigationState) -> Unit = {}): L {
         val sequence = installationSequence
         val owner = captureConfigurationOwnership()
         val renderer = effect
@@ -153,7 +156,8 @@ internal class PageTurnEffectManager(
             var failure: Exception? = null
             try {
                 turn.started = true
-                turn.effect.start(PageTurnContext(turn.token, requireNotNull(current), requireNotNull(target), viewport, direction, gesture?.origin))
+                turn.effect.start(PageTurnContext(turn.token, requireNotNull(current), requireNotNull(target), viewport, direction, gesture?.origin, vertical))
+                turn.resetClock()
                 ensureTurnActive(turn)
                 turn.frame = PageTurnFrame(gesture?.progress ?: 0f, if (gesture == null) TurnPhase.SettlingCommit else TurnPhase.Dragging, gesture?.touch)
                 turn.effect.update(turn.frame)
@@ -162,14 +166,15 @@ internal class PageTurnEffectManager(
                 ensureTurnActive(turn)
                 overlay.visibility = View.VISIBLE
                 while (gesture != null && gesture.decision == null) {
-                    gesture.awaitChange()
+                    val warming = (turn.effect as? PageTurnDynamics)?.warmingUp == true
+                    if (!warming) gesture.awaitChange()
                     ensureTurnActive(turn)
                     if (gesture.decision != null) break
                     // Coalesce input to the latest state for this display frame.
                     overlay.awaitAnimationFrame()
                     ensureTurnActive(turn)
                     if (gesture.decision != null) break
-                    val frame = PageTurnFrame(gesture.progress, TurnPhase.Dragging, gesture.touch)
+                    val frame = PageTurnFrame(gesture.progress, TurnPhase.Dragging, gesture.touch, turn.elapsedSeconds())
                     if (frame != turn.frame) {
                         turn.frame = frame
                         turn.effect.update(frame)
@@ -218,7 +223,8 @@ internal class PageTurnEffectManager(
         turn.failure?.let { throw it }
     }
     private suspend fun animate(turn: Turn, from: Float, to: Float, phase: TurnPhase, gesture: PageTurnGesture?) {
-        if (from == to) {
+        val dynamics = turn.effect as? PageTurnDynamics
+        if (from == to && dynamics == null) {
             ensureTurnActive(turn)
             turn.frame = PageTurnFrame(to, phase, gesture?.origin)
             turn.effect.update(turn.frame)
@@ -228,7 +234,7 @@ internal class PageTurnEffectManager(
         }
         // A release can arrive before the coalesced last MOVE is rendered.
         // Hand off that exact state before advancing the settling clock.
-        val initial = PageTurnFrame(from, phase, gesture?.touch)
+        val initial = PageTurnFrame(from, phase, gesture?.touch, turn.elapsedSeconds())
         val releaseTouch = initial.touch
         if (initial != turn.frame) {
             ensureTurnActive(turn)
@@ -237,21 +243,23 @@ internal class PageTurnEffectManager(
             ensureTurnActive(turn)
             overlay.invalidate()
         }
-        val duration = (options.durationMs * kotlin.math.abs(to - from)).toLong().coerceAtLeast(1L)
+        val duration = (dynamics?.beginSettling(to == 1f, gesture?.releaseVelocity)
+            ?: (options.durationMs * kotlin.math.abs(to - from)).toLong()).coerceAtLeast(1L)
         val start = overlay.awaitAnimationFrame()
         while (true) {
             ensureTurnActive(turn)
             val now = overlay.awaitAnimationFrame()
             ensureTurnActive(turn)
-            val fraction = ((now - start).toDouble() / duration).coerceIn(0.0, 1.0).toFloat()
-            val eased = fraction * fraction * (3f - 2f * fraction)
+            val fraction = ((now - start).toDouble() / duration).coerceIn(0.0, 1.0)
+            val f = fraction.toFloat()
+            val eased = f * f * (3f - 2f * f)
             val touch = gesture?.let {
                 val released = requireNotNull(releaseTouch)
                 TurnPoint(it.origin.xPx + (released.xPx - it.origin.xPx) * (1f - eased),
                     it.origin.yPx + (released.yPx - it.origin.yPx) * (1f - eased))
             }
-            turn.frame = PageTurnFrame((from + (to - from) * eased).coerceIn(0f, 1f), phase, touch)
-            turn.effect.update(turn.frame)
+            turn.frame = PageTurnFrame((from + (to - from) * eased).coerceIn(0f, 1f), phase, touch, turn.elapsedSeconds())
+            if (dynamics != null) dynamics.updateSettling(turn.frame, fraction) else turn.effect.update(turn.frame)
             ensureTurnActive(turn)
             overlay.invalidate()
             if (fraction >= 1f) break
@@ -335,6 +343,9 @@ internal class PageTurnEffectManager(
         }
     }
     private inner class Turn(val effect: PageTurnEffect, val effectId: String, val token: Long, val gesture: PageTurnGesture?) {
+        private var beganAt = android.os.SystemClock.uptimeMillis()
+        fun resetClock() { beganAt = android.os.SystemClock.uptimeMillis() }
+        fun elapsedSeconds() = if (effect is PageTurnDynamics) (android.os.SystemClock.uptimeMillis() - beganAt) / 1000.0 else 0.0
         var started = false
         var terminal = false
         var failure: Exception? = null

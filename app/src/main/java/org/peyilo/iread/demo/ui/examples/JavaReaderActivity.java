@@ -18,7 +18,7 @@ import java.nio.charset.StandardCharsets;
 
 import org.peyilo.ireadview.api.event.ReaderListenerAdapter;
 import org.peyilo.ireadview.api.event.ReaderAction;
-import org.peyilo.ireadview.api.effect.CurlOptions;
+import org.peyilo.ireadview.api.effect.GoogleCurlOptions;
 import org.peyilo.ireadview.api.effect.PageTurnEffects;
 import org.peyilo.ireadview.api.effect.TurnPoint;
 import org.peyilo.ireadview.api.model.BookDescriptor;
@@ -82,8 +82,8 @@ public final class JavaReaderActivity extends Activity {
             status.setText("Java 页脚按钮已响应");
             return true;
         });
-        reader.setPageTurnEffect(PageTurnEffects.googleCurl(new CurlOptions(
-                .10f, 18f, .20f, 0xffeee9df, .25f, 64, 48, control -> {
+        reader.setPageTurnEffect(PageTurnEffects.googleCurl(new GoogleCurlOptions(
+                .10f, 18f, .20f, 64, 48, control -> {
                     float p = control.getSheetProgress();
                     float eased = p * p * (3f - 2f * p);
                     return new TurnPoint(control.getViewport().getWidthPx() * (1f - 2f * eased),

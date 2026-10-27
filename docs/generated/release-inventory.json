@@ -1,9 +1,9 @@
 {
-  "generated": "2026-10-15",
-  "aarSha256": "e87300623f76fbc38094fd10e63a9e49616830ae3028cef1975b934b1c3b86d1",
-  "classesJarSha256": "23b56fe659182d337d302bcc5932db42e7e28792c51900263d5611c7a2f10703",
-  "classEntryCount": 569,
-  "publicDeclarationCount": 241,
+  "generated": "2026-10-27",
+  "aarSha256": "74dfb4ddb20d3597501319b97f2f42d00e70f1000d2701d0fec31d9f3aebe367",
+  "classesJarSha256": "36fee1ef3ba219086797fc32cddcdc21526b221cfd131f5ebcf7791d3b8fad15",
+  "classEntryCount": 672,
+  "publicDeclarationCount": 316,
   "demoOrTestClassCount": 0,
   "manifest": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\"\r\n    package=\"org.peyilo.ireadview\" >\r\n\r\n    <uses-sdk android:minSdkVersion=\"21\" />\r\n\r\n</manifest>",
   "tool": "JDK 17 javap -protected -s"

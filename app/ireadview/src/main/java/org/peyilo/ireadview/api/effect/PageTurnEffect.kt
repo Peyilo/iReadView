@@ -60,9 +60,12 @@ data class TurnPoint(val xPx: Float, val yPx: Float) {
     init { require(xPx.isFinite() && yPx.isFinite()) }
 }
 data class PageTurnContext(val token: Long, val current: PageSurface, val target: PageSurface,
-    val viewport: ReadViewport, val direction: TurnDirection, val touchOrigin: TurnPoint? = null)
-data class PageTurnFrame(val progress: Float, val phase: TurnPhase, val touch: TurnPoint? = null) {
-    init { require(progress.isFinite() && progress in 0f..1f) }
+    val viewport: ReadViewport, val direction: TurnDirection, val touchOrigin: TurnPoint? = null,
+    val vertical: Boolean = false)
+data class PageTurnFrame(val progress: Float, val phase: TurnPhase, val touch: TurnPoint? = null,
+    /** Seconds since this visual transaction started, supplied by the Widget's frame clock. */
+    val elapsedSeconds: Double = 0.0) {
+    init { require(progress.isFinite() && progress in 0f..1f); require(elapsedSeconds.isFinite() && elapsedSeconds >= 0.0) }
 }
 /** Gestures use a viewport-extent fraction and density-independent fling speed.
  * A fast reverse release resets even when the distance threshold was reached.

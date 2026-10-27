@@ -6,37 +6,29 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Shader
 import org.peyilo.ireadview.spi.presentation.ReadViewport
-import org.peyilo.ireadview.internal.effect.CornerCurlEffect
-import org.peyilo.ireadview.internal.effect.EdgeCurlEffect
+import org.peyilo.ireadview.internal.effect.googlecurl.GoogleCurlEffect
 import org.peyilo.ireadview.internal.effect.PageTurnSnapshots
-import org.peyilo.ireadview.internal.effect.BoundPageCurlEffect
+import org.peyilo.ireadview.internal.effect.ioscurl.IosCurlEffect
 
 /** Each factory creates a fresh renderer; the Widget owns progress and resource lifetime. */
 object PageTurnEffects {
-    /** 当前Web卷页及统一阴影。默认参数为用户调好的0.10/0.25/0.43/0.55。
-     * 可通过PageCurlOptions的with函数或copy调节；进度由Widget控制。
-     * 自定义配置由宿主保存并重新提供，稳定ID恢复仅恢复默认配置。 */
-    @JvmStatic @JvmOverloads fun pageCurl(options: PageCurlOptions = PageCurlOptions()): PageTurnEffectFactory =
-        PresetFactory("page_curl", options == PageCurlOptions()) { BoundPageCurlEffect(options) }
+    /** iOS12.5.7 recovered control/gesture/mesh/shadow algorithms, pure Kotlin + GLES2, API21+. */
+    @JvmStatic @JvmOverloads fun iosCurl(options: IosCurlOptions = IosCurlOptions()): PageTurnEffectFactory =
+        PresetFactory("ios_curl", options == IosCurlOptions()) { IosCurlEffect(options) }
     @JvmStatic fun none(): PageTurnEffectFactory = factory("none", 0)
     @JvmStatic fun slide(): PageTurnEffectFactory = factory("slide", 1)
     @JvmStatic fun cover(): PageTurnEffectFactory = factory("cover", 2)
     @JvmStatic fun iBookSlide(): PageTurnEffectFactory = factory("ibook_slide", 3)
-    /** Compatibility alias for the Apple/iBook cylindrical sheet. */
-    @JvmStatic @JvmOverloads fun curl(options: CurlOptions = CurlOptions()): PageTurnEffectFactory = iBookCurl(options)
-    @JvmStatic @JvmOverloads fun iBookCurl(options: CurlOptions = CurlOptions()): PageTurnEffectFactory =
-        PresetFactory("curl", options == CurlOptions()) { CornerCurlEffect(options) }
     /** Google/MoonReader wave and perspective deformation, without a reflected back face. */
-    @JvmStatic @JvmOverloads fun googleCurl(options: CurlOptions = CurlOptions()): PageTurnEffectFactory =
-        PresetFactory("google_curl", options == CurlOptions()) { EdgeCurlEffect(options) }
+    @JvmStatic @JvmOverloads fun googleCurl(options: GoogleCurlOptions = GoogleCurlOptions()): PageTurnEffectFactory =
+        PresetFactory("google_curl", options == GoogleCurlOptions()) { GoogleCurlEffect(options) }
     /** Resolves only the stable built-in IDs; custom factories must be supplied by their owner. */
     @JvmStatic fun fromId(id: String): PageTurnEffectFactory? = when (id) {
-        "page_curl" -> pageCurl()
+        "ios_curl" -> iosCurl()
         "none" -> none()
         "slide" -> slide()
         "cover" -> cover()
         "ibook_slide" -> iBookSlide()
-        "curl" -> curl()
         "google_curl" -> googleCurl()
         else -> null
     }

@@ -41,10 +41,17 @@ open class ReaderView @JvmOverloads constructor(
                 flingVelocityDpPerSecond = values.getFloat(R.styleable.ReaderView_ireadFlingVelocityDpPerSecond, 600f),
                 minimumTurnIntervalMs = values.getInt(R.styleable.ReaderView_ireadMinimumTurnIntervalMs, 0).toLong()
             ))
-            val presetIds = arrayOf("none", "slide", "cover", "ibook_slide", "curl", "google_curl")
             val preset = values.getInt(R.styleable.ReaderView_ireadPageTurnEffect, 0)
-            require(preset in presetIds.indices) { "Unknown ireadPageTurnEffect: $preset" }
-            setInitialPageTurnEffect(requireNotNull(PageTurnEffects.fromId(presetIds[preset])))
+            val factory = when (preset) {
+                0 -> PageTurnEffects.none()
+                1 -> PageTurnEffects.slide()
+                2 -> PageTurnEffects.cover()
+                3 -> PageTurnEffects.iBookSlide()
+                5 -> PageTurnEffects.googleCurl()
+                6 -> PageTurnEffects.iosCurl()
+                else -> throw IllegalArgumentException("Unknown ireadPageTurnEffect: $preset")
+            }
+            setInitialPageTurnEffect(factory)
             setInitialStyle(ReaderStyleAttributes.read(context, values, style))
         } finally { values.recycle() }
     }

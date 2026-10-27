@@ -21,7 +21,7 @@ APK 输出为 `app/build/outputs/apk/debug/app-debug.apk`。第三方依赖从 g
 
 - MainActivity：从 XML 创建 ReaderView，使用 Kotlin 回调、前后页按钮和 ReaderListener。
 - JavaReaderActivity：代码创建 ReaderView，使用 Java 回调和 ReaderListenerAdapter。
-- Java 页面通过 ReaderPageDecorationAdapter 工厂创建 LinearLayout 页眉（ImageView + TextView）和页脚（TextView + Button），解绑时清理文字及监听器；页脚使用绑定上下文请求宿主设置动作。Apple/Google 使用同一组 Java CurlOptions 和控制点 SAM，支持标准/提前完成的 smoothstep 行程，状态栏固定两行。
+- Java 页面通过 ReaderPageDecorationAdapter 工厂创建 LinearLayout 页眉（ImageView + TextView）和页脚（TextView + Button），解绑时清理文字及监听器；页脚使用绑定上下文请求宿主设置动作。iOSCurl 使用原版 Kotlin 参数，GoogleCurl 使用 Java GoogleCurlOptions 和控制点 SAM，支持标准/提前完成的 smoothstep 行程，状态栏固定两行。
 - SampleBooks：不可变 MemoryBookSource，自定义 TextContentBlock 保留宿主来源标签并使用默认文本排版。
 - 两个页面：停止时先取消旧请求再 closeBook，销毁时 release；用实例字段及 onSaveInstanceState 保存轻量快照，Activity 重建时读取系统提供的 Bundle 并重新创建来源。
 
@@ -62,7 +62,7 @@ SnapshotBundles是宿主格式，保存book/chapter/block/offset、内容revisio
 
 ## 两种自定义翻页的 Java 示例（2026-10-09）
 
-JavaReaderActivity增加Apple/Google、LTR/RTL及前后页按钮，通过公开PageTurnEffects工厂及View.layoutDirection配置Widget。同一个不可变CurlOptions配置两种效果：半径0.10、阴影18dp/0.20、背面内容0.25、64×48网格；控制点SAM将sheetProgress映射为q=p²(3−2p)，返回x=w(1−2q)、原默认y。该曲线连续并保留两个端点；Google只使用x，Apple同时使用默认y与手势起点。
+JavaReaderActivity 提供 iOSCurl/GoogleCurl、LTR/RTL 及前后页按钮，通过公开工厂配置 Widget。iOSCurl 使用原版手势与背景取色；GoogleCurl 通过不可变 GoogleCurlOptions 配置半径0.10、阴影18dp/0.20和64×48网格，控制点 SAM 可提供连续的标准或提前完成行程。
 
 宿主支持RTL的Manifest配置与阅读器方向一起决定Android显示方向。页眉ImageView/TextView容器与页脚TextView/Button容器通过ReaderPageDecorationAdapter创建和解绑，页脚经ReaderActionHandler响应；翻页和输入仍由Widget负责。此例用于展示Maven消费与Java公开接口，不是库附带阅读Activity。
 

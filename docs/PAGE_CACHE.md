@@ -47,4 +47,4 @@ BookReadView.pageCacheMode
 
 最终版本另将EPUB滚动呈现的备用页容量固定为零，只保存宿主的分页策略，补跑缓存契约及三项选区测试 `OK (4 tests)`（27.733秒），日志 `app/build/page-cache-final-device.log`。它没有改变上述分页性能路径；API21真机兼容与低端设备性能矩阵未在本轮执行。
 
-原始性能数据：[三页策略](performance/turn-three-page.json)。相同240 ms动画配置、16 MiB快照预算，普通文本六种动画的页面准备中位数为1.1–1.8 ms。滑动/覆盖/iBook滑动/Google卷页的窗口帧P95约18.8–18.9 ms；iBook卷页54.2 ms、page_curl70.3 ms，仍有持续长帧。此处是单次模拟器测量，缓存命中改善准备成本，不代表GPU瓶颈或API21真机性能已经解决。
+历史性能数据见 [三页策略](performance/turn-three-page.json)，只对应当时版本。当前仿真只有 iOSCurl / GoogleCurl；缓存命中改善准备成本，但不代表 GPU 瓶颈或 API21 真机性能已解决。

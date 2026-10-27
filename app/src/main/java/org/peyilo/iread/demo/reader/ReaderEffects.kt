@@ -7,9 +7,9 @@ import org.peyilo.ireadview.spi.presentation.ReadViewport
 
 /** Host catalogue. Custom IDs are resolved here, never by the Widget's built-in resolver. */
 internal object ReaderEffects {
-    val labels = arrayOf("无动画", "滑动", "覆盖", "iBook 风格滑动", "Apple / iBook 仿真翻页", "Google / MoonReader 仿真翻页", "卷页", "宿主擦除示例")
+    val labels = arrayOf("无动画", "滑动", "覆盖", "视差滑动", "iOSCurl", "GoogleCurl", "宿主擦除示例")
     fun factories() = listOf(PageTurnEffects.none(), PageTurnEffects.slide(), PageTurnEffects.cover(), PageTurnEffects.iBookSlide(),
-        PageTurnEffects.curl(), PageTurnEffects.googleCurl(), PageTurnEffects.pageCurl(), WipeFactory)
+        PageTurnEffects.iosCurl(), PageTurnEffects.googleCurl(), WipeFactory)
     fun fromId(id: String): PageTurnEffectFactory? = if (id == WipeFactory.id) WipeFactory else PageTurnEffects.fromId(id)
     fun isCustom(id: String) = id == WipeFactory.id
 

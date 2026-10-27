@@ -45,7 +45,7 @@ internal class ReadingSettingsSheet(
             PageTurnEffects.none().id -> 0; PageTurnEffects.cover().id -> 1; PageTurnEffects.slide().id -> 2
             PageTurnEffects.iBookSlide().id -> 5; else -> 3
         })
-        curl?.setSelectedIndex(when (id) { PageTurnEffects.googleCurl().id -> 1; PageTurnEffects.pageCurl().id -> 2; PageTurnEffects.iBookCurl().id, "curl" -> 0; else -> -1 })
+        curl?.setSelectedIndex(when (id) { PageTurnEffects.iosCurl().id -> 0; PageTurnEffects.googleCurl().id -> 1; else -> -1 })
         themes?.setSelectedIndex(ReaderThemes.indexOf(reader.style))
         motion?.setSelectedIndex(if (reader.pageTurnOptions.reduceMotion) 1 else 0)
         navigation?.setSelectedIndex(if (org.peyilo.iread.demo.reader.ReaderSystemBars.navigationHidden(activity)) 1 else 0)
@@ -69,14 +69,14 @@ internal class ReadingSettingsSheet(
                 0 -> selectEffect(PageTurnEffects.none())
                 1 -> selectEffect(PageTurnEffects.cover())
                 2 -> selectEffect(PageTurnEffects.slide())
-                3 -> selectEffect(PageTurnEffects.iBookCurl())
+                3 -> selectEffect(PageTurnEffects.iosCurl())
                 4 -> changeMode(ReadingMode.CONTINUOUS_SCROLL, null)
                 5 -> selectEffect(PageTurnEffects.iBookSlide())
             }
         }
         themes = row("阅读主题", ReaderThemes.labels.toList()) { applyStyle(ReaderThemes.apply(it, reader.style)) }
-        curl = row("仿真效果", listOf("iBook", "Google", "卷页")) {
-            selectEffect(when (it) { 0 -> PageTurnEffects.iBookCurl(); 1 -> PageTurnEffects.googleCurl(); else -> PageTurnEffects.pageCurl() })
+        curl = row("仿真效果", listOf("iOSCurl", "GoogleCurl")) {
+            selectEffect(if (it == 0) PageTurnEffects.iosCurl() else PageTurnEffects.googleCurl())
         }
         motion = row("动态效果", listOf("正常动画", "减少动态")) { selected ->
             when (val outcome = reader.setPageTurnOptions(reader.pageTurnOptions.copy(reduceMotion = selected == 1))) {
@@ -108,7 +108,9 @@ internal class ReadingSettingsSheet(
         shown.setOnDismissListener { if (dialog === shown) { dialog = null; choices.clear() } }
         refresh()
     }
-    private fun selectEffect(factory: PageTurnEffectFactory) = changeMode(ReadingMode.PAGED, factory)
+    private fun selectEffect(factory: PageTurnEffectFactory) {
+        changeMode(ReadingMode.PAGED, factory)
+    }
     private fun changeMode(mode: ReadingMode, factory: PageTurnEffectFactory?) {
         if (pending || activity.isFinishing || activity.isDestroyed) return
         pending = true; refresh()

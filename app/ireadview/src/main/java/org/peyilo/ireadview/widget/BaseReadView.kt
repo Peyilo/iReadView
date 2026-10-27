@@ -26,6 +26,7 @@ import org.peyilo.ireadview.internal.releaseReaderResources
 import org.peyilo.ireadview.internal.container.SupersededNavigation
 import org.peyilo.ireadview.internal.effect.PageTurnEffectManager
 import org.peyilo.ireadview.internal.effect.PageTurnGesture
+import org.peyilo.ireadview.internal.effect.input.EffectInputSession
 import org.peyilo.ireadview.internal.state.ReaderConfigurationState
 import org.peyilo.ireadview.api.effect.*
 import org.peyilo.ireadview.api.input.*
@@ -60,6 +61,7 @@ abstract class BaseReadView<L : Any> @JvmOverloads constructor(
     private var pageGestureJob: Job? = null
     private var gestureAttempted = false
     private var velocityTracker: VelocityTracker? = null
+    private var effectInput: EffectInputSession? = null
     private val handledKeys = HashSet<Int>()
     private var lastTurnUptime: Long? = null
     private var lastCapabilities: ReadNavigationCapabilities? = null
@@ -240,6 +242,15 @@ abstract class BaseReadView<L : Any> @JvmOverloads constructor(
         if (isReleased || generation != contentGeneration) return
         if (inputOptions.tapPagingEnabled && !isContentGestureBlocked() && currentLocation != null) {
             val vertical = inputOptions.pagingAxis == PagingAxis.Vertical
+            val provider = effects.inputProvider
+            if (provider != null) {
+                provider.tapForward(viewport, vertical, touchPoint(xPx, yPx))?.let {
+                    navigateFromInput(it, animated = true)
+                    return
+                }
+                performClick()
+                return
+            }
             val coordinate = if (vertical) tap.y else tap.x
             val edge = inputOptions.tapEdgeFraction
             if (coordinate < edge || coordinate > 1f - edge) {
@@ -351,7 +362,7 @@ abstract class BaseReadView<L : Any> @JvmOverloads constructor(
                             liveView.alpha = 0f
                             suspendedLiveView = true
                         }
-                    }, show, gesture, options.animated) { navigation.reportTransitionState(it) }
+                    }, show, gesture, options.animated, inputOptions.pagingAxis == PagingAxis.Vertical) { navigation.reportTransitionState(it) }
                 } finally {
                     if (suspendedLiveView) liveView.alpha = liveAlpha
                 }
@@ -534,11 +545,12 @@ abstract class BaseReadView<L : Any> @JvmOverloads constructor(
         val consumed = onContentTouch(event)
         if (consumed || contentGestureOwned) {
             contentGestureOwned = event.actionMasked != MotionEvent.ACTION_UP && event.actionMasked != MotionEvent.ACTION_CANCEL
-            if (pageGesture != null) stopPageGesture()
+            if (pageGesture != null || effectInput != null) stopPageGesture()
             cancelLongPress(); longPressConsumed = false
             parent?.requestDisallowInterceptTouchEvent(event.actionMasked != MotionEvent.ACTION_UP && event.actionMasked != MotionEvent.ACTION_CANCEL)
             return true
         }
+        if (effectInput != null || effects.inputProvider != null) return onEffectInput(event)
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 cancelLongPress(); longPressConsumed = false; gestureCancelled = false
@@ -603,6 +615,63 @@ abstract class BaseReadView<L : Any> @JvmOverloads constructor(
         }
         return super.onTouchEvent(event)
     }
+    /** Optional effect recognizers stay behind a generic session; the Widget owns arbitration,
+     * long-press selection, candidate preparation, commit/cancel and lifecycle interruption. */
+    private fun onEffectInput(event: MotionEvent): Boolean {
+        if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+            cancelLongPress(); longPressConsumed = false; gestureCancelled = false; gestureAttempted = false
+            recycleVelocityTracker()
+            if (navigationState != ReadNavigationState.Idle) { gestureCancelled = true; return true }
+            downX = event.x; downY = event.y
+            val viewport = viewportSnapshot()
+            effectInput = effects.inputProvider?.inputSession(viewport, inputOptions.pagingAxis == PagingAxis.Vertical) { forward ->
+                if (!inputOptions.gesturePagingEnabled || isContentGestureBlocked() || !isPageTurnEffectActive() || currentLocation == null) false
+                else {
+                    val caps = navigationCapabilities
+                    val value = if (forward) caps.next else caps.previous
+                    value == NavigationAvailability.Available || value == NavigationAvailability.Unknown
+                }
+            }
+            requestFocus()
+            val generation = contentGeneration
+            longPressTask = Runnable {
+                longPressTask = null
+                if (!isReleased && generation == contentGeneration && onContentLongPress(downX, downY)) {
+                    longPressConsumed = true; effectInput = null
+                    parent?.requestDisallowInterceptTouchEvent(true)
+                    performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+                }
+            }.also { mainHandler.postDelayed(it, ViewConfiguration.getLongPressTimeout().toLong()) }
+        }
+        if (gestureCancelled || longPressConsumed) {
+            if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) {
+                cancelLongPress(); effectInput = null; longPressConsumed = false
+                parent?.requestDisallowInterceptTouchEvent(false)
+            }
+            return true
+        }
+        val update = effectInput?.event(event,paddingLeft,paddingTop) ?: return true
+        if (update.moved || event.pointerCount > 1) cancelLongPress()
+        update.beginForward?.let { forward ->
+            if (!gestureAttempted) {
+                val vertical = inputOptions.pagingAxis == PagingAxis.Vertical
+                val point = update.point ?: touchPoint(event.x,event.y)
+                beginPageGesture(forward,vertical,point,point)
+            }
+        }
+        update.point?.let { pageGesture?.move(it) }
+        if (update.terminal) {
+            cancelLongPress()
+            val gesture = pageGesture
+            if (gesture != null) {
+                gesture.release(update.release == true,update.velocity)
+                if (update.release != true && !gesture.started) pageGestureJob?.cancel()
+            } else if (!gestureAttempted && update.tap) dispatchContentTap(event.x,event.y)
+            effectInput = null
+            parent?.requestDisallowInterceptTouchEvent(false)
+        }
+        return true
+    }
     private fun touchPoint(x: Float, y: Float) = TurnPoint(x - paddingLeft, y - paddingTop)
     private fun isPagingDrag(event: MotionEvent): Boolean {
         val horizontal = kotlin.math.abs(event.x - downX)
@@ -613,22 +682,26 @@ abstract class BaseReadView<L : Any> @JvmOverloads constructor(
         else horizontal > touchSlop && horizontal >= vertical
     }
     private fun startPageGesture(event: MotionEvent) {
-        gestureAttempted = true
         val vertical = inputOptions.pagingAxis == PagingAxis.Vertical
+        val delta = if (vertical) event.y - downY else event.x - downX
+        val forward = if (!vertical && layoutDirection == LAYOUT_DIRECTION_RTL) delta > 0 else delta < 0
+        beginPageGesture(forward,vertical,touchPoint(downX,downY),touchPoint(event.x,event.y))
+    }
+    private fun beginPageGesture(forward: Boolean,vertical: Boolean,origin: TurnPoint,touch: TurnPoint) {
+        gestureAttempted = true
         val viewport = viewportSnapshot()
         val extent = (if (vertical) viewport.heightPx else viewport.widthPx).toFloat()
         if (isContentGestureBlocked() || !isPageTurnEffectActive() || !inputOptions.gesturePagingEnabled || currentLocation == null ||
             navigationState != ReadNavigationState.Idle || extent <= 0) return
-        val delta = if (vertical) event.y - downY else event.x - downX
-        val forward = if (!vertical && layoutDirection == LAYOUT_DIRECTION_RTL) delta > 0 else delta < 0
-        val gesture = PageTurnGesture(touchPoint(downX, downY), forward, vertical, if (delta > 0) 1f else -1f, extent)
-        gesture.move(touchPoint(event.x, event.y))
+        val sign = if (forward != (!vertical && layoutDirection == LAYOUT_DIRECTION_RTL)) -1f else 1f
+        val gesture = PageTurnGesture(origin, forward, vertical, sign, extent)
+        gesture.move(touch)
         pageGesture = gesture
         parent?.requestDisallowInterceptTouchEvent(true)
         val job = readerScope.launch(start = CoroutineStart.LAZY) {
             try {
                 navigateInternal(if (gesture.forward) ReadNavigation.Next else ReadNavigation.Previous,
-                    NavigationOptions(animated = !gesture.vertical), PositionChangeReason.UserNavigation, gesture)
+                    NavigationOptions(animated = !gesture.vertical || effects.inputProvider != null), PositionChangeReason.UserNavigation, gesture)
             } finally {
                 if (pageGesture === gesture) { pageGesture = null; pageGestureJob = null }
             }
@@ -643,6 +716,7 @@ abstract class BaseReadView<L : Any> @JvmOverloads constructor(
     }
     private fun stopPageGesture() {
         cancelLongPress()
+        effectInput = null
         gestureCancelled = true
         pageGesture?.release(false)
         pageGestureJob?.cancel()

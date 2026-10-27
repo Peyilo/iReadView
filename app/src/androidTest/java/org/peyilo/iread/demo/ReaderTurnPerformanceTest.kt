@@ -90,7 +90,10 @@ class ReaderTurnPerformanceTest {
                         }
                         // Warm both documents and native layouts before comparing steady-state effects.
                         repeat(3) { request<NavigationResult<ReadingPosition>>(scenario) { r, c -> r.nextPage(NavigationOptions(animated=false, respectInterval=false), c) } }
-                        for (effectId in listOf("none", "slide", "cover", "ibook_slide", "curl", "google_curl", "page_curl")) {
+                        val allEffects=listOf("none", "slide", "cover", "ibook_slide", "google_curl")
+                        val requestedEffects=InstrumentationRegistry.getArguments().getString("effects")?.split(',')
+                        require(requestedEffects==null||requestedEffects.all { it in allEffects })
+                        for (effectId in requestedEffects ?: allEffects) {
                             scenario.onActivity { activity ->
                                 val r = activity.findViewById<ReaderView>(R.id.reader)
                                 val factory = PageTurnEffects.fromId(effectId)!!

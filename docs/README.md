@@ -24,7 +24,8 @@
 | 自研 EPUB 正文、系统 WebView 与 API21 边界 | [EPUB 引擎接入](EPUB_ENGINE.md) |
 | 六位置默认模板及任意 View 自定义的两层边界 | [页眉页脚](PAGE_CHROME.md) |
 | 选择、跨页手柄、菜单、高亮、划线与统一标注 | [选择与标注](SELECTION_AND_ANNOTATIONS.md) |
-| iBook、Google、GLSL卷页、阴影数学及历史验证 | [翻页渲染](RENDERING.md) |
+| iOSCurl、GoogleCurl、背景取色与渲染边界 | [翻页渲染](RENDERING.md) |
+| iOS 原版算法的 Kotlin 模块、单栏接入、双栏扩展和数值对照 | [Kotlin 仿真翻页](IOS_CURL_KOTLIN.md) |
 | 文本/EPUB全部翻页效果的性能对照与当前瓶颈 | [翻页性能测量](EPUB_TURN_PERFORMANCE.md) |
 | 手势首帧、跟手动画、正文交接与白闪回归 | [手势响应及正文交接](GESTURE_AND_EPUB_HANDOFF.md) |
 | 样式字段、单位与排版调节方法 | [排版 API](26_READER_PANELS_AND_TYPOGRAPHY_API.md) |

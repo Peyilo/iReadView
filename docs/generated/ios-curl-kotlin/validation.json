@@ -1,0 +1,209 @@
+{
+  "date": "2026-10-27",
+  "workspace": "D:/Code/Agent/iRead",
+  "supportedCurlEffects": [
+    "ios_curl",
+    "google_curl"
+  ],
+  "paperColor": "Actual turning front surface background metadata, otherwise dominant8x8 snapshot RGB; resolved once; neutral front texture/lighting unchanged",
+  "coreBaseline": {
+    "source": "Verified C11 port of iOS12.5.7 16H81 offline recovery",
+    "C_sha256": "c2d199a519e9b8fc4775e794eeee9aa903411099c3687847e50fa4288e67764b",
+    "meshFrames": 816,
+    "controlUpdates": 1440,
+    "mathSamples": 10000,
+    "panEvents": 2160,
+    "tapEvents": 360,
+    "timingSamples": 864,
+    "layouts": 20,
+    "transitionDecisions": 960,
+    "files": {
+      "control-golden.bin.gz": "23d32c66e15ea63040d1a837a376f99c885ee3e3feac247f870d20d0b6c13b66",
+      "layout-golden.bin.gz": "334c92cf10082b97b635a595f984d2d593a16721e49fbd1a66ee4e62a2da69aa",
+      "math-golden.bin.gz": "bece004efd0678779bd59a5fa36f4b340c3c2c83871d800dba5c5d9e09e84002",
+      "mesh-golden.bin.gz": "79482ccc16568d4373814846b5d3acf87c6c9cef8c6b82050c5511738266b7a4",
+      "pan-golden.bin.gz": "22e1dc6addceed198a00c135a4ca2c0031947c2db28ee5e88e2b3b2eb643b3c8",
+      "tap-golden.bin.gz": "d041eb7b12c4646f7974041648df3b11d28c7b69661dc40d19c6f7ff25bf1c1f",
+      "timing-golden.bin.gz": "4815be8ded10f33f4b8cd3ebfed9680bdc172d5ec24949d9b9c52076179ef4ef",
+      "transition-golden.bin.gz": "503b7b9798ae1bbf10604ce02da7228d43066c3ea0dfd22198ace2a7654e8674"
+    }
+  },
+  "stagedSourceVerification": "Index exported independently without unrelated uncommitted EPUB edits; assembled app/test APK and local Maven distribution",
+  "unitTests": {
+    "core": [
+      {
+        "name": "org.peyilo.pagecurl.GestureTimingParityTest",
+        "tests": "3",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "org.peyilo.pagecurl.GoldenParityTest",
+        "tests": "4",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "org.peyilo.pagecurl.LayoutTransitionParityTest",
+        "tests": "3",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      }
+    ],
+    "library": [
+      {
+        "name": "org.peyilo.ireadview.BookModelsTest",
+        "tests": "3",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "org.peyilo.ireadview.ChapterRepositoryTest",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "org.peyilo.ireadview.ChapterTrailingWhitespaceTest",
+        "tests": "4",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "org.peyilo.ireadview.CurlCatalogTest",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "org.peyilo.ireadview.DocumentAnnotationLifecycleTest",
+        "tests": "3",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "org.peyilo.ireadview.NavigationControllerTest",
+        "tests": "4",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "org.peyilo.ireadview.PaginationEngineTest",
+        "tests": "3",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "org.peyilo.ireadview.ReaderPageCacheTest",
+        "tests": "3",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      }
+    ]
+  },
+  "deviceTests": {
+    "backgroundAndGlesApi28": [
+      {
+        "name": "org.peyilo.ireadview.IosCurlDeviceTest",
+        "tests": "4",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      }
+    ],
+    "stagedDemoApi28": [
+      {
+        "name": "org.peyilo.iread.demo.IosCurlDemoTest",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      }
+    ]
+  },
+  "externalJavaMavenR8Consumer": "passed against independent staged Maven repository, offline",
+  "cleanupAudit": {
+    "releaseCurlRenderers": [
+      "org/peyilo/ireadview/internal/effect/googlecurl/GoogleCurlEffect.class",
+      "org/peyilo/ireadview/internal/effect/ioscurl/IosCurlEffect.class"
+    ],
+    "obsoleteReleaseClasses": [],
+    "distributedAarCount": 1,
+    "onlyCurrentMetadataSnapshotsBundled": true,
+    "customNativeLibraries": [],
+    "legacyPreviewsInSource": false
+  },
+  "artifacts": {
+    "stagedApk": {
+      "path": "build/curl-staged-check/app/build/outputs/apk/debug/app-debug.apk",
+      "bytes": 39078508,
+      "sha256": "e791e0091db3c732d9eeda784053d67bf24e0b213833a2ac3886623d02af33e5"
+    },
+    "stagedMavenBundle": {
+      "path": "build/curl-staged-check/app/ireadview/build/distributions/ireadview-maven-0.1.0-SNAPSHOT.zip",
+      "bytes": 1922375,
+      "sha256": "c5deb746acd4293c7217dbe2e7ce897e06bccfe5cc26a61ecb56d5fbab20457e"
+    },
+    "releaseAar": {
+      "path": "build/curl-staged-check/app/ireadview/build/outputs/aar/ireadview-release.aar",
+      "bytes": 1462676,
+      "sha256": "74dfb4ddb20d3597501319b97f2f42d00e70f1000d2701d0fec31d9f3aebe367"
+    }
+  },
+  "productionSources": {
+    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/control/CurlControl.kt": "8edffc41dfb73e7975918155d899b89fe7632bcfd0cae3e5b3dc345d7482dae9",
+    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/control/CurlTiming.kt": "ea23404b3526db33b4862f578ba2c097d2e8ea3f62cf683a98666ff250aa68bd",
+    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/gesture/CurlNavigation.kt": "e130d0be8c293fcdd8507c9a3fef0a4a70a071ea5fa52d62be9e53d0560b6a02",
+    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/gesture/CurlPan.kt": "5ab14ef5a7b14a660f3417a942fba15e703c498f0129469a5e5bf55f53fccdee",
+    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/gesture/CurlTap.kt": "75f730184f529d6323a8c4e43f9ab1952346f3b1d00f01fc6a23e7b5dd2e5d67",
+    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/layout/CurlLayout.kt": "11dd472d88d299b60d2fedd83688f913f07b099369eacfc1f3d660e2d668ea71",
+    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/math/AppleMath.kt": "aa38cf6ade94281d3317e242b70a59eb587076829ed7a9942bd79e99a2b5eaa6",
+    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/math/BinaryMath.kt": "559f18b0f212cf3228042e5916f6a87ea67f2499465e590b91df90d564e22828",
+    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/mesh/CurlMesh.kt": "b9b646165f9eeb488b1bb730d96707c48f1ce745dd7ee93d0d10a231250e1d98",
+    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/mesh/kernel/CurlMeshKernel.kt": "412aa4a955a1f45184976f8fc9a247a8786eb5559a6549af0fa777b62787555a",
+    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/mesh/kernel/KernelBlocks1.kt": "dd54dd0ab4c588588e69c95a19a138f0abf34e97aa21a2998c86d5aa4739ca7c",
+    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/mesh/kernel/KernelBlocks2.kt": "b2cc095272d0fadfbc6d39e29e82573ea0e63a52d1795495acd233799f39def3",
+    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/mesh/kernel/KernelBlocks3.kt": "52a985919bf7bc32966adc435c3fbb8364eaf1fca8c98566f71015708d60316a",
+    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/mesh/kernel/KernelBlocks4.kt": "fb26b63b2fe761f4ad279d0f19d2fb4275f90a34c3c4d5024270b6fd9179d295",
+    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/mesh/kernel/KernelBlocks5.kt": "a9449ec2f6e794e377a9ec9202aa752c9c8deb104cd68a7a21f2ee74b21d7130",
+    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/mesh/kernel/KernelBlocks6.kt": "d69a903cc82791a8ce1474ec2ce7508d2a4205064cdcf8ebade3e314bb260662",
+    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/mesh/kernel/KernelFlow.kt": "f58c7cf8a9a0d4823d038bb32a9cdf2e2d4dc42218782f7e18690473032a4e97",
+    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/mesh/kernel/KernelInput.kt": "745cc790d5f2c275f70613996f9b3c03f7c04bcca09cd20ae7ebd2899aa6a7d0",
+    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/mesh/kernel/KernelMemory.kt": "9f7534813ff331936cad08435e63242a14ac92e251458dac184b77e9cb518ada",
+    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/mesh/kernel/KernelPrimitives.kt": "5b0e082b6782a940ace090e5a07cc390e8a9b304dcf0b1be3db40c269530f362",
+    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/model/CurlModel.kt": "9a556163bb409451e6b4eed9fd4e5868b57da864f7114eb629dcda21643bd35e",
+    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/transition/CurlTransitions.kt": "cb7c84a1215a1be4fd10c645c7fcf07c5a2c8063a762895ea655ed2b62eb0be7",
+    "app/ireadview/src/main/java/org/peyilo/ireadview/internal/effect/ioscurl/IosCurlEffect.kt": "c3d9a68a1fd1c3cb45b6029eb92758312ea22023fea6fb5447842b4b8b61dd81",
+    "app/ireadview/src/main/java/org/peyilo/ireadview/internal/effect/ioscurl/IosCurlInput.kt": "5d4fcdf4af5077cfe280f7bb5c280818ed41edba3d84f4e010881603c4258a08",
+    "app/ireadview/src/main/java/org/peyilo/ireadview/internal/effect/ioscurl/IosCurlMaterial.kt": "6739fb734125f2400313ef5f7daff93969d59cd8763c41268a3a10a2b19de274",
+    "app/ireadview/src/main/java/org/peyilo/ireadview/internal/effect/ioscurl/render/IosCurlRenderer.kt": "d35ecb3f4f416cba5d8123ec05e07d7664c6f6914b278962a582c55f7170022d",
+    "app/ireadview/src/main/java/org/peyilo/ireadview/internal/effect/googlecurl/GoogleCurlEffect.kt": "f056290bffa811c75a70a54f4199a71d9b8dfed8ea5dfbf99cfc952b092ec49a",
+    "app/ireadview/src/main/java/org/peyilo/ireadview/internal/effect/googlecurl/GoogleCurlGeometry.kt": "4f54cbff7c0441b342c0cc4268e3283f4c6a510f40fa7284bcee6bcaa032348b"
+  },
+  "scope": [
+    "Android single-page adapter; spread APIs retained",
+    "Existing serialized Widget navigation retained",
+    "No iPhone framebuffer identity or universal frame-rate claim"
+  ],
+  "finalDeviceRerun": {
+    "status": "unavailable",
+    "reason": "Emulator disconnected after the successful background and staged-Demo regressions; final rerun reported no connected devices",
+    "successfulDeviceEvidenceRetained": true
+  },
+  "excludedUnrelatedWork": [
+    "app/ireadview-epub working-tree edits",
+    "PageTurnSnapshots diagnostic logging",
+    "ReaderGestureHandoffTest EPUB fixture sizing change"
+  ]
+}

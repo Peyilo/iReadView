@@ -47,7 +47,7 @@ class ReaderGestureHandoffTest {
             }
             try {
                 request<ReaderResult<ModeChange>>(scenario) { r,c -> r.setReadingMode(ReadingMode.PAGED,c) }
-                for(effect in listOf("slide","cover","ibook_slide")) {
+                for(effect in selectedEffects(listOf("slide","cover","ibook_slide"))) {
                     request<NavigationResult<ReadingPosition>>(scenario) { r,c -> r.firstPage(c) }
                     scenario.onActivity { it.findViewById<ReaderView>(R.id.reader).setPageTurnEffect(PageTurnEffects.fromId(effect)!!) }
                     repeat(6) { turn ->
@@ -125,7 +125,7 @@ class ReaderGestureHandoffTest {
                         }
                     }
                     repeat(2) { request<NavigationResult<ReadingPosition>>(scenario) { r,c -> r.nextPage(NavigationOptions(animated=false,respectInterval=false),c) } }
-                    for(effect in listOf("slide","cover","ibook_slide","curl","google_curl","page_curl")) {
+                    for(effect in selectedEffects(listOf("slide","cover","ibook_slide","google_curl"))) {
                         val probe=Probe()
                         var frameProbe:Frames?=null
                         val rect=Rect()
@@ -179,6 +179,11 @@ class ReaderGestureHandoffTest {
             }
             scenario.onActivity { File(it.filesDir,"gesture-handoff.json").writeText(reports.joinToString(",\n","[\n","\n]")) }
         }
+    }
+    private fun selectedEffects(defaults: List<String>): List<String> {
+        val requested = InstrumentationRegistry.getArguments().getString("effect") ?: return defaults
+        require(requested in defaults) { "Unsupported effect filter: $requested" }
+        return listOf(requested)
     }
     private fun watch(factory:PageTurnEffectFactory,probe:Probe)=object:PageTurnEffectFactory {
         override val id="handoff-${factory.id}"

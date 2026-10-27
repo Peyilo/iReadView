@@ -1,0 +1,14 @@
+{
+  "source": "iOS12.5.7 16H81 offline recovery -> verified C11 -> managed Kotlin",
+  "sourceSHA256": "6ac0425c97321faa501486c1329e8ce1a2b26139026c8a3abfd274da81f95684",
+  "blocks": 244,
+  "generatedFiles": [
+    "KernelBlocks1.kt",
+    "KernelBlocks2.kt",
+    "KernelBlocks3.kt",
+    "KernelBlocks4.kt",
+    "KernelBlocks5.kt",
+    "KernelBlocks6.kt",
+    "KernelFlow.kt"
+  ]
+}

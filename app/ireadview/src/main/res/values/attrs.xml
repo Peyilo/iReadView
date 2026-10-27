@@ -81,8 +81,8 @@
             <enum name="slide" value="1" />
             <enum name="cover" value="2" />
             <enum name="ibook_slide" value="3" />
-            <enum name="curl" value="4" />
             <enum name="google_curl" value="5" />
+            <enum name="ios_curl" value="6" />
         </attr>
         <attr name="ireadViewportPaddingStart" format="dimension" />
         <attr name="ireadViewportPaddingTop" format="dimension" />

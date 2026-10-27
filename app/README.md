@@ -2,6 +2,8 @@
 
 `:app` 是 iReadView 的示例宿主。类名直接描述职责，不再使用 `Demo` 前缀；包根 `org.peyilo.iread.demo` 已表明它们属于 Demo。应用 ID 和资源 namespace 保持该值，源码的子包按职责组织。
 
+阅读设置的“仿真效果 → iOSCurl”使用纯 Kotlin 还原算法；`CurlActivity` 也默认启用它。算法位于独立 `:app:pagecurl-core`，通过 `ireadview` 公共 `PageTurnEffects.iosCurl()` 接入，Demo 不依赖算法内部类型。详见 [Kotlin 仿真翻页](../docs/IOS_CURL_KOTLIN.md)。
+
 EPUB 和 TXT 共用 ReaderActivity 中同一个 ReaderView。可选 `:app:ireadview-epub` 提供 EpubReaderBookSource 与自研 EpubReaderBodyView，使用系统 WebView，无 Readium 运行时和导航 Fragment。整个 Demo minSdk21。默认 EPUB 为用户提供的《The Art of ARM Assembly》，也可导入本地书籍或选择两本原创样例；参见[正文架构](../docs/READER_BODY.md)及[实现边界](../docs/EPUB_ENGINE.md)。
 
 ## 源码目录
@@ -67,6 +69,17 @@ jsoup 与支持 API21 的 NIO desugaring 仅添加到 Demo：参考[jsoup Androi
 ```
 
 Windows 使用 `gradlew.bat`。输出为 `app/build/outputs/apk/debug/app-debug.apk`。
+
+### 仿真翻页
+
+阅读设置与翻页示例只提供 **iOSCurl / GoogleCurl**。前者使用纯 Kotlin 的原版手势、曲面、UV 与阴影，背面纸张色在翻页开始从实际正面页面解析；后者保留行波和透视变形。仿真设置分别为 `IosCurlOptions` 和 `GoogleCurlOptions`，Java 示例也使用这两种公开工厂。
+
+```kotlin
+reader.setPageTurnEffect(PageTurnEffects.iosCurl())
+reader.setPageTurnEffect(PageTurnEffects.googleCurl(GoogleCurlOptions(radiusFraction = .1f)))
+```
+
+目录、职责与验证范围见 [Kotlin 翻页](../docs/IOS_CURL_KOTLIN.md) 及 [翻页渲染](../docs/RENDERING.md)。
 
 目录、排版、设置均采用底部面板，详情与 Library 新增样式 API 见 [排版 API](../docs/26_READER_PANELS_AND_TYPOGRAPHY_API.md)。原六区域边距之外还可调节正文视口与段落内边距；标题/正文使用固定 dp 字距，页眉页脚通过默认模板逐一配置六位置内容及返回按钮；字号、字体、边距、高度和整体可见性使用底层样式API，不再调用旧单行内容与对齐配置。
 # 默认小说排版

@@ -1,73 +1,46 @@
-# 当前翻页渲染与阴影约束
+# 翻页渲染与背景颜色
 
-更新：2026-10-18。保留现行实现和避免退化所需的依据；被撤回的纸张研究、逐轮候选和失败修补不再作为设计方案。
+更新：2026-10-27。
 
-## 效果与事务边界
+## 现行效果
 
-PageTurnEffects提供none、slide、cover、iBookSlide、iBookCurl/curl（兼容别名）、googleCurl、pageCurl；默认稳定ID以源码工厂为准。连续滚动是独立呈现，不是效果。
+仿真翻页只提供 `PageTurnEffects.iosCurl(IosCurlOptions)` 与 `PageTurnEffects.googleCurl(GoogleCurlOptions)`，稳定 ID 分别为 `ios_curl` 与 `google_curl`。另保留无动画、滑动、覆盖和视差滑动；连续滚动是独立呈现模式。
 
-PageTurnEffectManager控制手势、松手完成/复位、动画时钟及资源终态；NavigationController提交位置。效果只画PageSurface，不改书页数据。PageTurnSnapshots共享预算捕获，前翻翻起current，后翻翻起target；RTL对应几何与纹理方向。
+Demo 阅读设置的“仿真效果”和翻页示例只列出 **iOSCurl / GoogleCurl**。Java 示例使用相同公开工厂。XML 的枚举值保持现有编号：GoogleCurl 为5，iOSCurl 为6，中间空位不复用。
 
-**撤回状态**：曾提出为了页眉页脚给所有新Android平移模式强制截图，用户随后确认本来每页都有，要求撤回。当前保持API29+原View绘制；旧系统平移模式尝试两张原分辨率快照，预算不足回退View。不要重新应用那次误诊改动。
+## 事务与资源
 
-## iBook现行路径
+`PageTurnEffectManager` 管理视觉事务、唯一帧时钟、快照预算、松手后的完成/复位和终态清理；导航层拥有阅读位置提交。效果消费 `PageSurface`，不读取书籍或 EPUB DOM，也不能自行导航。
 
-主要源码：IBookCurlGeometry、IBookCurlMesh、CurlEffects、IBookFrontShadow、IBookCurlShadow、IBookShadowFootprint。
+`PageTurnSnapshots` 在事务开始时捕获 current/target。上传 GPU 纹理后，iOSCurl 归还 CPU 快照，再借用输出位图。完成、取消、异常及 detach 释放 GPU 资源和位图租约。平移效果保持既有显示列表/快照策略。
 
-几何采用装订约束的可展曲面近似及前面浅弯曲，文字随材料UV映射；正背面分区裁剪。显示网格会压缩隐藏顶点，不能把它当作实际遮光纸面。现代路径使用索引网格，兼容路径使用bitmap mesh；材料投影支持使用独立可见材料网格。退化三角形与非有限值必须排除。
+## iOSCurl
 
-前面浅弯曲使用缓存积分映射；曲面微遮蔽是轻度补充，独立于背色混合，不应通过整页变暗掩盖几何问题。绷直时半径可能被约束到0，投影高度不能因此突变消失。
+算法位于独立 `:app:pagecurl-core`，手势、曲面、UV、原版阴影与缓动使用 Kotlin 执行。Android 的 `internal/effect/ioscurl` 仅负责输入转换、事务适配和 GLES2 绘制。没有 JNI、自编 native 库、WebView 或 WASM 算法运行依赖。详见 [Kotlin 实现](IOS_CURL_KOTLIN.md)。
 
-### 阴影高度近似
+### 从正面页面确定背面纸张色
 
-设requestedR为进度包络中的请求半径，r为约束后的半径，D=max(requestedR-r,0)，s为正向材料距离。绷直补偿近似为：
+`IosCurlMaterial` 在每次翻页开始、快照租约归还之前确定背景颜色：
 
-```text
-extraHeight = 2*D*s/(s+requestedR) * clamp(materialX/pageWidth)
-shadowHeight = materialHeight + extraHeight
-```
+1. 按实际 curl layout 选择正面纸页的 surface 与快照，不能固定取 current 或 target；前后翻、装订边和 RTL 都会影响来源。
+2. 复用 `PageBackTint.resolve`。优先读取 `PageBackgroundSurface` 提供的背景元数据；没有有效元数据时，在快照上取8×8样本，以 RGB 主色桶排除少量文字和装饰的影响。
+3. 仅将解析出的 RGB 用于背面纸张材质，保留原版 alpha、背面内容采样和中性光照。正面纹理已经包含主题底色，不再叠加一次主题色；阴影也不作主题染色。
+4. 一个翻页事务只解析一次，后续帧使用固定材质；下一次翻页重新读取主题。
 
-这是视觉高度近似，不是完整薄壳物理模型。根部和端点需连续；不能仅凭截图声称真实物理仿真。
+单栏的正反面属于同一张纸。背面仍显示当前卷曲纸页的镜像内容，露出的下层页保持独立。夜间背景不能出现固定白色背板。
 
-### 当前页与下一页投影
+## GoogleCurl
 
-两个投影共享光向/柔化轮廓。当前页使用规则距离场，避免沿曲边逐段画窄条产生扇形折叠。下一页仍用有限渐变条带，但必须同时裁到实际光线投影支持：
+`internal/effect/googlecurl` 包含 `GoogleCurlEffect` 和 `GoogleCurlGeometry`。它绘制前面行波与透视压缩，保持原有几何和边缘阴影，不生成反折背面。
 
-```text
-Q = (screenX + slopeX*shadowHeight, screenY + slopeY*shadowHeight)
-S = union(projected visible material triangles)
-VisibleNext = PageRect - FrontFace - BackFace
-DrawnShadow = ShadowRibbon ∩ S ∩ VisibleNext
-```
+`GoogleCurlOptions` 只包含实际生效的行波幅度、阴影宽度/强度、网格列/行数和控制点策略。`GoogleCurlControlPointPolicy` 可由 Kotlin 或 Java SAM 提供，控制点使用右侧为翻起边的标准坐标，x 从页宽连续移动到负页宽。
 
-投影三角形统一绕序，WINDING并集不应因正背面相反方向抵消。生产/设备检查共用clipIBookNextShadow。先从原材料纹理坐标构建支持，再做RTL纹理反射。
+## 验证
 
-**不可恢复的旧修补**：只做PageRect减正背面，仍会允许细矩形阴影延伸到无关区域；换渐变纹理只能改善色带，不能修复投影范围。不能拿轴对齐包围矩形或隐藏顶点塌缩的显示网格替代实际支持。
+- `CurlCatalogTest` 检查公开仿真工厂仅有两个，以及 Google 行波的首尾边界。
+- `pagecurl-core:test` 对照原 C11 基准中的参数、网格、UV、颜色、手势、缓动及布局；背景适配不改变核心默认基准。
+- `IosCurlBackgroundDeviceTest` 检查元数据/快照取色、夜间材质、各方向的真实来源及每事务一次取色。
+- `IosCurlDeviceTest` 检查 GLES2 单栏绘制与资源回收；`IosCurlDemoTest` 验证真实设置、手势和事务交接。
+- `ReaderTurnPerformanceTest` 和 `ReaderGestureHandoffTest` 的通用进度探针测试平移和 GoogleCurl。iOSCurl 的原版输入/缓动使用其专门测试，不通过会隐藏可选能力的宿主效果包装器。
 
-当前条带使用缓存1024×1渐变纹理及有限网格，端部向内衰减，不向轴外增加长尾；资源按clear/release归属清理。当前页距离场用有限采样/LUT，避免每帧昂贵逐像素计算和海量临时路径。当前有限支持软阴影不是完整面积光源半影积分。
-
-### 主题背色
-
-```text
-backRGB = backContentAlpha*contentRGB + (1-backContentAlpha)*backgroundRGB
-```
-
-从真正翻起页面取底色，翻页开始固定，下一次再读取主题。PageBackgroundSurface可提供背景元数据；内置背景可独立采样，缺失时从页面快照主色近似。不要固定浅色纸背导致夜间发亮，也不要隐藏背字绕开映射错误。Google路径没有该背面区域。
-
-## 独立pageCurl路径
-
-PageTurnEffects.pageCurl(PageCurlOptions)稳定ID为page_curl，使用BoundPageCurlEffect/Renderer/Shader，GLES2离屏渲染，复用快照与事务资源。与iBook网格效果不同，勿混用两套参数含义。
-
-默认radiusFraction/shadowStrength/lightSize/tilt为0.10/0.25/0.43/0.55；相应with方法公开。建议半径0.08～0.14、强度0.15～0.30、柔和度0.30～0.50、倾斜-0.60～0.60，仍须遵循源码校验范围。
-
-受控圆柱以材料坐标映射到正背面纹理；屏幕到材料逆映射包含asin圆弧分支及展开尾部，按材料是否位于页矩形、正背遮挡决定采样。背字混合、光照和两个接收面阴影在该shader实现；不是在Canvas上画一张不变形的旋转截图。
-
-[WebGL观察Demo](examples/shader-preview/index.html)保留为独立参考。网页的拖动阈值/松手曲线不覆盖Widget的PageTurnOptions，不能把网页验收自动当成Android验收。
-
-## 历史证据及限制
-
-[数学摘要](generated/ibook-mathematical-validation.json)记录2026-10-15的固定姿态：纸面202,958个三角形方向错误0；距离场276,480个单元折叠0，对比旧窄条577个折叠单元。报告绑定当时AAR哈希，不是当前源码的重新运行结果。
-
-[投影支持检查](generated/ibook-shadow-source-support.json)记录24组姿态。Android Bitmap Canvas旧范围外像素78,666，新0，保留合法像素11,383；边界避让1px。检查源码为IBookProjectionTest、IBookShadowFootprintTest和IBookShadowClipDeviceTest。
-
-这些检查不是所有姿态的证明，也未覆盖硬件Canvas帧率、真实设备/刷新率、长时间资源变化或用户视觉认可。API28/36早期有限UI观察和generated/page-curl中的图片/JSON只是当时pageCurl路径的历史参考。
+GLES 离屏回读仍可能造成设备相关开销。数值对照、构建成功和有限设备执行不代表所有 GPU 逐像素一致或稳定60fps；历史性能记录不作为新材质的帧率结果。

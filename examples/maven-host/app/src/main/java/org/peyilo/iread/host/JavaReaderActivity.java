@@ -9,7 +9,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import org.peyilo.ireadview.api.event.ReaderListenerAdapter;
 import org.peyilo.ireadview.api.event.ReaderAction;
-import org.peyilo.ireadview.api.effect.CurlOptions;
+import org.peyilo.ireadview.api.effect.GoogleCurlOptions;
 import org.peyilo.ireadview.api.effect.PageTurnEffects;
 import org.peyilo.ireadview.api.effect.TurnPoint;
 import org.peyilo.ireadview.spi.page.ReaderPageContext;
@@ -28,18 +28,18 @@ public final class JavaReaderActivity extends Activity {
     private ReaderSnapshot snapshot;
     private boolean started;
     private long serial;
-    private boolean appleCurl;
+    private boolean iosCurl;
     private boolean acceleratedCurl;
     private void applyCurl() {
         final boolean accelerated = acceleratedCurl;
-        CurlOptions options = new CurlOptions(.10f, 18f, .20f, 0xffeee9df, .25f, 64, 48, control -> {
+        GoogleCurlOptions options = new GoogleCurlOptions(.10f, 18f, .20f, 64, 48, control -> {
             float p = control.getSheetProgress();
             if (accelerated) p = Math.min(1f, p / .75f);
             float q = p * p * (3f - 2f * p);
             return new TurnPoint(control.getViewport().getWidthPx() * (1f - 2f * q),
                     control.getDefaultControlPoint().getYPx());
         });
-        reader.setPageTurnEffect(appleCurl ? PageTurnEffects.iBookCurl(options) : PageTurnEffects.googleCurl(options));
+        reader.setPageTurnEffect(iosCurl ? PageTurnEffects.iosCurl() : PageTurnEffects.googleCurl(options));
     }
     private final Runnable resume = () -> {
         if (!started) return;
@@ -103,12 +103,12 @@ public final class JavaReaderActivity extends Activity {
         });
         applyCurl();
         LinearLayout effects = new LinearLayout(this);
-        Button apple = new Button(this);
-        apple.setText("Apple");
-        apple.setOnClickListener(view -> { appleCurl = true; applyCurl(); });
+        Button ios = new Button(this);
+        ios.setText("iOSCurl");
+        ios.setOnClickListener(view -> { iosCurl = true; applyCurl(); });
         Button google = new Button(this);
-        google.setText("Google");
-        google.setOnClickListener(view -> { appleCurl = false; applyCurl(); });
+        google.setText("GoogleCurl");
+        google.setOnClickListener(view -> { iosCurl = false; applyCurl(); });
         Button travel = new Button(this);
         travel.setText("标准行程");
         travel.setOnClickListener(view -> {
@@ -123,7 +123,7 @@ public final class JavaReaderActivity extends Activity {
             reader.setLayoutDirection(rtl ? View.LAYOUT_DIRECTION_RTL : View.LAYOUT_DIRECTION_LTR);
             direction.setText(rtl ? "RTL" : "LTR");
         });
-        effects.addView(apple, new LinearLayout.LayoutParams(0, -2, 1f));
+        effects.addView(ios, new LinearLayout.LayoutParams(0, -2, 1f));
         effects.addView(google, new LinearLayout.LayoutParams(0, -2, 1f));
         effects.addView(direction, new LinearLayout.LayoutParams(0, -2, 1f));
         effects.addView(travel, new LinearLayout.LayoutParams(0, -2, 1f));

@@ -13,6 +13,8 @@ internal class PageTurnGesture(val origin: TurnPoint, val forward: Boolean, val 
     var started = false
     var decision: Boolean? = null
         private set
+    var releaseVelocity: TurnPoint? = null
+        private set
     private val released = CompletableDeferred<Boolean>()
     private val changes = Channel<Unit>(Channel.CONFLATED)
 
@@ -24,8 +26,9 @@ internal class PageTurnGesture(val origin: TurnPoint, val forward: Boolean, val 
         wake()
     }
     fun signedVelocity(velocity: Float) = velocity * sign
-    fun release(commit: Boolean) {
+    fun release(commit: Boolean, velocity: TurnPoint? = null) {
         if (decision != null) return
+        releaseVelocity = velocity
         decision = commit
         released.complete(commit)
         wake()
