@@ -31,3 +31,8 @@ APK：`app/build/outputs/apk/debug/app-debug.apk`；AAR：`app/ireadview/build/o
 本地Maven开发坐标：`org.peyilo.ireadview:ireadview:0.1.0-SNAPSHOT`；ZIP有依赖元数据，不嵌入第三方依赖。尚未配置正式在线发布。
 
 正文架构现分为 `TextReaderBodyView` 与自研 `EpubReaderBodyView`，统一继承 `ReaderBodyView` 并使用同一 ReaderView 入口；不依赖 Readium 运行时。参见[正文层设计](docs/READER_BODY.md)。
+
+## 贡献者
+
+- [Peyilo](https://github.com/Peyilo)：项目维护。
+- [Codex（OpenAI）](https://developers.openai.com/codex/)：AI 辅助开发，参与 pagecurl-core 的 Kotlin 移植与内核整理、EPUB 翻页问题修复及回归测试。
