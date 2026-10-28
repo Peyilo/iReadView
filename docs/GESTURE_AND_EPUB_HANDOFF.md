@@ -10,11 +10,16 @@ iOSCurl 使用自己的原版识别、0.25s begin 过渡和独立缓动轨道，
 
 EPUB 内容准备与视觉算法分层。三页缓存、录制资源和内容交接遵循 [正文层](READER_BODY.md) 与 [分页缓存](PAGE_CACHE.md) 的所有权规则；效果本身不通过 JS 加载或定位页面。
 
+EPUB 的硬件录制持有真实页面的子 RenderNode，能够在硬件 Canvas 上回放不等于可以作为不可变快照。隐藏或停放 WebView 可能替换这些节点的显示列表，造成取消后再次翻页只剩阴影。EPUB 因此声明 `SnapshotPreferredSurface`，不再声明 `RecordedPageSurface`；滑动、覆盖、视差滑动与两种 curl 都在隐藏正文之前捕获事务独占的像素，直到动画结束才归还租约。
+
+像素快照遵守已有预算和降采样阶梯。隔离失败时，平移效果请求 `ResourcesUnavailable` 降级，仍保留原手势的完成/复位决定，不回退到不稳定的 WebView 显示列表。动画结束归还像素租约，三页内容缓存照常保留，书籍内容和阅读位置不受影响。
+
 ## 验证入口
 
 - `IosCurlDemoTest` 直接使用原工厂验证前后翻、取消、多指、RTL、纵向、设置恢复和资源失败后的手势判定。
 - `IosCurlBackgroundDeviceTest` 验证实际卷曲正面的主题取色和夜间背面。
 - `ReaderGestureHandoffTest` 的通用探针覆盖平移、GoogleCurl 及 TXT/EPUB 页面交接，支持通过 `effect` 限定已有项目。
+- `cancelledEpubDragKeepsBothPagesVisibleOnRetry` 直接使用五种原工厂，通过 PixelCopy 检查前后翻、系统取消、手指反向退回复位，以及立即/预加载后重试时两页的可见内容，并验证取消不提交位置、重试仍能完成翻页。
 - `ReaderTurnPerformanceTest` 区分页面准备、效果启动、更新、绘制和窗口 FrameMetrics，不能用导航总时长替代帧率。
 
 PixelCopy 会增加采样开销；观察到有限姿态无白闪不代表全部设备、刷新率或逐像素连续性已验收。API21 仍需实际设备验证。旧的原始观测保留在 `performance/` 中，仅对应各文件记录的历史版本，不表示当前效果清单或帧率。

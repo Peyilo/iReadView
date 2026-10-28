@@ -8,11 +8,46 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.peyilo.ireadview.api.effect.*
 import org.peyilo.ireadview.internal.effect.ioscurl.IosCurlMaterial
+import org.peyilo.ireadview.internal.effect.ioscurl.render.IosCurlRenderer
 import org.peyilo.ireadview.spi.presentation.ReadViewport
 import org.peyilo.pagecurl.mesh.CurlMaterial
+import org.peyilo.pagecurl.mesh.CurlMesh
+import org.peyilo.pagecurl.mesh.CurlMeshInput
+import org.peyilo.pagecurl.model.CurlValues
 
 @RunWith(AndroidJUnit4::class)
 class IosCurlBackgroundDeviceTest {
+    @Test fun softCastShadowDarkensEveryThemeWithoutGreyOrColoredHalos() {
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            val width=160;val height=240
+            val paper=Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888)
+            val output=Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888)
+            try {
+                for(color in listOf(Color.WHITE,0xffeedfc1.toInt(),0xff19292f.toInt(),Color.BLACK)) {
+                    paper.eraseColor(color)
+                    val material=IosCurlMaterial.resolve(Surface(color),paper)
+                    val frame=CurlMesh().build(CurlMeshInput(CurlValues(.5,20.0,.45),width.toDouble(),height.toDouble(),
+                        material=material,shadowSoftness=IosCurlOptions().shadowSoftness.toDouble()))
+                    // Untextured cast-shadow passes, drawn over the receiver alone.
+                    // Isolating them prevents the paper's lighting from masking halo bugs.
+                    val shadows=frame.copy(batches=frame.batches.filter { it.mode==0 })
+                    assertTrue("A curled sheet must cast a shadow",shadows.batches.isNotEmpty())
+                    IosCurlRenderer().use { renderer ->
+                        renderer.upload(paper,paper);renderer.bindOutput(output)
+                        renderer.render(shadows,width.toFloat(),height.toFloat(),0,1,emptyList())
+                    }
+                    var darker=0
+                    for(y in 0 until height)for(x in 0 until width) {
+                        val pixel=output.getPixel(x,y)
+                        assertTrue("Shadow must not brighten ${color.toUInt().toString(16)} at $x,$y: ${pixel.toUInt().toString(16)}",Color.red(pixel)<=Color.red(color)+1 &&
+                            Color.green(pixel)<=Color.green(color)+1 && Color.blue(pixel)<=Color.blue(color)+1)
+                        if(Color.red(pixel)<Color.red(color)-2 || Color.green(pixel)<Color.green(color)-2 || Color.blue(pixel)<Color.blue(color)-2)darker++
+                    }
+                    if(color!=Color.BLACK)assertTrue("Shadow must remain visible on $color",darker>50)
+                }
+            } finally { paper.recycle();output.recycle() }
+        }
+    }
     private class Surface(private val color: Int, private val metadata: Boolean = true) : PageBackgroundSurface {
         override val widthPx = 160
         override val heightPx = 240

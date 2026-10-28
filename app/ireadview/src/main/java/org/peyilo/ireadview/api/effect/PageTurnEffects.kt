@@ -8,6 +8,7 @@ import android.graphics.Shader
 import org.peyilo.ireadview.spi.presentation.ReadViewport
 import org.peyilo.ireadview.internal.effect.googlecurl.GoogleCurlEffect
 import org.peyilo.ireadview.internal.effect.PageTurnSnapshots
+import org.peyilo.ireadview.internal.effect.EffectResourceUnavailable
 import org.peyilo.ireadview.internal.effect.ioscurl.IosCurlEffect
 
 /** Each factory creates a fresh renderer; the Widget owns progress and resource lifetime. */
@@ -60,8 +61,13 @@ private class SlidingEffect(private val kind: Int) : SnapshotPageTurnEffect {
         // Legacy native views retain live drawing unless full-resolution images fit.
         val preferSnapshot = (context.current as? SnapshotPreferredSurface)?.preferSnapshot == true ||
             (context.target as? SnapshotPreferredSurface)?.preferSnapshot == true
-        if (kind != 0 && (android.os.Build.VERSION.SDK_INT < 29 || preferSnapshot))
-            host?.let { snapshots.capture(it, context, fullResolutionOnly = !preferSnapshot) }
+        if (kind != 0 && (android.os.Build.VERSION.SDK_INT < 29 || preferSnapshot)) {
+            val captured = host?.let { snapshots.capture(it, context, fullResolutionOnly = !preferSnapshot) } == true
+            // A compositor-backed surface cannot safely fall back to a live display
+            // list after requesting isolation. Let the manager retain the user's
+            // commit/reset decision and degrade the visual when the budget is exhausted.
+            if (preferSnapshot && !captured) throw EffectResourceUnavailable()
+        }
     }
     override fun update(frame: PageTurnFrame) {}
     override fun draw(canvas: Canvas, frame: PageTurnFrame) {

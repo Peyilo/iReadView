@@ -77,11 +77,19 @@ class IosCurlDemoTest {
     @Test fun realSettingsSelectAndRestoreIosKotlinFactory() {
         ActivityScenario.launch(ReaderActivity::class.java).use{scenario->
             await(scenario){it.readerState.phase==ReaderPhase.Ready}
+            // Start from a different factory: a restored iOS selection otherwise
+            // satisfies await before the sheet's asynchronous mode request completes.
+            scenario.onActivity{
+                val reader=it.findViewById<ReaderView>(R.id.reader)
+                reader.setPageTurnOptions(PageTurnOptions())
+                reader.setPageTurnEffect(PageTurnEffects.cover())
+            }
             scenario.onActivity{it.javaClass.getDeclaredMethod("showReaderSettings").apply{isAccessible=true}.invoke(it)}
             SystemClock.sleep(500)
             onView(withText("iOSCurl")).inRoot(isDialog()).perform(click())
             await(scenario){it.pageTurnEffectId=="ios_curl"&&it.readingMode==ReadingMode.PAGED}
             scenario.onActivity{it.javaClass.getDeclaredMethod("showReaderSettings").apply{isAccessible=true}.invoke(it)}
+            SystemClock.sleep(500) // Wait for the reopened bottom sheet's entrance animation.
             onView(withText("iOSCurl")).inRoot(isDialog()).check{view,error->if(error!=null)throw error;assertTrue(view.isSelected)}
             onView(withText("GoogleCurl")).inRoot(isDialog()).perform(click())
             await(scenario){it.pageTurnEffectId=="google_curl"&&it.readingMode==ReadingMode.PAGED}

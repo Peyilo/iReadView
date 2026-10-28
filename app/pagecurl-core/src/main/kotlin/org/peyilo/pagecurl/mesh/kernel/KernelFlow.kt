@@ -1,264 +1,515 @@
-// Generated from the verified C11 curl geometry; regenerate with tools/Port-CurlKernel.py.
-// Direct Kotlin arithmetic and managed scratch storage. No machine instructions are executed.
+// Generated algorithm stages; regenerate with tools/Port-CurlKernel.py.
 @file:Suppress("UNUSED_VARIABLE", "UNUSED_VALUE", "NAME_SHADOWING", "RedundantConversion")
-package org.peyilo.pagecurl.mesh.kernel
-import kotlin.math.*
-import org.peyilo.pagecurl.math.AppleMath
-import org.peyilo.pagecurl.math.BinaryMath.fma
 
-/** Fixed algorithm control flow, not an instruction/opcode interpreter. */
-internal fun CurlMeshKernel.execute() {
-    var block = 0
-    var remaining = 100000
-    while (block >= 0) {
-        check(--remaining > 0) { "Curl geometry iteration limit" }
-        block = when (block) {
-                0 -> block0()
-                1 -> block1()
-                2 -> block2()
-                3 -> block3()
-                4 -> block4()
-                5 -> block5()
-                6 -> block6()
-                7 -> block7()
-                8 -> block8()
-                9 -> block9()
-                10 -> block10()
-                11 -> block11()
-                12 -> block12()
-                13 -> block13()
-                14 -> block14()
-                15 -> block15()
-                16 -> block16()
-                17 -> block17()
-                18 -> block18()
-                19 -> block19()
-                20 -> block20()
-                21 -> block21()
-                22 -> block22()
-                23 -> block23()
-                24 -> block24()
-                25 -> block25()
-                26 -> block26()
-                27 -> block27()
-                28 -> block28()
-                29 -> block29()
-                30 -> block30()
-                31 -> block31()
-                32 -> block32()
-                33 -> block33()
-                34 -> block34()
-                35 -> block35()
-                36 -> block36()
-                37 -> block37()
-                38 -> block38()
-                39 -> block39()
-                40 -> block40()
-                41 -> block41()
-                42 -> block42()
-                43 -> block43()
-                44 -> block44()
-                45 -> block45()
-                46 -> block46()
-                47 -> block47()
-                48 -> block48()
-                49 -> block49()
-                50 -> block50()
-                51 -> block51()
-                52 -> block52()
-                53 -> block53()
-                54 -> block54()
-                55 -> block55()
-                56 -> block56()
-                57 -> block57()
-                58 -> block58()
-                59 -> block59()
-                60 -> block60()
-                61 -> block61()
-                62 -> block62()
-                63 -> block63()
-                64 -> block64()
-                65 -> block65()
-                66 -> block66()
-                67 -> block67()
-                68 -> block68()
-                69 -> block69()
-                70 -> block70()
-                71 -> block71()
-                72 -> block72()
-                73 -> block73()
-                74 -> block74()
-                75 -> block75()
-                76 -> block76()
-                77 -> block77()
-                78 -> block78()
-                79 -> block79()
-                80 -> block80()
-                81 -> block81()
-                82 -> block82()
-                83 -> block83()
-                84 -> block84()
-                85 -> block85()
-                86 -> block86()
-                87 -> block87()
-                88 -> block88()
-                89 -> block89()
-                90 -> block90()
-                91 -> block91()
-                92 -> block92()
-                93 -> block93()
-                94 -> block94()
-                95 -> block95()
-                96 -> block96()
-                97 -> block97()
-                98 -> block98()
-                99 -> block99()
-                100 -> block100()
-                101 -> block101()
-                102 -> block102()
-                103 -> block103()
-                104 -> block104()
-                105 -> block105()
-                106 -> block106()
-                107 -> block107()
-                108 -> block108()
-                109 -> block109()
-                110 -> block110()
-                111 -> block111()
-                112 -> block112()
-                113 -> block113()
-                114 -> block114()
-                115 -> block115()
-                116 -> block116()
-                117 -> block117()
-                118 -> block118()
-                119 -> block119()
-                120 -> block120()
-                121 -> block121()
-                122 -> block122()
-                123 -> block123()
-                124 -> block124()
-                125 -> block125()
-                126 -> block126()
-                127 -> block127()
-                128 -> block128()
-                129 -> block129()
-                130 -> block130()
-                131 -> block131()
-                132 -> block132()
-                133 -> block133()
-                134 -> block134()
-                135 -> block135()
-                136 -> block136()
-                137 -> block137()
-                138 -> block138()
-                139 -> block139()
-                140 -> block140()
-                141 -> block141()
-                142 -> block142()
-                143 -> block143()
-                144 -> block144()
-                145 -> block145()
-                146 -> block146()
-                147 -> block147()
-                148 -> block148()
-                149 -> block149()
-                150 -> block150()
-                151 -> block151()
-                152 -> block152()
-                153 -> block153()
-                154 -> block154()
-                155 -> block155()
-                156 -> block156()
-                157 -> block157()
-                158 -> block158()
-                159 -> block159()
-                160 -> block160()
-                161 -> block161()
-                162 -> block162()
-                163 -> block163()
-                164 -> block164()
-                165 -> block165()
-                166 -> block166()
-                167 -> block167()
-                168 -> block168()
-                169 -> block169()
-                170 -> block170()
-                171 -> block171()
-                172 -> block172()
-                173 -> block173()
-                174 -> block174()
-                175 -> block175()
-                176 -> block176()
-                177 -> block177()
-                178 -> block178()
-                179 -> block179()
-                180 -> block180()
-                181 -> block181()
-                182 -> block182()
-                183 -> block183()
-                184 -> block184()
-                185 -> block185()
-                186 -> block186()
-                187 -> block187()
-                188 -> block188()
-                189 -> block189()
-                190 -> block190()
-                191 -> block191()
-                192 -> block192()
-                193 -> block193()
-                194 -> block194()
-                195 -> block195()
-                196 -> block196()
-                197 -> block197()
-                198 -> block198()
-                199 -> block199()
-                200 -> block200()
-                201 -> block201()
-                202 -> block202()
-                203 -> block203()
-                204 -> block204()
-                205 -> block205()
-                206 -> block206()
-                207 -> block207()
-                208 -> block208()
-                209 -> block209()
-                210 -> block210()
-                211 -> block211()
-                212 -> block212()
-                213 -> block213()
-                214 -> block214()
-                215 -> block215()
-                216 -> block216()
-                217 -> block217()
-                218 -> block218()
-                219 -> block219()
-                220 -> block220()
-                221 -> block221()
-                222 -> block222()
-                223 -> block223()
-                224 -> block224()
-                225 -> block225()
-                226 -> block226()
-                227 -> block227()
-                228 -> block228()
-                229 -> block229()
-                230 -> block230()
-                231 -> block231()
-                232 -> block232()
-                233 -> block233()
-                234 -> block234()
-                235 -> block235()
-                236 -> block236()
-                237 -> block237()
-                238 -> block238()
-                239 -> block239()
-                240 -> block240()
-                241 -> block241()
-                242 -> block242()
-                243 -> block243()
-            else -> error("Unknown geometry block $block")
-        }
-    }
-    check(block == -1) { "Invalid curl geometry" }
+package org.peyilo.pagecurl.mesh.kernel
+
+internal enum class KernelStep {
+    PrepareMaterialsAndBounds,
+    AdvanceProjectedCorner,
+    ProjectPageCorner,
+    PrepareBreakpointSort,
+    AdvanceBreakpointSort,
+    BeginBreakpointInsertion,
+    CompareBreakpointInsertion,
+    ShiftBreakpointForInsertion,
+    FinishBreakpointInsertion,
+    SelectBreakpointInsertion,
+    StoreSortedBreakpoint,
+    FinishBreakpointSort,
+    UseTwoCurveEndpoints,
+    DeriveAdaptiveSampleRange,
+    SkipEmptySampleRange,
+    PrepareAdaptiveSamples,
+    EvaluateAdaptiveSample,
+    PreserveNegativeSample,
+    AppendPositiveSample,
+    AdvanceAdaptiveSample,
+    PrepareSampleMerge,
+    SelectSampleMergeSource,
+    TakeAdaptiveSample,
+    InspectCornerSample,
+    CompareCornerSample,
+    TakeCornerSample,
+    AdvanceAdaptiveSource,
+    TakeProjectedCorner,
+    RetainAdaptiveEndpoint,
+    AdvanceCornerSource,
+    AppendMergedSample,
+    DrainAdaptiveSource,
+    PrepareSampleCompaction,
+    CompactSampleGap,
+    InspectSampleGap,
+    PrepareVisibleSampleRange,
+    FindVisibleRangeStart,
+    PrepareVisibleRangeEnd,
+    InspectVisibleRangeEnd,
+    ScanVisibleRangeEnd,
+    FinishVisibleSampleRange,
+    PrepareSurfaceStrips,
+    SampleSurfaceCrossSection,
+    SelectSurfaceLighting,
+    UseLinearSurfaceLighting,
+    UseUnlitSurfaceCrossSection,
+    UseCurvedSurfaceLighting,
+    EvaluateSurfaceLighting,
+    ProjectSurfaceCrossSection,
+    CheckSurfaceShadowRange,
+    RecordSurfaceShadowSample,
+    AppendSurfaceStrip,
+    PrepareBackStripIndices,
+    PrepareBackIndexReversal,
+    BeginBackIndexReversal,
+    ReverseBackStripIndices,
+    FinishBackIndexReversal,
+    PrepareBackStripColor,
+    CopyBackStripColor,
+    PrepareShadowBreakpoints,
+    InspectShadowStart,
+    BeginShadowStartSamples,
+    InspectShadowStartSample,
+    AppendShadowStartSample,
+    FinishShadowStartSamples,
+    SkipDisabledShadow,
+    SkipEmptyShadow,
+    FinishShadowStartRange,
+    InspectShadowEnd,
+    BeginShadowEndSamples,
+    InspectShadowEndSample,
+    AppendShadowEndSample,
+    FinishShadowEndSamples,
+    RetainShadowEnd,
+    ClampShadowEnd,
+    PrepareShadowEdgeIntersections,
+    UseEmptyShadowEdges,
+    AppendFirstShadowEdge,
+    InspectSecondShadowEdge,
+    SelectShadowMergeOrientation,
+    InspectShadowMergeAvailability,
+    SkipShadowEdgeMerge,
+    AppendSecondShadowEdge,
+    CompareShadowEdges,
+    SwapShadowEdges,
+    SelectTwoShadowEdges,
+    SelectOneShadowEdge,
+    FinishShadowMergeOrientation,
+    PrepareShadowEdgeMerge,
+    InspectShadowMergeSource,
+    TakeShadowEdge,
+    AdvanceShadowEdge,
+    InspectShadowMergeOrder,
+    CompareShadowMergeValues,
+    RetainShadowMergeValue,
+    TakeShadowBoundary,
+    RetainShadowBoundary,
+    AdvanceShadowBoundary,
+    AppendShadowMergedValue,
+    DrainShadowMerge,
+    InspectShadowSegmentCount,
+    PrepareShadowSegmentIndices,
+    BeginShadowSegmentSearch,
+    InspectShadowSegment,
+    AdvanceShadowSegmentSearch,
+    UseUnmatchedShadowSegment,
+    MatchShadowSegment,
+    InspectShadowSegmentEnd,
+    InspectShadowSegmentOrientation,
+    SelectShadowSegmentOrientation,
+    ChooseShadowSegmentVertex,
+    InspectShadowSegmentCase,
+    AdvanceShadowSegmentCase,
+    PrepareShadowSegment,
+    PrepareNextShadowSegment,
+    InspectShadowSegmentClass,
+    InspectShadowSegmentBoundary,
+    AppendShadowSegmentIndex,
+    FinishShadowSegmentIndex,
+    InspectShadowEndpointClass,
+    SelectShadowEndpointVertex,
+    StoreShadowEndpointVertex,
+    InspectShadowTerminalSegment,
+    AdvanceShadowTerminalSegment,
+    FinishShadowTopology,
+    PrepareShadowCrossSections,
+    SampleShadowCrossSection,
+    PreparePenumbraStrips,
+    BeginPenumbraSegment,
+    FindPenumbraSegment,
+    AdvancePenumbraSearch,
+    UseUnmatchedPenumbraSegment,
+    MatchPenumbraSegment,
+    InspectPenumbraSegmentEnd,
+    InspectPenumbraSegmentCase,
+    SelectPenumbraSegmentCase,
+    CalculatePenumbraDirection,
+    ValidatePenumbraDirection,
+    ValidatePenumbraDirectionMagnitude,
+    UseFallbackPenumbraDirection,
+    SelectPenumbraEndpoint,
+    CalculateAdjacentPenumbraDirection,
+    ValidateAdjacentPenumbraDirection,
+    ValidateAdjacentPenumbraMagnitude,
+    UseAdjacentPenumbraDirection,
+    UseTerminalPenumbraDirection,
+    BeginLowerPenumbraFade,
+    SampleLowerPenumbraFade,
+    CopyLowerFadeJoin,
+    AppendLowerPenumbraFade,
+    BeginUpperPenumbraFade,
+    SampleUpperPenumbraFade,
+    CopyUpperFadeJoin,
+    AppendUpperPenumbraFade,
+    AdvancePenumbraSegment,
+    FinishPenumbraSegments,
+    PrepareEmptyPenumbra,
+    InspectPenumbraAxis,
+    InspectPenumbraAxisMagnitude,
+    PreparePenumbraEndpointLookup,
+    FindPenumbraEndpoint,
+    InspectPenumbraTerminalEndpoint,
+    InspectPenumbraEndpointKind,
+    UseInteriorPenumbraEndpoint,
+    UseFirstPenumbraEndpoint,
+    UseLastPenumbraEndpoint,
+    ReadPenumbraEndpoint,
+    AdvancePenumbraEndpointLookup,
+    FinishPenumbraEndpointLookup,
+    PreparePenumbraEndCap,
+    AdvancePenumbraEndCap,
+    AppendPenumbraEndCap,
+    FinishPenumbraEndCap,
+    PreparePenumbraCorners,
+    PreparePenumbraCornerRotation,
+    BeginPenumbraCorner,
+    AppendPenumbraCornerVertex,
+    AdvancePenumbraCornerRing,
+    AdvancePenumbraCorner,
+    FinishPenumbraCorners,
+    InspectFrontFace,
+    InspectFrontSampleRange,
+    SkipEmptyFrontSamples,
+    SkipDisabledFrontFace,
+    PrepareFrontSamples,
+    SampleFrontRange,
+    InspectFirstFrontEdge,
+    UseEmptyFrontEdges,
+    AppendFirstFrontEdge,
+    InspectSecondFrontEdge,
+    SelectFrontMergeOrientation,
+    InspectFrontMergeAvailability,
+    SkipFrontEdgeMerge,
+    AppendSecondFrontEdge,
+    CompareFrontEdges,
+    SwapFrontEdges,
+    SelectTwoFrontEdges,
+    SelectOneFrontEdge,
+    FinishFrontEdgeSelection,
+    PrepareFrontEdgeMerge,
+    InspectFrontMergeSource,
+    TakeFrontEdge,
+    AdvanceFrontEdge,
+    InspectFrontMergeOrder,
+    CompareFrontMergeValues,
+    RetainFrontMergeValue,
+    TakeFrontBoundary,
+    RetainFrontBoundary,
+    AdvanceFrontBoundary,
+    AppendFrontMergedValue,
+    DrainFrontMerge,
+    PrepareFrontCrossSections,
+    BeginFrontCrossSections,
+    AppendFrontCrossSection,
+    FinishFrontCrossSections,
+    PrepareDrawState,
+    InspectOutputTransform,
+    UseAffineOutputScale,
+    MeasureOutputScale,
+    ApplyOutputScale,
+    BeginClipIteration,
+    PrepareDrawBuffers,
+    InspectSurfaceDraw,
+    DrawSurfaceStrips,
+    InspectBackDraw,
+    InspectBackShadowDraw,
+    PrepareShadowDrawLoop,
+    InspectShadowDrawSegment,
+    PrepareShadowDrawSegment,
+    DrawShadowSegment,
+    InspectShadowEndCap,
+    DrawShadowEndCap,
+    InspectShadowCorner,
+    DrawShadowCorner,
+    AdvanceShadowDrawSegment,
+    DrawBackFace,
+    DrawBackFaceFringe,
+    DrawBackFaceEdges,
+    AdvanceClipIteration,
+    FinishDrawClips,
+    RestoreDrawBlendFlags,
+    ResetDrawState,
+    CompleteGeometry,
+    RejectGeometry,
+    Complete,
+    Invalid,
 }
+
+/** Explicit geometry stages; labels preserve the reference algorithm's branch ordering. */
+internal fun CurlMeshKernel.execute() {
+    var step = KernelStep.PrepareMaterialsAndBounds
+    var remaining = MAX_GEOMETRY_STEPS
+    while (step != KernelStep.Complete) {
+        check(--remaining > 0) { "Curl geometry iteration limit" }
+        step =
+            when (step) {
+                KernelStep.PrepareMaterialsAndBounds -> prepareMaterialsAndBounds()
+                KernelStep.AdvanceProjectedCorner -> advanceProjectedCorner()
+                KernelStep.ProjectPageCorner -> projectPageCorner()
+                KernelStep.PrepareBreakpointSort -> prepareBreakpointSort()
+                KernelStep.AdvanceBreakpointSort -> advanceBreakpointSort()
+                KernelStep.BeginBreakpointInsertion -> beginBreakpointInsertion()
+                KernelStep.CompareBreakpointInsertion -> compareBreakpointInsertion()
+                KernelStep.ShiftBreakpointForInsertion -> shiftBreakpointForInsertion()
+                KernelStep.FinishBreakpointInsertion -> finishBreakpointInsertion()
+                KernelStep.SelectBreakpointInsertion -> selectBreakpointInsertion()
+                KernelStep.StoreSortedBreakpoint -> storeSortedBreakpoint()
+                KernelStep.FinishBreakpointSort -> finishBreakpointSort()
+                KernelStep.UseTwoCurveEndpoints -> useTwoCurveEndpoints()
+                KernelStep.DeriveAdaptiveSampleRange -> deriveAdaptiveSampleRange()
+                KernelStep.SkipEmptySampleRange -> skipEmptySampleRange()
+                KernelStep.PrepareAdaptiveSamples -> prepareAdaptiveSamples()
+                KernelStep.EvaluateAdaptiveSample -> evaluateAdaptiveSample()
+                KernelStep.PreserveNegativeSample -> preserveNegativeSample()
+                KernelStep.AppendPositiveSample -> appendPositiveSample()
+                KernelStep.AdvanceAdaptiveSample -> advanceAdaptiveSample()
+                KernelStep.PrepareSampleMerge -> prepareSampleMerge()
+                KernelStep.SelectSampleMergeSource -> selectSampleMergeSource()
+                KernelStep.TakeAdaptiveSample -> takeAdaptiveSample()
+                KernelStep.InspectCornerSample -> inspectCornerSample()
+                KernelStep.CompareCornerSample -> compareCornerSample()
+                KernelStep.TakeCornerSample -> takeCornerSample()
+                KernelStep.AdvanceAdaptiveSource -> advanceAdaptiveSource()
+                KernelStep.TakeProjectedCorner -> takeProjectedCorner()
+                KernelStep.RetainAdaptiveEndpoint -> retainAdaptiveEndpoint()
+                KernelStep.AdvanceCornerSource -> advanceCornerSource()
+                KernelStep.AppendMergedSample -> appendMergedSample()
+                KernelStep.DrainAdaptiveSource -> drainAdaptiveSource()
+                KernelStep.PrepareSampleCompaction -> prepareSampleCompaction()
+                KernelStep.CompactSampleGap -> compactSampleGap()
+                KernelStep.InspectSampleGap -> inspectSampleGap()
+                KernelStep.PrepareVisibleSampleRange -> prepareVisibleSampleRange()
+                KernelStep.FindVisibleRangeStart -> findVisibleRangeStart()
+                KernelStep.PrepareVisibleRangeEnd -> prepareVisibleRangeEnd()
+                KernelStep.InspectVisibleRangeEnd -> inspectVisibleRangeEnd()
+                KernelStep.ScanVisibleRangeEnd -> scanVisibleRangeEnd()
+                KernelStep.FinishVisibleSampleRange -> finishVisibleSampleRange()
+                KernelStep.PrepareSurfaceStrips -> prepareSurfaceStrips()
+                KernelStep.SampleSurfaceCrossSection -> sampleSurfaceCrossSection()
+                KernelStep.SelectSurfaceLighting -> selectSurfaceLighting()
+                KernelStep.UseLinearSurfaceLighting -> useLinearSurfaceLighting()
+                KernelStep.UseUnlitSurfaceCrossSection -> useUnlitSurfaceCrossSection()
+                KernelStep.UseCurvedSurfaceLighting -> useCurvedSurfaceLighting()
+                KernelStep.EvaluateSurfaceLighting -> evaluateSurfaceLighting()
+                KernelStep.ProjectSurfaceCrossSection -> projectSurfaceCrossSection()
+                KernelStep.CheckSurfaceShadowRange -> checkSurfaceShadowRange()
+                KernelStep.RecordSurfaceShadowSample -> recordSurfaceShadowSample()
+                KernelStep.AppendSurfaceStrip -> appendSurfaceStrip()
+                KernelStep.PrepareBackStripIndices -> prepareBackStripIndices()
+                KernelStep.PrepareBackIndexReversal -> prepareBackIndexReversal()
+                KernelStep.BeginBackIndexReversal -> beginBackIndexReversal()
+                KernelStep.ReverseBackStripIndices -> reverseBackStripIndices()
+                KernelStep.FinishBackIndexReversal -> finishBackIndexReversal()
+                KernelStep.PrepareBackStripColor -> prepareBackStripColor()
+                KernelStep.CopyBackStripColor -> copyBackStripColor()
+                KernelStep.PrepareShadowBreakpoints -> prepareShadowBreakpoints()
+                KernelStep.InspectShadowStart -> inspectShadowStart()
+                KernelStep.BeginShadowStartSamples -> beginShadowStartSamples()
+                KernelStep.InspectShadowStartSample -> inspectShadowStartSample()
+                KernelStep.AppendShadowStartSample -> appendShadowStartSample()
+                KernelStep.FinishShadowStartSamples -> finishShadowStartSamples()
+                KernelStep.SkipDisabledShadow -> skipDisabledShadow()
+                KernelStep.SkipEmptyShadow -> skipEmptyShadow()
+                KernelStep.FinishShadowStartRange -> finishShadowStartRange()
+                KernelStep.InspectShadowEnd -> inspectShadowEnd()
+                KernelStep.BeginShadowEndSamples -> beginShadowEndSamples()
+                KernelStep.InspectShadowEndSample -> inspectShadowEndSample()
+                KernelStep.AppendShadowEndSample -> appendShadowEndSample()
+                KernelStep.FinishShadowEndSamples -> finishShadowEndSamples()
+                KernelStep.RetainShadowEnd -> retainShadowEnd()
+                KernelStep.ClampShadowEnd -> clampShadowEnd()
+                KernelStep.PrepareShadowEdgeIntersections -> prepareShadowEdgeIntersections()
+                KernelStep.UseEmptyShadowEdges -> useEmptyShadowEdges()
+                KernelStep.AppendFirstShadowEdge -> appendFirstShadowEdge()
+                KernelStep.InspectSecondShadowEdge -> inspectSecondShadowEdge()
+                KernelStep.SelectShadowMergeOrientation -> selectShadowMergeOrientation()
+                KernelStep.InspectShadowMergeAvailability -> inspectShadowMergeAvailability()
+                KernelStep.SkipShadowEdgeMerge -> skipShadowEdgeMerge()
+                KernelStep.AppendSecondShadowEdge -> appendSecondShadowEdge()
+                KernelStep.CompareShadowEdges -> compareShadowEdges()
+                KernelStep.SwapShadowEdges -> swapShadowEdges()
+                KernelStep.SelectTwoShadowEdges -> selectTwoShadowEdges()
+                KernelStep.SelectOneShadowEdge -> selectOneShadowEdge()
+                KernelStep.FinishShadowMergeOrientation -> finishShadowMergeOrientation()
+                KernelStep.PrepareShadowEdgeMerge -> prepareShadowEdgeMerge()
+                KernelStep.InspectShadowMergeSource -> inspectShadowMergeSource()
+                KernelStep.TakeShadowEdge -> takeShadowEdge()
+                KernelStep.AdvanceShadowEdge -> advanceShadowEdge()
+                KernelStep.InspectShadowMergeOrder -> inspectShadowMergeOrder()
+                KernelStep.CompareShadowMergeValues -> compareShadowMergeValues()
+                KernelStep.RetainShadowMergeValue -> retainShadowMergeValue()
+                KernelStep.TakeShadowBoundary -> takeShadowBoundary()
+                KernelStep.RetainShadowBoundary -> retainShadowBoundary()
+                KernelStep.AdvanceShadowBoundary -> advanceShadowBoundary()
+                KernelStep.AppendShadowMergedValue -> appendShadowMergedValue()
+                KernelStep.DrainShadowMerge -> drainShadowMerge()
+                KernelStep.InspectShadowSegmentCount -> inspectShadowSegmentCount()
+                KernelStep.PrepareShadowSegmentIndices -> prepareShadowSegmentIndices()
+                KernelStep.BeginShadowSegmentSearch -> beginShadowSegmentSearch()
+                KernelStep.InspectShadowSegment -> inspectShadowSegment()
+                KernelStep.AdvanceShadowSegmentSearch -> advanceShadowSegmentSearch()
+                KernelStep.UseUnmatchedShadowSegment -> useUnmatchedShadowSegment()
+                KernelStep.MatchShadowSegment -> matchShadowSegment()
+                KernelStep.InspectShadowSegmentEnd -> inspectShadowSegmentEnd()
+                KernelStep.InspectShadowSegmentOrientation -> inspectShadowSegmentOrientation()
+                KernelStep.SelectShadowSegmentOrientation -> selectShadowSegmentOrientation()
+                KernelStep.ChooseShadowSegmentVertex -> chooseShadowSegmentVertex()
+                KernelStep.InspectShadowSegmentCase -> inspectShadowSegmentCase()
+                KernelStep.AdvanceShadowSegmentCase -> advanceShadowSegmentCase()
+                KernelStep.PrepareShadowSegment -> prepareShadowSegment()
+                KernelStep.PrepareNextShadowSegment -> prepareNextShadowSegment()
+                KernelStep.InspectShadowSegmentClass -> inspectShadowSegmentClass()
+                KernelStep.InspectShadowSegmentBoundary -> inspectShadowSegmentBoundary()
+                KernelStep.AppendShadowSegmentIndex -> appendShadowSegmentIndex()
+                KernelStep.FinishShadowSegmentIndex -> finishShadowSegmentIndex()
+                KernelStep.InspectShadowEndpointClass -> inspectShadowEndpointClass()
+                KernelStep.SelectShadowEndpointVertex -> selectShadowEndpointVertex()
+                KernelStep.StoreShadowEndpointVertex -> storeShadowEndpointVertex()
+                KernelStep.InspectShadowTerminalSegment -> inspectShadowTerminalSegment()
+                KernelStep.AdvanceShadowTerminalSegment -> advanceShadowTerminalSegment()
+                KernelStep.FinishShadowTopology -> finishShadowTopology()
+                KernelStep.PrepareShadowCrossSections -> prepareShadowCrossSections()
+                KernelStep.SampleShadowCrossSection -> sampleShadowCrossSection()
+                KernelStep.PreparePenumbraStrips -> preparePenumbraStrips()
+                KernelStep.BeginPenumbraSegment -> beginPenumbraSegment()
+                KernelStep.FindPenumbraSegment -> findPenumbraSegment()
+                KernelStep.AdvancePenumbraSearch -> advancePenumbraSearch()
+                KernelStep.UseUnmatchedPenumbraSegment -> useUnmatchedPenumbraSegment()
+                KernelStep.MatchPenumbraSegment -> matchPenumbraSegment()
+                KernelStep.InspectPenumbraSegmentEnd -> inspectPenumbraSegmentEnd()
+                KernelStep.InspectPenumbraSegmentCase -> inspectPenumbraSegmentCase()
+                KernelStep.SelectPenumbraSegmentCase -> selectPenumbraSegmentCase()
+                KernelStep.CalculatePenumbraDirection -> calculatePenumbraDirection()
+                KernelStep.ValidatePenumbraDirection -> validatePenumbraDirection()
+                KernelStep.ValidatePenumbraDirectionMagnitude ->
+                    validatePenumbraDirectionMagnitude()
+                KernelStep.UseFallbackPenumbraDirection -> useFallbackPenumbraDirection()
+                KernelStep.SelectPenumbraEndpoint -> selectPenumbraEndpoint()
+                KernelStep.CalculateAdjacentPenumbraDirection ->
+                    calculateAdjacentPenumbraDirection()
+                KernelStep.ValidateAdjacentPenumbraDirection -> validateAdjacentPenumbraDirection()
+                KernelStep.ValidateAdjacentPenumbraMagnitude -> validateAdjacentPenumbraMagnitude()
+                KernelStep.UseAdjacentPenumbraDirection -> useAdjacentPenumbraDirection()
+                KernelStep.UseTerminalPenumbraDirection -> useTerminalPenumbraDirection()
+                KernelStep.BeginLowerPenumbraFade -> beginLowerPenumbraFade()
+                KernelStep.SampleLowerPenumbraFade -> sampleLowerPenumbraFade()
+                KernelStep.CopyLowerFadeJoin -> copyLowerFadeJoin()
+                KernelStep.AppendLowerPenumbraFade -> appendLowerPenumbraFade()
+                KernelStep.BeginUpperPenumbraFade -> beginUpperPenumbraFade()
+                KernelStep.SampleUpperPenumbraFade -> sampleUpperPenumbraFade()
+                KernelStep.CopyUpperFadeJoin -> copyUpperFadeJoin()
+                KernelStep.AppendUpperPenumbraFade -> appendUpperPenumbraFade()
+                KernelStep.AdvancePenumbraSegment -> advancePenumbraSegment()
+                KernelStep.FinishPenumbraSegments -> finishPenumbraSegments()
+                KernelStep.PrepareEmptyPenumbra -> prepareEmptyPenumbra()
+                KernelStep.InspectPenumbraAxis -> inspectPenumbraAxis()
+                KernelStep.InspectPenumbraAxisMagnitude -> inspectPenumbraAxisMagnitude()
+                KernelStep.PreparePenumbraEndpointLookup -> preparePenumbraEndpointLookup()
+                KernelStep.FindPenumbraEndpoint -> findPenumbraEndpoint()
+                KernelStep.InspectPenumbraTerminalEndpoint -> inspectPenumbraTerminalEndpoint()
+                KernelStep.InspectPenumbraEndpointKind -> inspectPenumbraEndpointKind()
+                KernelStep.UseInteriorPenumbraEndpoint -> useInteriorPenumbraEndpoint()
+                KernelStep.UseFirstPenumbraEndpoint -> useFirstPenumbraEndpoint()
+                KernelStep.UseLastPenumbraEndpoint -> useLastPenumbraEndpoint()
+                KernelStep.ReadPenumbraEndpoint -> readPenumbraEndpoint()
+                KernelStep.AdvancePenumbraEndpointLookup -> advancePenumbraEndpointLookup()
+                KernelStep.FinishPenumbraEndpointLookup -> finishPenumbraEndpointLookup()
+                KernelStep.PreparePenumbraEndCap -> preparePenumbraEndCap()
+                KernelStep.AdvancePenumbraEndCap -> advancePenumbraEndCap()
+                KernelStep.AppendPenumbraEndCap -> appendPenumbraEndCap()
+                KernelStep.FinishPenumbraEndCap -> finishPenumbraEndCap()
+                KernelStep.PreparePenumbraCorners -> preparePenumbraCorners()
+                KernelStep.PreparePenumbraCornerRotation -> preparePenumbraCornerRotation()
+                KernelStep.BeginPenumbraCorner -> beginPenumbraCorner()
+                KernelStep.AppendPenumbraCornerVertex -> appendPenumbraCornerVertex()
+                KernelStep.AdvancePenumbraCornerRing -> advancePenumbraCornerRing()
+                KernelStep.AdvancePenumbraCorner -> advancePenumbraCorner()
+                KernelStep.FinishPenumbraCorners -> finishPenumbraCorners()
+                KernelStep.InspectFrontFace -> inspectFrontFace()
+                KernelStep.InspectFrontSampleRange -> inspectFrontSampleRange()
+                KernelStep.SkipEmptyFrontSamples -> skipEmptyFrontSamples()
+                KernelStep.SkipDisabledFrontFace -> skipDisabledFrontFace()
+                KernelStep.PrepareFrontSamples -> prepareFrontSamples()
+                KernelStep.SampleFrontRange -> sampleFrontRange()
+                KernelStep.InspectFirstFrontEdge -> inspectFirstFrontEdge()
+                KernelStep.UseEmptyFrontEdges -> useEmptyFrontEdges()
+                KernelStep.AppendFirstFrontEdge -> appendFirstFrontEdge()
+                KernelStep.InspectSecondFrontEdge -> inspectSecondFrontEdge()
+                KernelStep.SelectFrontMergeOrientation -> selectFrontMergeOrientation()
+                KernelStep.InspectFrontMergeAvailability -> inspectFrontMergeAvailability()
+                KernelStep.SkipFrontEdgeMerge -> skipFrontEdgeMerge()
+                KernelStep.AppendSecondFrontEdge -> appendSecondFrontEdge()
+                KernelStep.CompareFrontEdges -> compareFrontEdges()
+                KernelStep.SwapFrontEdges -> swapFrontEdges()
+                KernelStep.SelectTwoFrontEdges -> selectTwoFrontEdges()
+                KernelStep.SelectOneFrontEdge -> selectOneFrontEdge()
+                KernelStep.FinishFrontEdgeSelection -> finishFrontEdgeSelection()
+                KernelStep.PrepareFrontEdgeMerge -> prepareFrontEdgeMerge()
+                KernelStep.InspectFrontMergeSource -> inspectFrontMergeSource()
+                KernelStep.TakeFrontEdge -> takeFrontEdge()
+                KernelStep.AdvanceFrontEdge -> advanceFrontEdge()
+                KernelStep.InspectFrontMergeOrder -> inspectFrontMergeOrder()
+                KernelStep.CompareFrontMergeValues -> compareFrontMergeValues()
+                KernelStep.RetainFrontMergeValue -> retainFrontMergeValue()
+                KernelStep.TakeFrontBoundary -> takeFrontBoundary()
+                KernelStep.RetainFrontBoundary -> retainFrontBoundary()
+                KernelStep.AdvanceFrontBoundary -> advanceFrontBoundary()
+                KernelStep.AppendFrontMergedValue -> appendFrontMergedValue()
+                KernelStep.DrainFrontMerge -> drainFrontMerge()
+                KernelStep.PrepareFrontCrossSections -> prepareFrontCrossSections()
+                KernelStep.BeginFrontCrossSections -> beginFrontCrossSections()
+                KernelStep.AppendFrontCrossSection -> appendFrontCrossSection()
+                KernelStep.FinishFrontCrossSections -> finishFrontCrossSections()
+                KernelStep.PrepareDrawState -> prepareDrawState()
+                KernelStep.InspectOutputTransform -> inspectOutputTransform()
+                KernelStep.UseAffineOutputScale -> useAffineOutputScale()
+                KernelStep.MeasureOutputScale -> measureOutputScale()
+                KernelStep.ApplyOutputScale -> applyOutputScale()
+                KernelStep.BeginClipIteration -> beginClipIteration()
+                KernelStep.PrepareDrawBuffers -> prepareDrawBuffers()
+                KernelStep.InspectSurfaceDraw -> inspectSurfaceDraw()
+                KernelStep.DrawSurfaceStrips -> drawSurfaceStrips()
+                KernelStep.InspectBackDraw -> inspectBackDraw()
+                KernelStep.InspectBackShadowDraw -> inspectBackShadowDraw()
+                KernelStep.PrepareShadowDrawLoop -> prepareShadowDrawLoop()
+                KernelStep.InspectShadowDrawSegment -> inspectShadowDrawSegment()
+                KernelStep.PrepareShadowDrawSegment -> prepareShadowDrawSegment()
+                KernelStep.DrawShadowSegment -> drawShadowSegment()
+                KernelStep.InspectShadowEndCap -> inspectShadowEndCap()
+                KernelStep.DrawShadowEndCap -> drawShadowEndCap()
+                KernelStep.InspectShadowCorner -> inspectShadowCorner()
+                KernelStep.DrawShadowCorner -> drawShadowCorner()
+                KernelStep.AdvanceShadowDrawSegment -> advanceShadowDrawSegment()
+                KernelStep.DrawBackFace -> drawBackFace()
+                KernelStep.DrawBackFaceFringe -> drawBackFaceFringe()
+                KernelStep.DrawBackFaceEdges -> drawBackFaceEdges()
+                KernelStep.AdvanceClipIteration -> advanceClipIteration()
+                KernelStep.FinishDrawClips -> finishDrawClips()
+                KernelStep.RestoreDrawBlendFlags -> restoreDrawBlendFlags()
+                KernelStep.ResetDrawState -> resetDrawState()
+                KernelStep.CompleteGeometry -> completeGeometry()
+                KernelStep.RejectGeometry -> rejectGeometry()
+                KernelStep.Complete -> KernelStep.Complete
+                KernelStep.Invalid -> error("Invalid curl geometry")
+            }
+    }
+}
+
+private const val MAX_GEOMETRY_STEPS = 100_000

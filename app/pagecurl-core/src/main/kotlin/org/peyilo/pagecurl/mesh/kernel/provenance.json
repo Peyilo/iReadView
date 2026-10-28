@@ -3,12 +3,14 @@
   "sourceSHA256": "6ac0425c97321faa501486c1329e8ce1a2b26139026c8a3abfd274da81f95684",
   "blocks": 244,
   "generatedFiles": [
-    "KernelBlocks1.kt",
-    "KernelBlocks2.kt",
-    "KernelBlocks3.kt",
-    "KernelBlocks4.kt",
-    "KernelBlocks5.kt",
-    "KernelBlocks6.kt",
+    "KernelProjection.kt",
+    "KernelSurfaceSampling.kt",
+    "KernelShadowTopology.kt",
+    "KernelPenumbra.kt",
+    "KernelFaceSampling.kt",
+    "KernelDrawing.kt",
+    "KernelValues.kt",
     "KernelFlow.kt"
-  ]
+  ],
+  "naming": "Reaching-definition live ranges and semantic geometry stages; shared bitwise scratch storage"
 }

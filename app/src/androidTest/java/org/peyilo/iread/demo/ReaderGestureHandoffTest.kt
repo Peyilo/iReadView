@@ -13,6 +13,7 @@ import org.junit.runner.RunWith
 import org.json.JSONObject
 import org.peyilo.iread.demo.ui.reader.ReaderActivity
 import org.peyilo.ireadview.api.effect.*
+import org.peyilo.ireadview.api.input.ReaderInputOptions
 import org.peyilo.ireadview.api.model.*
 import org.peyilo.ireadview.api.source.ReaderInput
 import org.peyilo.ireadview.api.state.*
@@ -36,9 +37,92 @@ class ReaderGestureHandoffTest {
         @Volatile var progress=0f
         @Volatile var phase:TurnPhase?=null
     }
+    @Test fun cancelledEpubDragKeepsBothPagesVisibleOnRetry() {
+        ActivityScenario.launch(ReaderActivity::class.java).use { scenario ->
+            await(scenario) { it.readerState.phase==ReaderPhase.Ready }
+            resetTurnConfiguration(scenario)
+            var source:EpubReaderBookSource?=null
+            request<OpenResult>(scenario) { r,c ->
+                source=EpubReaderBookSource("cancel-pages-${System.nanoTime()}",
+                    ReaderInput { ByteArrayInputStream(publication(panels=true)) },File(r.context.cacheDir,"cancel-pages"))
+                r.openBook(source!!,callback=c)
+            }
+            try {
+                request<ReaderResult<ModeChange>>(scenario) { r,c -> r.setReadingMode(ReadingMode.PAGED,c) }
+                for(effect in selectedEffects(listOf("ibook_slide","slide","cover","google_curl","ios_curl"))) {
+                    request<NavigationResult<ReadingPosition>>(scenario) { r,c -> r.firstPage(c) }
+                    scenario.onActivity { it.findViewById<ReaderView>(R.id.reader).setPageTurnEffect(PageTurnEffects.fromId(effect)!!) }
+                    for(forward in listOf(true,false)) {
+                        SystemClock.sleep(750)
+                        val rect=Rect()
+                        var before:ReadingPosition?=null
+                        scenario.onActivity {
+                            val reader=it.findViewById<ReaderView>(R.id.reader)
+                            before=reader.currentPosition
+                            findBody(reader)!!.getGlobalVisibleRect(rect)
+                        }
+                        var firstPixels=0
+                        fun x(value:Float)=if(forward)value else 1f-value
+                        val currentRed=requireNotNull(before).pageNumberHint!!%2==1
+                        repeat(3) { attempt ->
+                            val down=SystemClock.uptimeMillis()
+                            pointer(down,MotionEvent.ACTION_DOWN,rect,x(.85f))
+                            pointer(down,MotionEvent.ACTION_MOVE,rect,.5f)
+                            await(scenario) { it.navigationState==ReadNavigationState.Dragging }
+                            SystemClock.sleep(350)
+                            val bitmap=Bitmap.createBitmap(240,320,Bitmap.Config.ARGB_8888)
+                            try {
+                                val result=LinkedBlockingQueue<Int>()
+                                scenario.onActivity { PixelCopy.request(it.window,rect,bitmap,{ status -> result.add(status) },Handler(Looper.getMainLooper())) }
+                                assertEquals(PixelCopy.SUCCESS,result.poll(5,TimeUnit.SECONDS))
+                                var currentPixels=0
+                                var targetPixels=0
+                                for(y in 80 until 240) for(x in 15 until 225) {
+                                    val color=bitmap.getPixel(x,y)
+                                    val red=Color.red(color)>130 && Color.blue(color)<110
+                                    val blue=Color.blue(color)>130 && Color.red(color)<110
+                                    if(if(currentRed)red else blue)currentPixels++
+                                    if(if(currentRed)blue else red)targetPixels++
+                                }
+                                android.util.Log.i("CancelPages","$effect forward=$forward attempt=$attempt current=$currentPixels target=$targetPixels")
+                                if(attempt==0)firstPixels=currentPixels
+                                if(currentPixels<2000 || currentPixels<firstPixels*.65 || targetPixels<=1000) scenario.onActivity { activity ->
+                                    File(activity.filesDir,"cancel-page-$effect-$attempt.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG,100,it) }
+                                }
+                                assertTrue("$effect attempt $attempt turning page disappeared ($currentPixels, first=$firstPixels)",currentPixels>2000 && currentPixels>=firstPixels*.65)
+                                assertTrue("$effect attempt $attempt target page disappeared ($targetPixels)",targetPixels>1000)
+                            } finally { bitmap.recycle() }
+                            // Exercise both system cancellation and reversing the finger before UP.
+                            if(attempt==0)pointer(down,MotionEvent.ACTION_CANCEL,rect,.5f)
+                            else {
+                                // Multiple return samples also reverse iOSCurl's native
+                                // two-sample velocity filter, rather than forcing its decision.
+                                for(point in listOf(.65f,.85f,.96f)) {
+                                    pointer(down,MotionEvent.ACTION_MOVE,rect,x(point))
+                                    SystemClock.sleep(20)
+                                }
+                                pointer(down,MotionEvent.ACTION_UP,rect,x(.96f))
+                            }
+                            await(scenario) { it.navigationState==ReadNavigationState.Idle }
+                            scenario.onActivity { assertEquals("$effect cancellation must preserve position",before,it.findViewById<ReaderView>(R.id.reader).currentPosition) }
+                            SystemClock.sleep(if(attempt==0) 50 else 750)
+                        }
+                        val down=SystemClock.uptimeMillis()
+                        pointer(down,MotionEvent.ACTION_DOWN,rect,x(.85f))
+                        pointer(down,MotionEvent.ACTION_MOVE,rect,x(.2f))
+                        await(scenario) { it.navigationState==ReadNavigationState.Dragging }
+                        SystemClock.sleep(150)
+                        pointer(down,MotionEvent.ACTION_UP,rect,x(.2f))
+                        await(scenario) { it.navigationState==ReadNavigationState.Idle && it.currentPosition!=before }
+                    }
+                }
+            } finally { scenario.onActivity { it.findViewById<ReaderView>(R.id.reader).closeBook() };source?.close() }
+        }
+    }
     @Test fun bothEpubPagesRemainVisibleDuringRepeatedDrags() {
         ActivityScenario.launch(ReaderActivity::class.java).use { scenario ->
             await(scenario) { it.readerState.phase==ReaderPhase.Ready }
+            resetTurnConfiguration(scenario)
             var source:EpubReaderBookSource?=null
             request<OpenResult>(scenario) { r,c ->
                 source=EpubReaderBookSource("distinct-pages-${System.nanoTime()}",
@@ -99,6 +183,7 @@ class ReaderGestureHandoffTest {
         val reports=mutableListOf<JSONObject>()
         ActivityScenario.launch(ReaderActivity::class.java).use { scenario ->
             await(scenario) { it.readerState.phase==ReaderPhase.Ready }
+            resetTurnConfiguration(scenario)
             for(format in listOf("epub","text","arm")) {
                 val epub=format!="text"
                 val id="handoff-$format-${System.nanoTime()}"
@@ -178,6 +263,16 @@ class ReaderGestureHandoffTest {
                 } finally { scenario.onActivity { it.findViewById<ReaderView>(R.id.reader).closeBook() }; owned?.close() }
             }
             scenario.onActivity { File(it.filesDir,"gesture-handoff.json").writeText(reports.joinToString(",\n","[\n","\n]")) }
+        }
+    }
+    private fun resetTurnConfiguration(scenario:ActivityScenario<ReaderActivity>) {
+        scenario.onActivity {
+            val reader=it.findViewById<ReaderView>(R.id.reader)
+            // Other integration tests deliberately persist a one-byte bitmap budget
+            // or vertical/RTL input. Gesture rendering fixtures own their configuration.
+            reader.setPageTurnOptions(PageTurnOptions())
+            reader.setInputOptions(ReaderInputOptions())
+            reader.layoutDirection=View.LAYOUT_DIRECTION_LTR
         }
     }
     private fun selectedEffects(defaults: List<String>): List<String> {
@@ -263,7 +358,9 @@ class ReaderGestureHandoffTest {
             entry("mimetype","application/epub+zip")
             entry("META-INF/container.xml","""<container xmlns="urn:oasis:names:tc:opendocument:xmlns:container" version="1.0"><rootfiles><rootfile full-path="book.opf" media-type="application/oebps-package+xml"/></rootfiles></container>""")
             entry("book.opf","""<package xmlns="http://www.idpf.org/2007/opf" version="3.0"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>Handoff</dc:title></metadata><manifest><item id="c" href="chapter.xhtml" media-type="application/xhtml+xml"/></manifest><spine><itemref idref="c"/></spine></package>""")
-            val content=if(panels) (0 until 12).joinToString("") { "<div style='height:100vh;break-after:column;background:${if(it%2==0) "#c72525" else "#255bc7"}'>Page $it</div>" }
+            // Leave headroom for legacy WebView viewport/column rounding;
+            // exactly 100vh can spill a blank fragment into the next column.
+            val content=if(panels) (0 until 12).joinToString("") { "<div style='height:90vh;break-inside:avoid;-webkit-column-break-after:always;break-after:column;background:${if(it%2==0) "#c72525" else "#255bc7"}'>Page $it</div>" }
                 else (0 until 80).joinToString("") { "<p>$text</p>" }
             entry("chapter.xhtml","""<html xmlns="http://www.w3.org/1999/xhtml"><head><title>Handoff</title></head><body>$content</body></html>""")
         }

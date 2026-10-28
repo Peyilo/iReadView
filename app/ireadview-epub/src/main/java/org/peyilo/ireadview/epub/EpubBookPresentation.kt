@@ -15,7 +15,6 @@ import kotlinx.coroutines.*
 import org.json.JSONObject
 import org.peyilo.ireadview.api.effect.PageBackgroundSurface
 import org.peyilo.ireadview.api.effect.SnapshotPreferredSurface
-import org.peyilo.ireadview.api.effect.RecordedPageSurface
 import org.peyilo.ireadview.api.input.PagingAxis
 import org.peyilo.ireadview.api.model.*
 import org.peyilo.ireadview.api.state.*
@@ -382,9 +381,12 @@ internal class EpubBookPresentation(private val context: Context, private val so
         var pageCount = 1
         val surface: PageBackgroundSurface get() {
             val recorded = recording
-            return object : PageBackgroundSurface, SnapshotPreferredSurface, RecordedPageSurface {
-            override val preferSnapshot get() = recorded == null
-            override val isRecorded get() = recorded != null
+            return object : PageBackgroundSurface, SnapshotPreferredSurface {
+            // WebView recordings borrow mutable child RenderNodes. Replaying on a
+            // hardware Canvas is possible, but does not make them immutable snapshots:
+            // a hidden/parked hierarchy may replace their display lists mid-turn.
+            // Effects must capture transaction-owned pixels before hiding live content.
+            override val preferSnapshot get() = true
             override val widthPx get() = template.root.width
             override val heightPx get() = template.root.height
             override val backgroundColor get() = host.style.page.backgroundColor

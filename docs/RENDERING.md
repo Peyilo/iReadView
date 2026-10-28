@@ -29,6 +29,12 @@ Demo 阅读设置的“仿真效果”和翻页示例只列出 **iOSCurl / Googl
 
 单栏的正反面属于同一张纸。背面仍显示当前卷曲纸页的镜像内容，露出的下层页保持独立。夜间背景不能出现固定白色背板。
 
+### 柔和阴影
+
+Android 默认使用中性黑色、0.55 不透明度的投影，并将原渐隐网格的范围扩至1.35倍。只改变半影条带的延伸和投影颜色，不模糊页面文字，也不改变手势、纸面顶点或 UV。`IosCurlOptions.shadowSoftness`（1–3）和 `shadowOpacity`（0–1）可分别调整范围和强度。
+
+白底、米色和夜间底色共用半透明黑色，按预乘 alpha 的 source-over 混合：接收页面的 RGB 随遮挡程度衰减，因此保留原底色的色相；纯黑底也不会被灰色阴影提亮。不按主题叠加一层固定灰色或有色遮罩。独立 Kotlin 核心默认仍保留原始阴影参数，以继续执行原版数值对照。
+
 ## GoogleCurl
 
 `internal/effect/googlecurl` 包含 `GoogleCurlEffect` 和 `GoogleCurlGeometry`。它绘制前面行波与透视压缩，保持原有几何和边缘阴影，不生成反折背面。
@@ -40,6 +46,8 @@ Demo 阅读设置的“仿真效果”和翻页示例只列出 **iOSCurl / Googl
 - `CurlCatalogTest` 检查公开仿真工厂仅有两个，以及 Google 行波的首尾边界。
 - `pagecurl-core:test` 对照原 C11 基准中的参数、网格、UV、颜色、手势、缓动及布局；背景适配不改变核心默认基准。
 - `IosCurlBackgroundDeviceTest` 检查元数据/快照取色、夜间材质、各方向的真实来源及每事务一次取色。
+- `ShadowProfileTest` 检查半影扩展不改变纸面和 UV；投影的 GLES 像素检查覆盖白、米色、夜间及纯黑背景，确保阴影只变暗。
+- `SnapshotIsolationDeviceTest` 检查平移效果使用预算内快照、真实合成器变透明后两页仍可见，以及隔离失败时归还部分租约并请求降级。
 - `IosCurlDeviceTest` 检查 GLES2 单栏绘制与资源回收；`IosCurlDemoTest` 验证真实设置、手势和事务交接。
 - `ReaderTurnPerformanceTest` 和 `ReaderGestureHandoffTest` 的通用进度探针测试平移和 GoogleCurl。iOSCurl 的原版输入/缓动使用其专门测试，不通过会隐藏可选能力的宿主效果包装器。
 

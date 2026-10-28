@@ -9,6 +9,7 @@ Requires pycparser at regeneration time only. Generated files are checked in.
 import argparse, hashlib, json, re
 from pathlib import Path
 from pycparser import c_parser, c_ast as A
+from CurlKernelReadability import refine_kernel, normalize_kernel_source
 
 ROOT = Path(__file__).resolve().parents[1]
 DEST = ROOT / 'app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/mesh/kernel'
@@ -220,8 +221,14 @@ internal fun CurlMeshKernel.execute() {
     check(block == -1) { "Invalid curl geometry" }
 }
 ''',encoding='utf-8')
+groups = refine_kernel(DEST)
+for name in groups:
+    path = DEST / name
+    path.write_text(normalize_kernel_source(path.read_text(encoding='utf-8')), encoding='utf-8')
 manifest={'source':'iOS12.5.7 16H81 offline recovery -> verified C11 -> managed Kotlin',
           'sourceSHA256':hashlib.sha256((args.source/'pc_render_body.inc').read_bytes()).hexdigest(),
-          'blocks':len(blocks),'generatedFiles':groups+['KernelFlow.kt']}
+          'blocks':len(blocks),'generatedFiles':groups,
+          'naming':'Reaching-definition live ranges and semantic geometry stages; shared bitwise scratch storage'}
 (DEST/'provenance.json').write_text(json.dumps(manifest,indent=2)+'\n')
 print(json.dumps(manifest))
+print('Run ./gradlew.bat :app:pagecurl-core:formatKotlin after regeneration.')
