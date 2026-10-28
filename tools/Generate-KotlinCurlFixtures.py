@@ -3,7 +3,7 @@ from pathlib import Path
 import argparse, ctypes as C, gzip, hashlib, json, math, random, struct
 ROOT=Path(__file__).resolve().parents[1]
 ap=argparse.ArgumentParser();ap.add_argument('--source',type=Path,required=True);a=ap.parse_args()
-P=a.source;dest=ROOT/'app/pagecurl-core/src/test/resources';dest.mkdir(parents=True,exist_ok=True)
+P=a.source;dest=ROOT/'app/ioscurl/src/test/resources';dest.mkdir(parents=True,exist_ok=True)
 class Values(C.Structure):_fields_=[(n,C.c_double)for n in ('time','radius','angle')]
 class Rect(C.Structure):_fields_=[(n,C.c_double)for n in ('x','y','w','h')]
 class Config(C.Structure):_fields_=[(n,C.c_double)for n in ('width','height','initial_x','initial_y')]+[(n,C.c_int32)for n in ('spine','direction','requested_type','double_sided')]
@@ -11,6 +11,7 @@ class Input(C.Structure):_fields_=[('values',Values)]+[(n,C.c_double)for n in ('
 class Vertex(C.Structure):_fields_=[('raw',C.c_uint8*64)]
 class Batch(C.Structure):_fields_=[(n,C.c_uint32)for n in ('primitive','mode','blend_function','blend_enabled','vertex_count','index_count')]+[('vertices',C.POINTER(Vertex)),('indices',C.POINTER(C.c_uint16)),('clip',Rect)]
 class Frame(C.Structure):_fields_=[(n,C.c_uint32)for n in ('width','height','batch_count')]+[('batches',C.POINTER(Batch)),('in_state',C.c_double*13),('out_state',C.c_uint8*0x120),('arena',C.c_void_p)]
+# The verified external C reference keeps its research filename, independent of the ioscurl module.
 d=C.CDLL(str(P/'pagecurl.dll'))
 d.pc_render_input_defaults.argtypes=[C.POINTER(Input)];d.pc_render.argtypes=[C.POINTER(Input),C.POINTER(Frame)];d.pc_render_frame_free.argtypes=[C.POINTER(Frame)]
 d.pc_control_update.argtypes=[C.POINTER(Config),C.c_double,C.c_double,C.POINTER(Values)]

@@ -35,4 +35,4 @@ APK：`app/build/outputs/apk/debug/app-debug.apk`；AAR：`app/ireadview/build/o
 ## 贡献者
 
 - [Peyilo](https://github.com/Peyilo)：项目维护。
-- [Codex（OpenAI）](https://developers.openai.com/codex/)：AI 辅助开发，参与 pagecurl-core 的 Kotlin 移植与内核整理、EPUB 翻页问题修复及回归测试。
+- [Codex（OpenAI）](https://developers.openai.com/codex/)：AI 辅助开发，参与 ioscurl 的 Kotlin 移植与内核整理、EPUB 翻页问题修复及回归测试。

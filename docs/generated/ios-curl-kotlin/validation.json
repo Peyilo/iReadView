@@ -32,22 +32,29 @@
   "unitTests": {
     "core": [
       {
-        "name": "org.peyilo.pagecurl.GestureTimingParityTest",
+        "name": "org.peyilo.ioscurl.GestureTimingParityTest",
         "tests": "3",
         "failures": "0",
         "errors": "0",
         "skipped": "0"
       },
       {
-        "name": "org.peyilo.pagecurl.GoldenParityTest",
+        "name": "org.peyilo.ioscurl.GoldenParityTest",
         "tests": "4",
         "failures": "0",
         "errors": "0",
         "skipped": "0"
       },
       {
-        "name": "org.peyilo.pagecurl.LayoutTransitionParityTest",
+        "name": "org.peyilo.ioscurl.LayoutTransitionParityTest",
         "tests": "3",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "org.peyilo.ioscurl.ShadowProfileTest",
+        "tests": "1",
         "failures": "0",
         "errors": "0",
         "skipped": "0"
@@ -162,34 +169,36 @@
     }
   },
   "productionSources": {
-    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/control/CurlControl.kt": "8edffc41dfb73e7975918155d899b89fe7632bcfd0cae3e5b3dc345d7482dae9",
-    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/control/CurlTiming.kt": "ea23404b3526db33b4862f578ba2c097d2e8ea3f62cf683a98666ff250aa68bd",
-    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/gesture/CurlNavigation.kt": "e130d0be8c293fcdd8507c9a3fef0a4a70a071ea5fa52d62be9e53d0560b6a02",
-    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/gesture/CurlPan.kt": "5ab14ef5a7b14a660f3417a942fba15e703c498f0129469a5e5bf55f53fccdee",
-    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/gesture/CurlTap.kt": "75f730184f529d6323a8c4e43f9ab1952346f3b1d00f01fc6a23e7b5dd2e5d67",
-    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/layout/CurlLayout.kt": "11dd472d88d299b60d2fedd83688f913f07b099369eacfc1f3d660e2d668ea71",
-    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/math/AppleMath.kt": "aa38cf6ade94281d3317e242b70a59eb587076829ed7a9942bd79e99a2b5eaa6",
-    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/math/BinaryMath.kt": "559f18b0f212cf3228042e5916f6a87ea67f2499465e590b91df90d564e22828",
-    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/mesh/CurlMesh.kt": "b9b646165f9eeb488b1bb730d96707c48f1ce745dd7ee93d0d10a231250e1d98",
-    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/mesh/kernel/CurlMeshKernel.kt": "412aa4a955a1f45184976f8fc9a247a8786eb5559a6549af0fa777b62787555a",
-    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/mesh/kernel/KernelBlocks1.kt": "dd54dd0ab4c588588e69c95a19a138f0abf34e97aa21a2998c86d5aa4739ca7c",
-    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/mesh/kernel/KernelBlocks2.kt": "b2cc095272d0fadfbc6d39e29e82573ea0e63a52d1795495acd233799f39def3",
-    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/mesh/kernel/KernelBlocks3.kt": "52a985919bf7bc32966adc435c3fbb8364eaf1fca8c98566f71015708d60316a",
-    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/mesh/kernel/KernelBlocks4.kt": "fb26b63b2fe761f4ad279d0f19d2fb4275f90a34c3c4d5024270b6fd9179d295",
-    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/mesh/kernel/KernelBlocks5.kt": "a9449ec2f6e794e377a9ec9202aa752c9c8deb104cd68a7a21f2ee74b21d7130",
-    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/mesh/kernel/KernelBlocks6.kt": "d69a903cc82791a8ce1474ec2ce7508d2a4205064cdcf8ebade3e314bb260662",
-    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/mesh/kernel/KernelFlow.kt": "f58c7cf8a9a0d4823d038bb32a9cdf2e2d4dc42218782f7e18690473032a4e97",
-    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/mesh/kernel/KernelInput.kt": "745cc790d5f2c275f70613996f9b3c03f7c04bcca09cd20ae7ebd2899aa6a7d0",
-    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/mesh/kernel/KernelMemory.kt": "9f7534813ff331936cad08435e63242a14ac92e251458dac184b77e9cb518ada",
-    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/mesh/kernel/KernelPrimitives.kt": "5b0e082b6782a940ace090e5a07cc390e8a9b304dcf0b1be3db40c269530f362",
-    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/model/CurlModel.kt": "9a556163bb409451e6b4eed9fd4e5868b57da864f7114eb629dcda21643bd35e",
-    "app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/transition/CurlTransitions.kt": "cb7c84a1215a1be4fd10c645c7fcf07c5a2c8063a762895ea655ed2b62eb0be7",
-    "app/ireadview/src/main/java/org/peyilo/ireadview/internal/effect/ioscurl/IosCurlEffect.kt": "c3d9a68a1fd1c3cb45b6029eb92758312ea22023fea6fb5447842b4b8b61dd81",
-    "app/ireadview/src/main/java/org/peyilo/ireadview/internal/effect/ioscurl/IosCurlInput.kt": "5d4fcdf4af5077cfe280f7bb5c280818ed41edba3d84f4e010881603c4258a08",
-    "app/ireadview/src/main/java/org/peyilo/ireadview/internal/effect/ioscurl/IosCurlMaterial.kt": "6739fb734125f2400313ef5f7daff93969d59cd8763c41268a3a10a2b19de274",
-    "app/ireadview/src/main/java/org/peyilo/ireadview/internal/effect/ioscurl/render/IosCurlRenderer.kt": "d35ecb3f4f416cba5d8123ec05e07d7664c6f6914b278962a582c55f7170022d",
+    "app/ioscurl/src/main/kotlin/org/peyilo/ioscurl/control/CurlControl.kt": "c8703719f6cd59347039f0c597d8c9187b75e3c248c8dfb0d6e1097a73cd9138",
+    "app/ioscurl/src/main/kotlin/org/peyilo/ioscurl/control/CurlTiming.kt": "39d9b17e1d83408d8b5645be87009affea097f0af09dc753bbf659db00bf6311",
+    "app/ioscurl/src/main/kotlin/org/peyilo/ioscurl/gesture/CurlNavigation.kt": "3d3abc6fae4efb309fee4319274472cbe49fc1baecba5be026d3111d499f938c",
+    "app/ioscurl/src/main/kotlin/org/peyilo/ioscurl/gesture/CurlPan.kt": "c03f90018033af6ecec37f0f3355e06e943104f90a6f09cf2dee4eac0d13378f",
+    "app/ioscurl/src/main/kotlin/org/peyilo/ioscurl/gesture/CurlTap.kt": "38ab984f79c8edf0c9989f4d850b4acef51b7dd153b7b0a0b51b516f8bc66650",
+    "app/ioscurl/src/main/kotlin/org/peyilo/ioscurl/layout/CurlLayout.kt": "eb324c48e7789a7832a58032a81f14a69fe9d960321170e2a78202f6ba0e3160",
+    "app/ioscurl/src/main/kotlin/org/peyilo/ioscurl/math/AppleMath.kt": "4a87c361df0ab93cf2d27d56ffd807e712dca631000e783c36e63553be1dcacb",
+    "app/ioscurl/src/main/kotlin/org/peyilo/ioscurl/math/BinaryMath.kt": "bac8a9b3e1a51978d6083b22020960a17f4eca1d8a070e28d39371f63fdd527c",
+    "app/ioscurl/src/main/kotlin/org/peyilo/ioscurl/mesh/CurlMesh.kt": "a9a31342169b7a97d5a9dd42658d6e54b2eee92b80f093b86feabe3f3ea51cd4",
+    "app/ioscurl/src/main/kotlin/org/peyilo/ioscurl/mesh/kernel/CurlMeshKernel.kt": "ffb5710b837bd909777f90ee51bc10ada45c9d4de002f6d6af8f5f9666181dfc",
+    "app/ioscurl/src/main/kotlin/org/peyilo/ioscurl/mesh/kernel/KernelDrawing.kt": "c3719314be18bfedcef963ceeccbb36260fa90ebce4596740ebcb63cb6be51d6",
+    "app/ioscurl/src/main/kotlin/org/peyilo/ioscurl/mesh/kernel/KernelFaceSampling.kt": "ae1453f1b99e63240fdd838ae9e351d0d3e96a297bb48319297c4259825e41a8",
+    "app/ioscurl/src/main/kotlin/org/peyilo/ioscurl/mesh/kernel/KernelFlow.kt": "786602beaa7243e12b8a4dfae5811299c160c5301fbdba52a51c46696ff39c1d",
+    "app/ioscurl/src/main/kotlin/org/peyilo/ioscurl/mesh/kernel/KernelInput.kt": "4578fe3d9687133a79936a6af42018c5c791078aa613f193e63ed8ee2926b201",
+    "app/ioscurl/src/main/kotlin/org/peyilo/ioscurl/mesh/kernel/KernelLayout.kt": "2f3fdcc36f0be02acf15826a7ff3cb44a25925adf2d1123ec7a0bfa8f19e3be8",
+    "app/ioscurl/src/main/kotlin/org/peyilo/ioscurl/mesh/kernel/KernelMemory.kt": "0ae46f91b27dd57dc32bb413be2aa2532807cd1184fd3f77002b46efc7b6900c",
+    "app/ioscurl/src/main/kotlin/org/peyilo/ioscurl/mesh/kernel/KernelPenumbra.kt": "b83a9cf9f240fb2eca0bfb073c0f2ba9ba25916c0d58650262e6ef6f424e1dfb",
+    "app/ioscurl/src/main/kotlin/org/peyilo/ioscurl/mesh/kernel/KernelPrimitives.kt": "0461867a8747ea83639b7998d9ed10203f8f11373fa5cd7a7cb8580afcd24ff8",
+    "app/ioscurl/src/main/kotlin/org/peyilo/ioscurl/mesh/kernel/KernelProjection.kt": "c39b1cd69337b3adb2368f0be6901446560da31996ae119badef6dedee3b1fa7",
+    "app/ioscurl/src/main/kotlin/org/peyilo/ioscurl/mesh/kernel/KernelShadowTopology.kt": "6e6afe91abbff3be7508751e59d065d2a32e3b3f29a2520df01d450ba77cea80",
+    "app/ioscurl/src/main/kotlin/org/peyilo/ioscurl/mesh/kernel/KernelSurfaceSampling.kt": "8c2e3bd0de6c890ff3de357fac1b70cd55a2f8e3d175d3034b5fe70774c2dd87",
+    "app/ioscurl/src/main/kotlin/org/peyilo/ioscurl/mesh/kernel/KernelValues.kt": "e95e8f36d505f333719d12fcae5c07b579392bfe4f938dcc0e719475468ff854",
+    "app/ioscurl/src/main/kotlin/org/peyilo/ioscurl/model/CurlModel.kt": "e2ddd526f8599bab05eb721d2ca896a2685c0b2845ec3c6d019bdf84ff690ae3",
+    "app/ioscurl/src/main/kotlin/org/peyilo/ioscurl/transition/CurlTransitions.kt": "2da41f49650cf56b944faa3eb1917a6ec760cf656cec75650dfa94d1d4dacc18",
     "app/ireadview/src/main/java/org/peyilo/ireadview/internal/effect/googlecurl/GoogleCurlEffect.kt": "f056290bffa811c75a70a54f4199a71d9b8dfed8ea5dfbf99cfc952b092ec49a",
-    "app/ireadview/src/main/java/org/peyilo/ireadview/internal/effect/googlecurl/GoogleCurlGeometry.kt": "4f54cbff7c0441b342c0cc4268e3283f4c6a510f40fa7284bcee6bcaa032348b"
+    "app/ireadview/src/main/java/org/peyilo/ireadview/internal/effect/googlecurl/GoogleCurlGeometry.kt": "4f54cbff7c0441b342c0cc4268e3283f4c6a510f40fa7284bcee6bcaa032348b",
+    "app/ireadview/src/main/java/org/peyilo/ireadview/internal/effect/ioscurl/IosCurlEffect.kt": "5d731d1f3acf1cac367c92f8bafd912bd37a2a1869a7f8d77b7495a8833a2fd3",
+    "app/ireadview/src/main/java/org/peyilo/ireadview/internal/effect/ioscurl/IosCurlInput.kt": "94e372332e1399b7f38a412bf0aae379fe77ddfd43d9d95e8b67cb3b341a6dfd",
+    "app/ireadview/src/main/java/org/peyilo/ireadview/internal/effect/ioscurl/IosCurlMaterial.kt": "497b6ec575ddf6e7ac3b32fb45859ec11c62e9512d5987f0fc221e597732dcf3",
+    "app/ireadview/src/main/java/org/peyilo/ireadview/internal/effect/ioscurl/render/IosCurlRenderer.kt": "d7209f793d63912d1669539aa00b7acb180ec535b01108f040cd1c0577e0be0f"
   },
   "scope": [
     "Android single-page adapter; spread APIs retained",
@@ -205,5 +214,60 @@
     "app/ireadview-epub working-tree edits",
     "PageTurnSnapshots diagnostic logging",
     "ReaderGestureHandoffTest EPUB fixture sizing change"
-  ]
+  ],
+  "moduleRenameVerification": {
+    "date": "2026-10-28",
+    "module": ":app:ioscurl",
+    "coordinates": "org.peyilo.ireadview:ioscurl:0.1.0-SNAPSHOT",
+    "package": "org.peyilo.ioscurl",
+    "sourceAndFixtureIdentity": "38 source/resource files identical after package-only substitution and line-ending normalization",
+    "checks": [
+      "11 portable numeric parity and shadow tests",
+      "24 ireadview unit tests",
+      "Kotlin format",
+      "Architecture boundaries",
+      "Demo debug APK",
+      "Demo and library instrumentation APK compilation",
+      "Library and EPUB Maven bundles",
+      "JAR namespace and POM/Gradle transitive dependency metadata",
+      "Independent Java Maven consumer: offline release build with R8",
+      "Independent EPUB Maven consumer: offline release build with R8",
+      "Whole-project source/config/documentation scan: no obsolete module/package/task references",
+      "Demo APK dex namespace audit"
+    ],
+    "distributedModules": [
+      "ireadview",
+      "ioscurl"
+    ],
+    "artifacts": {
+      "ireadview": {
+        "path": "app/ireadview/build/distributions/ireadview-maven-0.1.0-SNAPSHOT.zip",
+        "bytes": 2281168,
+        "sha256": "0b5fe809474c73f4e19fef13b0b4c6c3b8a3ca48e526113784995b5dba6d8f98",
+        "modules": [
+          "ioscurl",
+          "ireadview"
+        ]
+      },
+      "epub": {
+        "path": "app/ireadview-epub/build/distributions/ireadview-epub-maven-0.1.0-SNAPSHOT.zip",
+        "bytes": 368736,
+        "sha256": "66bfd834f19f42fc0f104f50f8bed0e9471ee9c1eb57021d95d16e536e5edccd",
+        "modules": [
+          "ireadview-epub"
+        ]
+      },
+      "ioscurlJar": {
+        "path": "app/ioscurl/build/libs/ioscurl-0.1.0-SNAPSHOT.jar",
+        "bytes": 491794,
+        "sha256": "de640753f70f435791f1785db3766f571f007286213813891ca36f6468eea624"
+      }
+    },
+    "evidenceNote": "Core/library unit results above were refreshed for this rename. productionSources hashes describe staged source bytes, excluding unrelated uncommitted edits. Device and staged-artifact evidence in the other fields retains its original 2026-10-27 execution date; it was not rerun for this rename.",
+    "externalMavenConsumers": {
+      "repository": "Fresh extraction of the distribution ZIPs, without project dependency substitution",
+      "maven-host": "release build passed; resolves org.peyilo.ireadview:ioscurl:0.1.0-SNAPSHOT transitively",
+      "maven-epub-host": "release build passed; resolves org.peyilo.ireadview:ioscurl:0.1.0-SNAPSHOT transitively"
+    }
+  }
 }

@@ -16,7 +16,7 @@ Demo 阅读设置的“仿真效果”和翻页示例只列出 **iOSCurl / Googl
 
 ## iOSCurl
 
-算法位于独立 `:app:pagecurl-core`，手势、曲面、UV、原版阴影与缓动使用 Kotlin 执行。Android 的 `internal/effect/ioscurl` 仅负责输入转换、事务适配和 GLES2 绘制。没有 JNI、自编 native 库、WebView 或 WASM 算法运行依赖。详见 [Kotlin 实现](IOS_CURL_KOTLIN.md)。
+算法位于独立 `:app:ioscurl`，手势、曲面、UV、原版阴影与缓动使用 Kotlin 执行。Android 的 `internal/effect/ioscurl` 仅负责输入转换、事务适配和 GLES2 绘制。没有 JNI、自编 native 库、WebView 或 WASM 算法运行依赖。详见 [Kotlin 实现](IOS_CURL_KOTLIN.md)。
 
 ### 从正面页面确定背面纸张色
 
@@ -44,7 +44,7 @@ Android 默认使用中性黑色、0.55 不透明度的投影，并将原渐隐�
 ## 验证
 
 - `CurlCatalogTest` 检查公开仿真工厂仅有两个，以及 Google 行波的首尾边界。
-- `pagecurl-core:test` 对照原 C11 基准中的参数、网格、UV、颜色、手势、缓动及布局；背景适配不改变核心默认基准。
+- `ioscurl:test` 对照原 C11 基准中的参数、网格、UV、颜色、手势、缓动及布局；背景适配不改变核心默认基准。
 - `IosCurlBackgroundDeviceTest` 检查元数据/快照取色、夜间材质、各方向的真实来源及每事务一次取色。
 - `ShadowProfileTest` 检查半影扩展不改变纸面和 UV；投影的 GLES 像素检查覆盖白、米色、夜间及纯黑背景，确保阴影只变暗。
 - `SnapshotIsolationDeviceTest` 检查平移效果使用预算内快照、真实合成器变透明后两页仍可见，以及隔离失败时归还部分租约并请求降级。

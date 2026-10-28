@@ -4,10 +4,10 @@ import android.view.MotionEvent
 import org.peyilo.ireadview.api.effect.TurnPoint
 import org.peyilo.ireadview.spi.presentation.ReadViewport
 import org.peyilo.ireadview.internal.effect.input.*
-import org.peyilo.pagecurl.gesture.*
-import org.peyilo.pagecurl.model.*
+import org.peyilo.ioscurl.gesture.*
+import org.peyilo.ioscurl.model.*
 
-/** Android event/density adapter. The recognizers and navigation decisions live in pagecurl-core. */
+/** Android event/density adapter. The recognizers and navigation decisions live in ioscurl. */
 internal class IosCurlInput(private val viewport: ReadViewport,vertical: Boolean,private val available: (Boolean)->Boolean): EffectInputSession {
     private val density=viewport.density.toDouble()
     private val pan=CurlPan(viewport.widthPx/density,viewport.heightPx/density,if(vertical)CurlAxis.Vertical else CurlAxis.Horizontal)

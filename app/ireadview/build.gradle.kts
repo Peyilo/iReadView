@@ -34,7 +34,7 @@ android {
 }
 
 dependencies {
-    implementation(project(":app:pagecurl-core"))
+    implementation(project(":app:ioscurl"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.recyclerview)
     implementation(libs.androidx.customview)
@@ -67,17 +67,21 @@ publishing {
 }
 
 /** A folder repository includes the dependency metadata absent from a standalone AAR. */
-val stagePageCurlRepository = tasks.register<Copy>("stagePageCurlRepository") {
-    dependsOn(":app:pagecurl-core:publishReleasePublicationToLocalRepository")
-    from(project(":app:pagecurl-core").layout.buildDirectory.dir("repository"))
+val stageIosCurlRepository = tasks.register<Copy>("stageIosCurlRepository") {
+    dependsOn(":app:ioscurl:publishReleasePublicationToLocalRepository")
+    from(project(":app:ioscurl").layout.buildDirectory.dir("repository")) {
+        include("org/peyilo/ireadview/ioscurl/**")
+    }
     into(layout.buildDirectory.dir("repository"))
 }
 tasks.withType<PublishToMavenRepository>().configureEach {
-    if (name == "publishReleasePublicationToLocalRepository") dependsOn(stagePageCurlRepository)
+    if (name == "publishReleasePublicationToLocalRepository") dependsOn(stageIosCurlRepository)
 }
 tasks.register<Zip>("bundleReleaseRepository") {
     dependsOn("publishReleasePublicationToLocalRepository")
     from(layout.buildDirectory.dir("repository"))
+    // Reused repositories may contain artifacts from removed or renamed modules.
+    include("org/peyilo/ireadview/ireadview/**", "org/peyilo/ireadview/ioscurl/**")
     // A reused local Maven repository retains old timestamped snapshots. Distribute only
     // snapshots referenced by the current metadata, so removed renderers cannot ride along.
     val snapshotPrefixes = mutableMapOf<File, List<String>>()

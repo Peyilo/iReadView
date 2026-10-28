@@ -12,7 +12,7 @@ from pycparser import c_parser, c_ast as A
 from CurlKernelReadability import refine_kernel, normalize_kernel_source
 
 ROOT = Path(__file__).resolve().parents[1]
-DEST = ROOT / 'app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/mesh/kernel'
+DEST = ROOT / 'app/ioscurl/src/main/kotlin/org/peyilo/ioscurl/mesh/kernel'
 parser = argparse.ArgumentParser()
 parser.add_argument('--source', type=Path, required=True)
 args = parser.parse_args()
@@ -188,10 +188,10 @@ DEST.mkdir(parents=True,exist_ok=True)
 header='''// Generated from the verified C11 curl geometry; regenerate with tools/Port-CurlKernel.py.
 // Direct Kotlin arithmetic and managed scratch storage. No machine instructions are executed.
 @file:Suppress("UNUSED_VARIABLE", "UNUSED_VALUE", "NAME_SHADOWING", "RedundantConversion")
-package org.peyilo.pagecurl.mesh.kernel
+package org.peyilo.ioscurl.mesh.kernel
 import kotlin.math.*
-import org.peyilo.pagecurl.math.AppleMath
-import org.peyilo.pagecurl.math.BinaryMath.fma
+import org.peyilo.ioscurl.math.AppleMath
+import org.peyilo.ioscurl.math.BinaryMath.fma
 '''
 groups=[]
 for offset in range(0,len(blocks),48):
@@ -231,4 +231,4 @@ manifest={'source':'iOS12.5.7 16H81 offline recovery -> verified C11 -> managed 
           'naming':'Reaching-definition live ranges and semantic geometry stages; shared bitwise scratch storage'}
 (DEST/'provenance.json').write_text(json.dumps(manifest,indent=2)+'\n')
 print(json.dumps(manifest))
-print('Run ./gradlew.bat :app:pagecurl-core:formatKotlin after regeneration.')
+print('Run ./gradlew.bat :app:ioscurl:formatKotlin after regeneration.')

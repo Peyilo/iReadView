@@ -4,7 +4,10 @@ dependencyResolutionManagement {
     repositories {
         maven {
             url = uri(providers.gradleProperty("ireadRepository").getOrElse("../../app/ireadview/build/repository"))
-            content { includeModule("org.peyilo.ireadview", "ireadview") }
+            content {
+                includeModule("org.peyilo.ireadview", "ireadview")
+                includeModule("org.peyilo.ireadview", "ioscurl")
+            }
         }
         maven {
             url = uri(providers.gradleProperty("ireadEpubRepository").getOrElse("../../app/ireadview-epub/build/repository"))

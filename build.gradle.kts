@@ -15,7 +15,7 @@ tasks.register("verifyArchitectureBoundaries") {
         fileTree("app/ireadview-epub/src/main") { include("**/*.kt", "**/*.java") },
         fileTree("examples") { include("**/src/main/**/*.kt", "**/src/main/**/*.java"); exclude("**/build/**") }
     )
-    val curlSources = fileTree("app/pagecurl-core/src/main") { include("**/*.kt", "**/*.java") }
+    val curlSources = fileTree("app/ioscurl/src/main") { include("**/*.kt", "**/*.java") }
     inputs.files(coreSources, consumerSources, curlSources)
     doLast {
         val violations = mutableListOf<String>()

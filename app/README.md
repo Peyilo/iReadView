@@ -2,7 +2,7 @@
 
 `:app` 是 iReadView 的示例宿主。类名直接描述职责，不再使用 `Demo` 前缀；包根 `org.peyilo.iread.demo` 已表明它们属于 Demo。应用 ID 和资源 namespace 保持该值，源码的子包按职责组织。
 
-阅读设置的“仿真效果 → iOSCurl”使用纯 Kotlin 还原算法；`CurlActivity` 也默认启用它。算法位于独立 `:app:pagecurl-core`，通过 `ireadview` 公共 `PageTurnEffects.iosCurl()` 接入，Demo 不依赖算法内部类型。详见 [Kotlin 仿真翻页](../docs/IOS_CURL_KOTLIN.md)。
+阅读设置的“仿真效果 → iOSCurl”使用纯 Kotlin 还原算法；`CurlActivity` 也默认启用它。算法位于独立 `:app:ioscurl`，通过 `ireadview` 公共 `PageTurnEffects.iosCurl()` 接入，Demo 不依赖算法内部类型。详见 [Kotlin 仿真翻页](../docs/IOS_CURL_KOTLIN.md)。
 
 EPUB 和 TXT 共用 ReaderActivity 中同一个 ReaderView。可选 `:app:ireadview-epub` 提供 EpubReaderBookSource 与自研 EpubReaderBodyView，使用系统 WebView，无 Readium 运行时和导航 Fragment。整个 Demo minSdk21。默认 EPUB 为用户提供的《The Art of ARM Assembly》，也可导入本地书籍或选择两本原创样例；参见[正文架构](../docs/READER_BODY.md)及[实现边界](../docs/EPUB_ENGINE.md)。
 

@@ -11,7 +11,7 @@ import re
 import struct
 
 ROOT = Path(__file__).resolve().parents[1]
-DEST = ROOT / 'app/pagecurl-core/src/main/kotlin/org/peyilo/pagecurl/mesh/kernel'
+DEST = ROOT / 'app/ioscurl/src/main/kotlin/org/peyilo/ioscurl/mesh/kernel'
 
 # Names describe the operation, not the original machine address / basic-block ID.
 STEP_GROUPS = [
@@ -350,10 +350,10 @@ def refine_kernel(directory=DEST):
     files = defaultdict(list)
     header = '''// Generated algorithm stages; regenerate with tools/Port-CurlKernel.py.
 @file:Suppress("UNUSED_VARIABLE", "UNUSED_VALUE", "NAME_SHADOWING", "RedundantConversion")
-package org.peyilo.pagecurl.mesh.kernel
+package org.peyilo.ioscurl.mesh.kernel
 import kotlin.math.*
-import org.peyilo.pagecurl.math.AppleMath
-import org.peyilo.pagecurl.math.BinaryMath.fma
+import org.peyilo.ioscurl.math.AppleMath
+import org.peyilo.ioscurl.math.BinaryMath.fma
 '''
     for n, (label, body) in blocks.items():
         replacements = [(pos, pos + len(reg), names[key]) for (number, pos), key in uses.items()

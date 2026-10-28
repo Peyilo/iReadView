@@ -3,8 +3,8 @@ package org.peyilo.ireadview.internal.effect.ioscurl.render
 import android.graphics.Bitmap
 import android.opengl.*
 import java.nio.*
-import org.peyilo.pagecurl.mesh.*
-import org.peyilo.pagecurl.model.CurlRect
+import org.peyilo.ioscurl.mesh.*
+import org.peyilo.ioscurl.model.CurlRect
 
 /** GLES2 raster adapter only: consumes Kotlin mesh packets with the recovered 0/3/12 programs.
  * One owner/thread, no SurfaceView, JNI, independent clock or navigation state.

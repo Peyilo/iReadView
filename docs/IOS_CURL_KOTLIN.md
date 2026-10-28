@@ -13,12 +13,14 @@ Demo → ireadview 公共 API
                  ├─ IosCurlMaterial：从实际正面页面解析纸张背景色
                  └─ render/IosCurlRenderer：GLES2 资源和绘制
                           ↓
-                    pagecurl-core
+                    ioscurl
                  model / gesture / control / math
                  layout / transition / mesh
 ```
 
-`app/pagecurl-core` 是独立 Kotlin/JVM 模块。生产源码没有 Android、Java、阅读库、EPUB 或 Demo 导入，可迁移到其他 Kotlin target。`verifyArchitectureBoundaries` 会检查这些约束。
+`app/ioscurl` 是独立 Kotlin/JVM 模块。生产源码没有 Android、Java、阅读库、EPUB 或 Demo 导入，可迁移到其他 Kotlin target。`verifyArchitectureBoundaries` 会检查这些约束。
+
+Gradle 模块名为 `:app:ioscurl`，Maven 坐标为 `org.peyilo.ireadview:ioscurl:<version>`，Kotlin 包名为 `org.peyilo.ioscurl`。该模块只实现 iOSCurl；GoogleCurl 独立位于 `ireadview`。
 
 Android 通用层只增加了两个可选内部能力：`EffectInputProvider` 提供输入会话，`PageTurnDynamics` 提供原版缓动和预热帧。它们不引用 iOS 算法类型。原有特效继续沿用原有输入和缓动。`PageTurnContext.vertical` 与 `PageTurnFrame.elapsedSeconds` 将方向和时间显式传入，避免算法自己读取平台时钟。
 
@@ -65,18 +67,18 @@ GLES2 适配器执行原版模式 0/3/12，使用线性采样、边缘钳制和�
 
 效果复用阅读库快照和位图租约。上传页纹理后归还 CPU 快照，再借用输出位图；完成、取消、异常与 detach 都清理 GL 资源和租约。当前通过 EGL 离屏绘制、readback 和 Canvas 接入，性能仍受设备 GPU/readback 影响；数值对照不代表所有设备都达到相同帧率。位图预算不足时沿用库的下采样策略，可按宿主需求增大 `bitmapBudgetBytes`。
 
-发布的 `ireadview` POM 带 `pagecurl-core` 依赖。`publishReleasePublicationToLocalRepository` 和 `bundleReleaseRepository` 会同时收集该 JAR 与元数据；单独拷贝 AAR 的使用者需同时携带核心 JAR，优先使用 Maven 产物。
+发布的 `ireadview` POM 带 `ioscurl` 依赖。`publishReleasePublicationToLocalRepository` 和 `bundleReleaseRepository` 会同时收集该 JAR 与元数据；单独拷贝 AAR 的使用者需同时携带核心 JAR，优先使用 Maven 产物。
 
 ## 验证
 
-`pagecurl-core:test` 包含 816 帧网格（位置、UV、half4、索引、模式和批次顺序）、1,440 组手势参数、10,000 组数学函数、2,160 次 Pan 事件、360 次 Tap 事件、864 组缓动、20 种布局和 960 组转场决策的 C 版对照，以及 FIFO 行为测试。正式测试不需要 C 或固件。
+`ioscurl:test` 包含 816 帧网格（位置、UV、half4、索引、模式和批次顺序）、1,440 组手势参数、10,000 组数学函数、2,160 次 Pan 事件、360 次 Tap 事件、864 组缓动、20 种布局和 960 组转场决策的 C 版对照，以及 FIFO 行为测试。正式测试不需要 C 或固件。
 
 移植阶段在 API 28 和 API 36 模拟器验证过单栏装订方向/翻页方向/轴向/RTL；本次背景取色与清理回归在 API 28 重新覆盖16组绘制及资源回收，并加入主题取色设备测试。Demo 测试覆盖前后翻、反向取消、多指、RTL、纵向、设置恢复，以及资源不足回退后保持原手势判定。图形数值对照与设备执行均通过，但没有宣称 Android 与原始 iPhone GPU 的逐像素光栅结果相同。
 
 构建与验证汇总见 [验证记录](generated/ios-curl-kotlin/validation.json)。背景取色与夜间背面的设备检查见 `IosCurlBackgroundDeviceTest`。
 
 ```powershell
-./gradlew.bat :app:pagecurl-core:test :app:ireadview:testDebugUnitTest verifyArchitectureBoundaries
+./gradlew.bat :app:ioscurl:test :app:ireadview:testDebugUnitTest verifyArchitectureBoundaries
 ./gradlew.bat :app:ireadview:connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=org.peyilo.ireadview.IosCurlBackgroundDeviceTest,org.peyilo.ireadview.IosCurlDeviceTest"
 ./gradlew.bat :app:connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=org.peyilo.iread.demo.IosCurlDemoTest"
 ./gradlew.bat :app:assembleDebug :app:ireadview:bundleReleaseRepository
