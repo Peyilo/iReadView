@@ -18,7 +18,7 @@ sealed interface LinkTarget {
 
 /** Half-open UTF-16 offsets into LinkedTextBlock.text. */
 data class TextLink(val startOffset: Int, val endExclusive: Int, val target: LinkTarget) {
-    init { require(startOffset >= 0 && endExclusive > startOffset) }
+    init { require(startOffset in 0..<endExclusive) }
 }
 
 class LinkedTextBlock @JvmOverloads constructor(

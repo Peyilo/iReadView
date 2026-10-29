@@ -4,8 +4,8 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import org.peyilo.ireadview.api.effect.PageSurface
 import org.peyilo.ireadview.internal.effect.PageBackTint
-import org.peyilo.ioscurl.mesh.CurlColor
-import org.peyilo.ioscurl.mesh.CurlMaterial
+import org.peyilo.pagecurl.mesh.CurlColor
+import org.peyilo.pagecurl.mesh.CurlMaterial
 
 /** Resolve the turning sheet's paper color once, before its CPU snapshot lease is returned.
  * Front texture/lighting remain neutral. The cast shadow uses translucent black:

@@ -18,6 +18,5 @@ rootProject.name = "iReadView"
 include(":app")
 include(":app:ireadview")
 include(":app:ireadview-epub")
-include(":app:ioscurl")
 
 

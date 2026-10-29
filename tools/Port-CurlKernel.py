@@ -10,6 +10,7 @@ import argparse, hashlib, json, re
 from pathlib import Path
 from pycparser import c_parser, c_ast as A
 from CurlKernelReadability import refine_kernel, normalize_kernel_source
+from CurlKernelAlgorithms import recover
 
 ROOT = Path(__file__).resolve().parents[1]
 DEST = ROOT / 'app/ioscurl/src/main/kotlin/org/peyilo/ioscurl/mesh/kernel'
@@ -225,10 +226,26 @@ groups = refine_kernel(DEST)
 for name in groups:
     path = DEST / name
     path.write_text(normalize_kernel_source(path.read_text(encoding='utf-8')), encoding='utf-8')
+recovery = recover(DEST)
+groups=[name for name in groups if (DEST/name).exists()]
 manifest={'source':'iOS12.5.7 16H81 offline recovery -> verified C11 -> managed Kotlin',
           'sourceSHA256':hashlib.sha256((args.source/'pc_render_body.inc').read_bytes()).hexdigest(),
           'blocks':len(blocks),'generatedFiles':groups,
-          'naming':'Reaching-definition live ranges and semantic geometry stages; shared bitwise scratch storage'}
+          'naming':'Maintained scalar/matrix algorithms; no register containers or reference dispatch',
+          'recovery':recovery,
+          'structuredStages':['projected bounds matrix loop (reference steps 0-2)',
+                              'projected breakpoint insertion sort (reference steps 4-10)',
+                              'penumbra corner rotation (reference steps 174,177)',
+                              'shared edge selection and descending sample merge (reference steps 75-99,186-210)',
+                              'coarse/fine shadow sampling and indexed segment splitting (reference steps 59-124)',
+                              'typed inner/outer shadow sampling profile (reference steps 124-125)',
+                              'surface sections, lighting and back strip assembly (reference steps 41-58)',
+                              'value-based strip emission and optional inline sine output',
+                              'scalar front sampling, lighting and color modulation (reference steps 180-214)',
+                              'scalar penumbra cross sections, fading bands, endpoints and rotated corner rings (reference steps 125-179)',
+                              'batch assembly (reference steps 215-242)'],
+          'maintainedSources':recovery['maintainedSources'],
+          }
 (DEST/'provenance.json').write_text(json.dumps(manifest,indent=2)+'\n')
 print(json.dumps(manifest))
 print('Run ./gradlew.bat :app:ioscurl:formatKotlin after regeneration.')

@@ -13,7 +13,9 @@ data class ReaderImageRequest(
     val maxEncodedBytes: Int,
     val maxDecodedBytes: Long
 ) {
-    init { require(resourceId.isNotBlank() && maxEncodedBytes > 0 && maxDecodedBytes >= 4) }
+    init {
+        require(resourceId.isNotBlank() && maxEncodedBytes > 0 && maxDecodedBytes >= 4)
+    }
 }
 
 /** IO worker callback. Implementations may be called concurrently and must cooperate with
@@ -35,10 +37,14 @@ data class ReaderImageLoadingOptions @JvmOverloads constructor(
     val maxDecodedImageBytes: Long = 4L * 1024 * 1024,
     val maxDecodedChapterBytes: Long = 16L * 1024 * 1024
 ) {
-    init { require(maxEncodedImageBytes > 0 && maxDecodedImageBytes >= 4 && maxDecodedChapterBytes >= 0) }
+    init {
+        require(maxEncodedImageBytes > 0 && maxDecodedImageBytes >= 4 && maxDecodedChapterBytes >= 0)
+    }
 }
 
 object ReaderImageLoaders {
     /** Stateless default loader; suitable for delegation from a custom loader. */
-    @JvmStatic fun defaultLoader(): ReaderImageLoader = org.peyilo.ireadview.internal.layout.DefaultReaderImageLoader
+    @JvmStatic
+    fun defaultLoader(): ReaderImageLoader =
+        org.peyilo.ireadview.internal.layout.DefaultReaderImageLoader
 }

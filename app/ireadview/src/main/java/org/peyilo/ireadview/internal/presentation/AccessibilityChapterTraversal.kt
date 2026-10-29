@@ -8,9 +8,11 @@ import org.peyilo.ireadview.internal.render.AccessibilityTraversalBoundary
 
 /** Sequential, cancellable source borrowing; intermediate empty chapters never commit a position. */
 internal object AccessibilityChapterTraversal {
-    suspend fun resolve(book: BookDescriptor, initial: ChapterContent, boundary: AccessibilityTraversalBoundary,
+    suspend fun resolve(
+        book: BookDescriptor, initial: ChapterContent, boundary: AccessibilityTraversalBoundary,
         forward: Boolean, granularity: Int, isCurrent: () -> Boolean,
-        getChapter: suspend (String) -> ReaderResult<ChapterContent>): ReaderResult<AccessibilitySourceTraversal.Result> {
+        getChapter: suspend (String) -> ReaderResult<ChapterContent>
+    ): ReaderResult<AccessibilitySourceTraversal.Result> {
         var index = book.chapters.indexOfFirst { it.chapterId == initial.chapterId }
         if (initial.bookId != book.bookId || index < 0) return ReaderResult.Rejected(ReaderRejection.InvalidAnchor)
         var content = initial
@@ -20,10 +22,17 @@ internal object AccessibilityChapterTraversal {
             if (!isCurrent()) return ReaderResult.Superseded
             val result = withContext(Dispatchers.Default) {
                 val work = currentCoroutineContext()
-                AccessibilitySourceTraversal.find(content, anchor, forward, granularity) { work.ensureActive() }
+                AccessibilitySourceTraversal.find(
+                    content,
+                    anchor,
+                    forward,
+                    granularity
+                ) { work.ensureActive() }
             }
             if (!isCurrent()) return ReaderResult.Superseded
-            if (result != AccessibilitySourceTraversal.Result.Exhausted) return ReaderResult.Success(result)
+            if (result != AccessibilitySourceTraversal.Result.Exhausted) return ReaderResult.Success(
+                result
+            )
             index += if (forward) 1 else -1
             if (index !in book.chapters.indices) return ReaderResult.Success(result)
             yield()

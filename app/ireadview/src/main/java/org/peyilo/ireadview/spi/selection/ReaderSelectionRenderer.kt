@@ -9,14 +9,33 @@ import org.peyilo.ireadview.api.style.SelectionStyle
  * close is final disposal, not a content rebind or temporary RecyclerView detach.
  */
 interface ReaderSelectionRenderer : AutoCloseable {
-    fun createHandle(x: Float, top: Float, bottom: Float, end: Boolean, width: Int, height: Int,
-        style: SelectionStyle, density: Float, clampDots: Boolean): ReaderSelectionHandle
+    fun createHandle(
+        x: Float, top: Float, bottom: Float, end: Boolean, width: Int, height: Int,
+        style: SelectionStyle, density: Float, clampDots: Boolean
+    ): ReaderSelectionHandle
+
     fun drawFill(canvas: Canvas, path: Path, style: SelectionStyle)
-    fun drawHandles(canvas: Canvas, handles: List<ReaderSelectionHandle>, style: SelectionStyle, density: Float, width: Int)
-    fun handleAt(handles: List<ReaderSelectionHandle>, x: Float, y: Float, style: SelectionStyle, density: Float): Boolean?
+    fun drawHandles(
+        canvas: Canvas,
+        handles: List<ReaderSelectionHandle>,
+        style: SelectionStyle,
+        density: Float,
+        width: Int
+    )
+
+    fun handleAt(
+        handles: List<ReaderSelectionHandle>,
+        x: Float,
+        y: Float,
+        style: SelectionStyle,
+        density: Float
+    ): Boolean?
+
     fun dragOffset(handle: ReaderSelectionHandle, x: Float, y: Float): PointF
     fun handleBounds(handle: ReaderSelectionHandle, style: SelectionStyle, density: Float): RectF
     override fun close() {}
 }
 
-fun interface ReaderSelectionRendererFactory { fun create(context: Context): ReaderSelectionRenderer }
+fun interface ReaderSelectionRendererFactory {
+    fun create(context: Context): ReaderSelectionRenderer
+}

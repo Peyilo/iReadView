@@ -10,7 +10,11 @@ internal object ReaderPageOwnership {
     private val templates = IdentityHashMap<ReaderPageTemplate, View>()
 
     fun acquire(template: ReaderPageTemplate, root: View): Boolean {
-        if (templates.containsKey(template) || !ReaderViewOwnership.acquire(root, template)) return false
+        if (templates.containsKey(template) || !ReaderViewOwnership.acquire(
+                root,
+                template
+            )
+        ) return false
         templates[template] = root
         return true
     }

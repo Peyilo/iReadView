@@ -1,6 +1,6 @@
 # EPUB 示例
 
-默认展示书籍为用户提供的《The Art of ARM Assembly》，原文件来自 `F:/User/Desktop/The Art of ARM Assembly.epub`，以 `the-art-of-arm-assembly.epub` 原样复制到此目录。该书的版权和授权信息以原书为准，不属于仓库原创示例。
+默认展示书籍为用户提供的《The Art of ARM Assembly》，以 `the-art-of-arm-assembly.epub` 原样复制到此目录。该书的版权和授权信息以原书为准，不属于仓库原创示例。
 
 - `the-art-of-arm-assembly.epub`：默认展示书籍，用户提供的原始 EPUB。
 

@@ -8,9 +8,10 @@ if ($GeneratedDate -notmatch '^\d{4}-\d{2}-\d{2}$') { throw 'GeneratedDate must 
 $root=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $aar=Join-Path $root 'app/ireadview/build/outputs/aar/ireadview-release.aar'
 $temporary=Join-Path $root 'app/ireadview/build/api-inventory'
-$output=Join-Path $root 'docs/generated'
-$javap=Join-Path $JdkHome 'bin/javap.exe'
-$jar=Join-Path $JdkHome 'bin/jar.exe'
+$output=Join-Path $root 'app/ireadview/build/reports/api'
+$executableSuffix=if ([Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT) { '.exe' } else { '' }
+$javap=Join-Path $JdkHome "bin/javap$executableSuffix"
+$jar=Join-Path $JdkHome "bin/jar$executableSuffix"
 if (!(Test-Path -LiteralPath $aar) -or !(Test-Path -LiteralPath $javap)) { throw 'Build the Release AAR and supply a JDK home first.' }
 New-Item -ItemType Directory -Path $temporary,$output -Force | Out-Null
 $classesJar=Join-Path $temporary 'classes.jar'
@@ -43,7 +44,7 @@ classes.jar SHA-256: $jarSha
 Tool: JDK 17 javap -protected -s
 Scope: public bytecode declarations under api/spi/widget/source, public/protected members; file helpers and lambda classes excluded.
 Includes compiler generated/Kotlin internal JVM members; not a supported API allowlist.
-Use docs/08_HOST_INTEGRATION_GUIDE.md and source for nullability/defaults/thread/lifecycle contracts.
+Use docs/integration.md and source for nullability/defaults/thread/lifecycle contracts.
 
 "@
 Set-Content -LiteralPath (Join-Path $output 'release-jvm-api.txt') -Value ($header+($blocks -join "`n")) -Encoding utf8
@@ -55,5 +56,3 @@ $inventory=[ordered]@{
 }
 $inventory | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $output 'release-inventory.json') -Encoding utf8
 $inventory | ConvertTo-Json -Depth 4
-
-

@@ -42,18 +42,27 @@ data class ReaderPageChrome @JvmOverloads constructor(
     val footerEnd: ReaderPageChromeSlot? = null
 ) {
     /** Configure start/center/end positions. null inherits the position's legacy default. */
-    fun withHeader(start: ReaderPageChromeSlot?, center: ReaderPageChromeSlot?, end: ReaderPageChromeSlot?) =
+    fun withHeader(
+        start: ReaderPageChromeSlot?,
+        center: ReaderPageChromeSlot?,
+        end: ReaderPageChromeSlot?
+    ) =
         copy(headerStart = start, headerCenter = center, headerEnd = end)
 
     /** Configure footer independently. Use a NONE slot to intentionally leave a position empty. */
-    fun withFooter(start: ReaderPageChromeSlot?, center: ReaderPageChromeSlot?, end: ReaderPageChromeSlot?) =
+    fun withFooter(
+        start: ReaderPageChromeSlot?,
+        center: ReaderPageChromeSlot?,
+        end: ReaderPageChromeSlot?
+    ) =
         copy(footerStart = start, footerCenter = center, footerEnd = end)
 
     /** The button is before headerStart, outside the three text positions.
      * A null callback restores the default guarded ExitReader action. Hiding it
      * frees its horizontal width without changing the body's vertical viewport.
      */
-    @JvmOverloads fun withBackButton(visible: Boolean, action: ReaderPageChromeAction? = null) =
+    @JvmOverloads
+    fun withBackButton(visible: Boolean, action: ReaderPageChromeAction? = null) =
         copy(showBackButton = visible, backAction = action)
 }
 
@@ -62,10 +71,14 @@ data class ReaderPageChrome @JvmOverloads constructor(
  * do not call page.chrome (recursive), navigate, or update the Widget here.
  * After captured state changes call BookReadView.refreshPageChrome().
  */
-fun interface ReaderPageChromeProvider { fun provide(page: ReaderPageContext): ReaderPageChrome }
+fun interface ReaderPageChromeProvider {
+    fun provide(page: ReaderPageContext): ReaderPageChrome
+}
 
 /** Main-thread click on a bound chrome item; the context belongs to that page.
  * Use page.requestReaderAction for standard guarded reader actions.
  * The default back button requests ExitReader; arbitrary host actions may override it.
  */
-fun interface ReaderPageChromeAction { fun onClick(page: ReaderPageContext) }
+fun interface ReaderPageChromeAction {
+    fun onClick(page: ReaderPageContext)
+}

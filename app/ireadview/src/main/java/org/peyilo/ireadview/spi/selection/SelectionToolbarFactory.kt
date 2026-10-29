@@ -11,11 +11,13 @@ interface SelectionActions {
     fun isValid(): Boolean
     fun hasHighlight(): Boolean
     fun hasUnderline(): Boolean
+
     /** Removes marks covering the selection, otherwise adds one. Existing add-only APIs remain. */
     fun toggleHighlight(styleId: String = "default"): ReaderResult<Unit>
     fun toggleUnderline(style: org.peyilo.ireadview.api.style.TextLineStyle = org.peyilo.ireadview.api.style.TextLineStyle()): ReaderResult<Unit>
     fun copyText(): ReaderResult<Unit>
     fun highlight(styleId: String = "default"): ReaderResult<org.peyilo.ireadview.api.model.HighlightAnnotation>
+
     /** Adds an independent line annotation, using source range/revision validation. */
     fun underline(style: org.peyilo.ireadview.api.style.TextLineStyle = org.peyilo.ireadview.api.style.TextLineStyle()): ReaderResult<org.peyilo.ireadview.api.model.UnderlineAnnotation>
     fun clearSelection()
@@ -27,6 +29,7 @@ interface SelectionToolbarFactory {
      * If creation throws before returning a view, release partial resources inside the factory.
      */
     fun create(context: Context, selection: ReaderSelection, actions: SelectionActions): View
+
     /** Release listeners/resources after a returned view is dismissed or its preparation is abandoned. */
     fun unbind(view: View) {}
 }

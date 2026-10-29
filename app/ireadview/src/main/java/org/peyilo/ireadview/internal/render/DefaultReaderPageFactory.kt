@@ -25,8 +25,13 @@ internal class DefaultReaderPageFactory : ReaderPageFactory {
 private class DefaultPage(context: Context) : ReaderPageTemplate {
     private val density = context.resources.displayMetrics.density
     private val layout = DefaultChromeRoot(context).apply { orientation = LinearLayout.VERTICAL }
-    private val header = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-    private fun text() = TextView(layout.context).apply { setSingleLine(true); ellipsize = TextUtils.TruncateAt.END }
+    private val header = LinearLayout(context).apply {
+        orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
+    }
+
+    private fun text() =
+        TextView(layout.context).apply { setSingleLine(true); ellipsize = TextUtils.TruncateAt.END }
+
     private val title = text()
     private val headerCenter = text()
     private val headerEnd = text()
@@ -36,7 +41,9 @@ private class DefaultPage(context: Context) : ReaderPageTemplate {
         setPaddingRelative(0, dp(1f), dp(5f), dp(1f))
     }
     private val body = FrameLayout(context)
-    private val footer = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+    private val footer = LinearLayout(context).apply {
+        orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
+    }
     private val progress = text()
     private val footerCenter = text()
     private val clock = text()
@@ -65,25 +72,34 @@ private class DefaultPage(context: Context) : ReaderPageTemplate {
         layout.addView(body, LinearLayout.LayoutParams(-1, 0, 1f))
         layout.addView(footer, LinearLayout.LayoutParams(-1, -2))
     }
+
     private fun dp(value: Float) = (value * density).toInt()
-    private fun gravity(value: ChromeAlignment) = Gravity.CENTER_VERTICAL or when(value) {
+    private fun gravity(value: ChromeAlignment) = Gravity.CENTER_VERTICAL or when (value) {
         ChromeAlignment.START -> Gravity.START
         ChromeAlignment.CENTER -> Gravity.CENTER_HORIZONTAL
         ChromeAlignment.END -> Gravity.END
     }
-    private fun slot(view: View, chrome: ChromeStyle, binding: ReaderBackgroundBinding, labels: List<TextView>) {
-        view.visibility = if(chrome.visible) View.VISIBLE else View.GONE
+
+    private fun slot(
+        view: View,
+        chrome: ChromeStyle,
+        binding: ReaderBackgroundBinding,
+        labels: List<TextView>
+    ) {
+        view.visibility = if (chrome.visible) View.VISIBLE else View.GONE
         binding.bind(PageStyle(backgroundColor = 0, readerBackground = chrome.background))
         val p = chrome.padding
         view.setPaddingRelative(dp(p.startDp), dp(p.topDp), dp(p.endDp), dp(p.bottomDp))
         val height = chrome.heightDp?.let { dp(it).coerceAtLeast(1) } ?: -2
-        if(view.layoutParams.height != height) view.layoutParams = view.layoutParams.apply { this.height = height }
+        if (view.layoutParams.height != height) view.layoutParams =
+            view.layoutParams.apply { this.height = height }
         labels.forEach { label ->
             label.textSize = chrome.textSizeSp
             label.typeface = chrome.font ?: Typeface.DEFAULT
             label.setTextColor(chrome.textColor)
         }
     }
+
     override fun bind(context: ReaderPageContext) {
         boundContext = context
         background.bind(context.style.page)
@@ -92,49 +108,59 @@ private class DefaultPage(context: Context) : ReaderPageTemplate {
         slot(header, context.style.header, headerBackground, listOf(title, headerCenter, headerEnd))
         slot(footer, context.style.footer, footerBackground, listOf(progress, footerCenter, clock))
         // Hiding the icon does not alter the vertical body viewport.
-        header.minimumHeight = dp(16f + context.style.header.padding.topDp + context.style.header.padding.bottomDp)
+        header.minimumHeight =
+            dp(16f + context.style.header.padding.topDp + context.style.header.padding.bottomDp)
         back.imageTintList = ColorStateList.valueOf(context.style.header.textColor)
         renderChrome(context)
     }
+
     override fun refreshChrome() {
         val page = boundContext ?: return
         val updated = page.copy(timeMillis = System.currentTimeMillis())
         boundContext = updated
         renderChrome(updated)
     }
+
     override fun onTimeChanged(timeMillis: Long) {
         val page = boundContext ?: return
         val updated = page.copy(timeMillis = timeMillis)
         boundContext = updated
         renderChrome(updated)
     }
+
     private fun renderChrome(page: ReaderPageContext) {
         val chrome = page.chrome
-        if(boundContext !== page) return // Provider may close/rebind its owner.
+        if (boundContext !== page) return // Provider may close/rebind its owner.
         val style = page.style
-        val time = android.text.format.DateFormat.getTimeFormat(layout.context).format(java.util.Date(page.timeMillis))
+        val time = android.text.format.DateFormat.getTimeFormat(layout.context)
+            .format(java.util.Date(page.timeMillis))
         val batteryText by lazy { battery.text() }
         val resolved = resolveDefaultPageChrome(page, chrome, time) { batteryText }
         fun action(view: View, callback: ReaderPageChromeAction?, fallback: (() -> Unit)? = null) {
             view.setOnClickListener(null)
             view.isClickable = callback != null || fallback != null
-            if(view.isClickable) view.setOnClickListener {
-                if(boundContext == null) return@setOnClickListener
-                if(callback != null) callback.onClick(page) else fallback?.invoke()
+            if (view.isClickable) view.setOnClickListener {
+                if (boundContext == null) return@setOnClickListener
+                if (callback != null) callback.onClick(page) else fallback?.invoke()
             }
         }
+
         fun row(views: List<TextView>, content: DefaultChromeRow, headerRow: Boolean) {
             views.forEachIndexed { index, view ->
                 val cell = content.cells[index]
                 val visible = content.threeColumns || index == 0 ||
-                    !headerRow && index == 2 && resolved.legacyFooterEndVisible
-                view.visibility = if(visible) View.VISIBLE else View.GONE
+                        !headerRow && index == 2 && resolved.legacyFooterEndVisible
+                view.visibility = if (visible) View.VISIBLE else View.GONE
                 view.text = cell.text
-                val alignment = if(content.threeColumns) {
-                    listOf(ChromeAlignment.START, ChromeAlignment.CENTER, ChromeAlignment.END)[index]
-                } else if(headerRow) style.header.alignment
-                else if(resolved.legacyFooterEndVisible) {
-                    if(index == 0) ChromeAlignment.START else ChromeAlignment.END
+                val alignment = if (content.threeColumns) {
+                    listOf(
+                        ChromeAlignment.START,
+                        ChromeAlignment.CENTER,
+                        ChromeAlignment.END
+                    )[index]
+                } else if (headerRow) style.header.alignment
+                else if (resolved.legacyFooterEndVisible) {
+                    if (index == 0) ChromeAlignment.START else ChromeAlignment.END
                 } else style.footer.alignment
                 view.gravity = gravity(alignment)
                 action(view, cell.action)
@@ -142,18 +168,29 @@ private class DefaultPage(context: Context) : ReaderPageTemplate {
         }
         row(listOf(title, headerCenter, headerEnd), resolved.header, true)
         row(listOf(progress, footerCenter, clock), resolved.footer, false)
-        back.visibility = if(chrome.showBackButton) View.VISIBLE else View.GONE
+        back.visibility = if (chrome.showBackButton) View.VISIBLE else View.GONE
         action(back, chrome.backAction) { page.requestReaderAction(ReaderAction.ExitReader); Unit }
         headerTime = style.header.visible && resolved.header.cells.any { it.usesTime }
         footerTime = style.footer.visible && resolved.footer.cells.any { it.usesTime }
         battery.setEnabled(style.header.visible && resolved.header.cells.any { it.usesBattery } ||
-            style.footer.visible && resolved.footer.cells.any { it.usesBattery })
+                style.footer.visible && resolved.footer.cells.any { it.usesBattery })
     }
+
     override fun unbind() {
         boundContext = null; headerTime = false; footerTime = false
         battery.close()
-        listOf(back, title, headerCenter, headerEnd, progress, footerCenter, clock).forEach { it.setOnClickListener(null); it.isClickable = false }
-        listOf(title, headerCenter, headerEnd, progress, footerCenter, clock).forEach { it.text = "" }
+        listOf(
+            back,
+            title,
+            headerCenter,
+            headerEnd,
+            progress,
+            footerCenter,
+            clock
+        ).forEach { it.setOnClickListener(null); it.isClickable = false }
+        listOf(title, headerCenter, headerEnd, progress, footerCenter, clock).forEach {
+            it.text = ""
+        }
         background.clear(); headerBackground.clear(); footerBackground.clear()
     }
 }

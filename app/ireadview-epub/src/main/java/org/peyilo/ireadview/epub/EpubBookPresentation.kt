@@ -27,6 +27,7 @@ import org.peyilo.ireadview.spi.selection.DocumentSelectionHandle
 internal class EpubBookPresentation(private val context: Context, private val source: EpubReaderBookSource,
     private val mode: ReadingMode, private val host: BookPresentationHost) : BookPresentation() {
     private var active: Page? = null
+    private val resourceCache = EpubResourceCache()
     // Current + at most two parked neighbors. Idle work never moves the committed body.
     private val parked = ReaderPageCache<Page>(if (mode == ReadingMode.PAGED) host.pageCacheMode else ReaderPageCacheMode.SINGLE_PAGE) { it.close() }
     private val preloader = ReaderPagePreloader()
@@ -37,7 +38,7 @@ internal class EpubBookPresentation(private val context: Context, private val so
     private var navigationBusy = false
     private var inputSerial = 0L
     private var paragraphJob: Job? = null
-    private val root: FrameLayout = object : FrameLayout(context) {
+    private val root: EpubPageDeck = object : EpubPageDeck(context) {
         private var ownsTouch = false
         private var downY = 0f
         private var lastY = 0f
@@ -207,7 +208,10 @@ internal class EpubBookPresentation(private val context: Context, private val so
         return if (available) NavigationAvailability.Available else NavigationAvailability.AtBoundary
     }
     override suspend fun prepare(target: ReadNavigation<ReadingPosition>): ReadPreparation<ReadingPosition> {
+        var stamp = System.nanoTime()
+        fun stage(name: String) { val now=System.nanoTime(); android.util.Log.i("EpubStage", "$name ${(now-stamp)/1e6}ms"); stamp=now }
         preloader.stop()
+        stage("stop")
         if (detached) return ReadPreparation.Rejected(ReaderRejection.NotReady)
         if (navigationAvailability(target) == NavigationAvailability.AtBoundary) return ReadPreparation.Rejected(ReaderRejection.AtBoundary)
         val snapshot = source.acquire()
@@ -240,6 +244,7 @@ internal class EpubBookPresentation(private val context: Context, private val so
             val reusable = if (mode == ReadingMode.PAGED && requestedPage != null)
                 parked.take { it.matches(index, requestedPage) } ?: parked.take { it.index == index }
                 else null
+            stage("lookup reuse=${reusable != null} exact=${reusable?.matches(index,requestedPage ?: -1)}")
             if (reusable == null) parked.reserveCandidate(displayed != null)
             val created = reusable ?: Page(snapshot, index, host.generation)
             page = created
@@ -250,14 +255,17 @@ internal class EpubBookPresentation(private val context: Context, private val so
                 else if (!created.matches(index, requireNotNull(requestedPage))) created.moveToPage(requestedPage)
                 else created.syncAnnotations()
             } else created.mount(locator, requestedPage)
+            stage("page ready")
             currentCoroutineContext().ensureActive()
             if (!created.current()) return ReadPreparation.Rejected(ReaderRejection.NotReady)
             val actual = requireNotNull(created.position)
             created.bindChrome()
+            created.awaitReady()
             if (mode == ReadingMode.PAGED && host.documentSelection == null) {
                 displayed?.prepareSurface()
                 created.prepareSurface()
             }
+            stage("surfaces")
             page = null // ownership is transferred only to the returned candidate
             val direction = if (target == ReadNavigation.Previous) -1 else 1
             return ReadPreparation.Ready(Candidate(created, actual, host.generation, direction))
@@ -294,6 +302,7 @@ internal class EpubBookPresentation(private val context: Context, private val so
         inputSerial++; paragraphJob?.cancel(); selectionInteraction.release()
         active?.close(); active = null
         parked.clear()
+        resourceCache.clear()
         root.removeAllViews()
     }
 
@@ -317,6 +326,7 @@ internal class EpubBookPresentation(private val context: Context, private val so
         if (detached || navigationBusy || !parked.enabled || mode != ReadingMode.PAGED || host.documentSelection != null) return
         val displayed = base ?: return
         preloader.schedule(displayed to direction) {
+            android.util.Log.i("EpubStage", "warm base=${displayed.index}:${displayed.number} direction=$direction")
             // Chromium work competes with the animation's window GPU even on a parked page.
             // Prepare neighbors only while reading; never trade animation frames for read-ahead.
             try {
@@ -325,6 +335,7 @@ internal class EpubBookPresentation(private val context: Context, private val so
                 val targets = listOfNotNull(neighbor(displayed, direction), neighbor(displayed, -direction))
                     .filterNot { active?.matches(it.first, it.second) == true }
                 for ((index, number) in targets) {
+                    android.util.Log.i("EpubStage", "warm target=$index:$number cached=${parked.entries.map { "${it.index}:${it.number}/${it.mounted}" }}")
                     if (parked.entries.any { it.matches(index, number) && it.hasSurface }) continue
                     val reusable = parked.take { it.matches(index, number) }
                         ?: parked.take { p -> !targets.any { p.matches(it.first, it.second) } && p.index == index }
@@ -342,6 +353,7 @@ internal class EpubBookPresentation(private val context: Context, private val so
                         else page.mount(page.snapshot.locator(index), number)
                         page.bindChrome()
                         page.prepareSurface()
+                        android.util.Log.i("EpubStage", "warm ready=${page.index}:${page.number}")
                     } finally {
                         page.park()
                         if (page.mounted && page.body.isBound) keepParked(page) else page.close()
@@ -356,7 +368,7 @@ internal class EpubBookPresentation(private val context: Context, private val so
     private inner class Page(val snapshot: EpubSnapshot, val index: Int, val generation: Long) {
         val template = host.pageFactory.create(context)
         private val pageLease = ReaderPageLease.acquire(template)
-        val body = try { EpubReaderBodyView(context) } catch (failure: Throwable) {
+        val body = try { EpubReaderBodyView(context, resourceCache) } catch (failure: Throwable) {
             try { template.unbind() } catch (cleanup: Throwable) { failure.addSuppressed(cleanup) }
             pageLease.close()
             throw failure
@@ -413,8 +425,10 @@ internal class EpubBookPresentation(private val context: Context, private val so
                 }, chromeProvider = host.pageChromeProvider))
             boundPosition = position; boundChromeEpoch = chromeEpoch
         }
+        suspend fun awaitReady() = body.awaitReady()
         suspend fun prepareSurface() {
-            if (recording != null || !current() || android.os.Build.VERSION.SDK_INT < 29) return
+            awaitReady()
+            if (recording != null || !current()) return
             if (template.root.isLayoutRequested) {
                 // We own this MATCH_PARENT template. Resolve chrome's pending layout now;
                 // waiting for an invisible neighbor's traversal adds whole frames to input.
@@ -426,26 +440,27 @@ internal class EpubBookPresentation(private val context: Context, private val so
             }
             currentCoroutineContext().ensureActive()
             if (!current()) return
-            recording = HardwareEpubPageRecording(template.root)
+            recording = if (android.os.Build.VERSION.SDK_INT >= 29) HardwareEpubPageRecording(template.root)
+                else SoftwareEpubPageRecording(template.root)
         }
         fun reveal() {
             // The recording references child RenderNodes. A real hierarchy traversal after
             // revealing a parked WebView can replace their display lists; the recording
             // made while parked must not become the next turn's current-page surface.
-            if (template.root.alpha != 1f) invalidateSurface()
-            template.root.alpha = 1f
+            if (!root.isRevealed(template.root)) invalidateSurface()
+            root.reveal(template.root)
         }
         fun park() {
             annotationJob?.cancel()
             // Keep recordings local to one visibility state, including reverse navigation.
-            if (template.root.alpha != 0f) invalidateSurface()
-            template.root.alpha = 0f
+            if (root.isRevealed(template.root)) invalidateSurface()
+            root.park(template.root)
         }
         suspend fun syncAnnotations() = renderAnnotations(host.documentAnnotations(snapshot.book.chapters[index].chapterId))
         suspend fun moveToPage(requestedPage: Int) {
             invalidateSurface()
             positionReady = false
-            accept(body.goToPage(requestedPage.coerceIn(1, pageCount)))
+            accept(body.preparePage(requestedPage.coerceIn(1, pageCount)))
             syncAnnotations()
             positionReady = true
         }
@@ -457,13 +472,13 @@ internal class EpubBookPresentation(private val context: Context, private val so
             position = snapshot.position(index, locator)
             bindChrome()
             require(template.root.parent == null || template.root.parent === root) { "Page bind attached its root outside the reader" }
-            template.root.alpha = 0f
+            root.park(template.root)
             template.root.visibility = View.VISIBLE
             if (template.root.parent == null) root.addView(template.root, FrameLayout.LayoutParams(-1, -1))
-            val state = body.bind(snapshot.publication, snapshot.publication.readingOrder[index].path, host.style, mode, locator)
+            val state = body.prepareBinding(snapshot.publication, snapshot.publication.readingOrder[index].path, host.style, mode, locator, requestedPage)
+            android.util.Log.i("EpubStage", "bound $index requested=$requestedPage")
             accept(state)
             mounted = true
-            if (requestedPage != null) accept(body.goToPage(requestedPage.coerceIn(1, pageCount)))
             // Prepare decorations before supplying the candidate surface to a page-turn effect.
             renderAnnotations(host.documentAnnotations(snapshot.book.chapters[index].chapterId))
             body.onGeometryChanged = { if (current() && active === this) {

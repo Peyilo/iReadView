@@ -1,27 +1,28 @@
-# EPUB 的独立 Maven 宿主
+# EPUB 独立 Maven 宿主
 
-本工程仅依赖`org.peyilo.ireadview:ireadview-epub:0.1.0-SNAPSHOT`，核心库由其Maven元数据传递引入。不使用project/includeBuild，不复制库实现，也不直接拼接AAR。两个来源按钮在同一个ReaderView切换MemoryBookSource和EpubReaderBookSource；正文绘制组件、导航和位置恢复继续使用核心公开API。
+本工程只声明 `org.peyilo.ireadview:ireadview-epub:0.1.0-SNAPSHOT`，通过元数据引入核心和 PageCurl Core。没有 project/includeBuild 依赖，也不复制库源码。两个来源按钮在同一个 `ReaderView` 切换 `MemoryBookSource` 和 `EpubReaderBookSource`。
 
-## 构建和运行
+## 构建
 
-在主工程根目录使用JDK17与Android SDK。独立工程可通过ANDROID_HOME或自己的local.properties指定SDK。
+需要 JDK 17 和 Android SDK，使用 `ANDROID_HOME` 或此工程的 `local.properties` 配置 SDK。从仓库根目录执行，Windows 使用 `gradlew.bat`：
 
-```powershell
-./gradlew.bat :app:ireadview:publishReleasePublicationToLocalRepository :app:ireadview-epub:bundleReleaseRepository
-./gradlew.bat -p examples/maven-epub-host :app:assembleDebug :app:assembleRelease
-./gradlew.bat -p examples/maven-epub-host :app:connectedDebugAndroidTest
+```sh
+./gradlew :app:ireadview:bundleReleaseRepository :app:ireadview-epub:bundleReleaseRepository
+./gradlew -p examples/maven-epub-host :app:assembleDebug :app:assembleDebugAndroidTest :app:assembleRelease
 ```
 
-仓库默认分别位于两个库的build/repository，可通过ireadRepository和ireadEpubRepository覆盖。离线交付的EPUB仓库ZIP只包含EPUB模块；需要同时提供核心模块仓库。EPUB AAR的POM及Gradle metadata保留core/jsoup/coroutines依赖，不把它们打进fat AAR。
+两个仓库默认分别位于库模块的 `build/repository`，可通过 `-PireadRepository`、`-PireadEpubRepository` 和 `-PireadVersion` 覆盖。EPUB 仓库 ZIP 只包含 EPUB 模块；独立交付时同时提供核心仓库，并保留 `google()` / `mavenCentral()`。
 
-宿主minSdk21，消费EPUB时启用coreLibraryDesugaring并配置与项目一致的desugar_jdk_libs_nio:2.1.5，见app/build.gradle.kts。没有Readium、FragmentActivity或AppCompat要求。Release开启R8/资源压缩且未配置签名，不能把Release构建成功当作Release设备运行通过。
+宿主最低 API 21，启用 core library desugaring，使用与主工程一致的 `desugar_jdk_libs_nio`。不要求 Readium、FragmentActivity 或 AppCompat。Release 开启 R8/资源压缩，未配置发布签名。
 
-## 所有权与示例范围
+## 内容与验证
 
-切来源、进入后台和销毁时取消宿主请求，先让ReaderView.closeBook释放呈现，再关闭宿主持有的EpubReaderBookSource；最终reader.release释放组件。页面位置使用ReaderSnapshot和源定位，Activity重建时重新创建来源，不保存WebView/页面对象。
+`demo.epub` 是 `tools/Generate-EpubSamples.py` 生成的原创重排样例，不包含主 Demo 的 ARM 书籍。示例检查单 Widget 加载、正文绘制 SPI、来源切换、下一页提交和 `ReaderSnapshot` 恢复。
 
-demo.epub与主工程原创illustrated-flow.epub一致，来自tools/Generate-EpubSamples.py，不包含用户ARM书籍。该小样例用于证明打包和公开SPI消费，不代表所有EPUB格式兼容。
+`PublishedEngineIntegrationTest` 位于此工程的 `src/androidTest`。连接设备后可从仓库根目录执行：
 
-PublishedEngineIntegrationTest实际验证：发布的EPUB在单一Widget内加载、独立绘制SPI注入、切换到文本再切回EPUB、两种引擎下一页提交，以及Activity重建后章节与页位置恢复。
+```sh
+./gradlew -p examples/maven-epub-host :app:connectedDebugAndroidTest
+```
 
-2026-10-23：两库本地发布和EPUB仓库ZIP生成成功，独立宿主Debug/AndroidTest/R8 Release构建成功，API36设备测试1项通过（7.381秒）。主工程日志app/build/architecture-epub-publication.log及architecture-epub-host.log。未执行API21真机或未签名Release的运行验收。
+切换来源或停止时取消请求，先 `closeBook()` 释放呈现，再关闭宿主持有的来源；最终调用 `release()`。重建时重新创建来源，不能保存 WebView 或页面对象。支持范围见[EPUB 引擎](../../docs/epub.md)与[兼容边界](../../docs/compatibility.md)。

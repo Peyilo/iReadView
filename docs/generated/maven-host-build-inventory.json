@@ -1,9 +1,0 @@
-{
-  "generated": "2026-10-07",
-  "project": "examples/maven-host",
-  "coordinate": "org.peyilo.ireadview:ireadview:0.1.0-SNAPSHOT",
-  "apk": "examples/maven-host/app/build/outputs/apk/debug/app-debug.apk",
-  "apkSha256": "a47392cf63e3cba1e6914e7e31ae19e1ed403d27ecd994c01764ff01dd9ad1c3",
-  "build": "assembleDebug succeeded for saved-state host changes; Kotlin and Java compilation executed; existing dependency report records unchanged runtime graph",
-  "scope": "No installation, runtime interaction, shrinking, or tests."
-}

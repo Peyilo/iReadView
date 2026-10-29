@@ -17,14 +17,21 @@ internal object AccessibilitySourceTraversal {
         data object Invalid : Result
     }
 
-    fun find(content: ChapterContent, boundary: AccessibilityTraversalBoundary?, forward: Boolean, granularity: Int,
-        checkCancellation: () -> Unit): Result {
+    fun find(
+        content: ChapterContent,
+        boundary: AccessibilityTraversalBoundary?,
+        forward: Boolean,
+        granularity: Int,
+        checkCancellation: () -> Unit
+    ): Result {
         if (granularity != AccessibilityNodeInfoCompat.MOVEMENT_GRANULARITY_CHARACTER &&
             granularity != AccessibilityNodeInfoCompat.MOVEMENT_GRANULARITY_WORD &&
-            granularity != AccessibilityNodeInfoCompat.MOVEMENT_GRANULARITY_PARAGRAPH) return Result.Invalid
+            granularity != AccessibilityNodeInfoCompat.MOVEMENT_GRANULARITY_PARAGRAPH
+        ) return Result.Invalid
         val blocks = content.blocks
         val source = (boundary as? AccessibilityTraversalBoundary.Source)?.anchor
-        val blockId = source?.blockId ?: (boundary as? AccessibilityTraversalBoundary.CompletedBlock)?.blockId
+        val blockId =
+            source?.blockId ?: (boundary as? AccessibilityTraversalBoundary.CompletedBlock)?.blockId
         var index = blockId?.let(content::blockIndexForId)
             ?: if (forward) 0 else blocks.lastIndex
         if (boundary != null && index !in blocks.indices) return Result.Invalid
@@ -34,17 +41,35 @@ internal object AccessibilitySourceTraversal {
             val block = blocks[index]
             val text = when (block) {
                 is TextContentBlock -> block.text
-                else -> return Result.Unsupported(ReadingPosition(content.bookId, content.chapterId,
-                    ContentAnchor(block.blockId, 0), content.revision))
+                else -> return Result.Unsupported(
+                    ReadingPosition(
+                        content.bookId, content.chapterId,
+                        ContentAnchor(block.blockId, 0), content.revision
+                    )
+                )
             }
             val offset = if (block.blockId == source?.blockId) source.offset else null
-            if (offset != null && !AccessibilityTextTraversal.isCharacterBoundary(text, offset)) return Result.Invalid
-            val step = AccessibilityTextTraversal.step(text, offset, granularity, forward, checkCancellation)
+            if (offset != null && !AccessibilityTextTraversal.isCharacterBoundary(
+                    text,
+                    offset
+                )
+            ) return Result.Invalid
+            val step = AccessibilityTextTraversal.step(
+                text,
+                offset,
+                granularity,
+                forward,
+                checkCancellation
+            )
             checkCancellation()
             if (step != null) {
-                return Result.Found(ReadingPosition(content.bookId, content.chapterId,
-                    ContentAnchor(block.blockId, step.start), content.revision),
-                    ContentAnchor(block.blockId, if (forward) step.start else step.end))
+                return Result.Found(
+                    ReadingPosition(
+                        content.bookId, content.chapterId,
+                        ContentAnchor(block.blockId, step.start), content.revision
+                    ),
+                    ContentAnchor(block.blockId, if (forward) step.start else step.end)
+                )
             }
             index += if (forward) 1 else -1
         }

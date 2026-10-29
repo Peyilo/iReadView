@@ -7,5 +7,6 @@ object BlockLayoutProviders {
      * A wrapper must use its own id/version and forward selection/accessibility geometry
      * when decorating fragments. Register only the wrapper; built-in fallback remains automatic.
      */
-    @JvmStatic fun text(): BlockLayoutProvider = org.peyilo.ireadview.internal.layout.TextBlockLayoutProvider()
+    @JvmStatic
+    fun text(): BlockLayoutProvider = org.peyilo.ireadview.internal.layout.TextBlockLayoutProvider()
 }

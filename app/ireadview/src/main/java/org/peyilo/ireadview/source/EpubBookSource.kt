@@ -13,7 +13,12 @@ class EpubBookSource @JvmOverloads constructor(
     cacheDirectory: File,
     options: EpubTextBookOptions = EpubTextBookOptions()
 ) : BookResourceSource, BookLinkSource, AutoCloseable {
-    private val delegate = EpubTextBookSource(bookId, input, cacheDirectory, options.copy(contentMode = EpubContentMode.Flow))
+    private val delegate = EpubTextBookSource(
+        bookId,
+        input,
+        cacheDirectory,
+        options.copy(contentMode = EpubContentMode.Flow)
+    )
     override val bookId get() = delegate.bookId
     val diagnostics get() = delegate.diagnostics
     val navigation get() = delegate.navigation
@@ -21,7 +26,10 @@ class EpubBookSource @JvmOverloads constructor(
     override suspend fun loadChapter(chapterId: String) = delegate.loadChapter(chapterId)
     override suspend fun loadResource(resourceId: String, bookRevision: String?, maxBytes: Int) =
         delegate.loadResource(resourceId, bookRevision, maxBytes)
-    override suspend fun resolveLink(target: LinkTarget.Internal, bookRevision: String?) = delegate.resolveLink(target, bookRevision)
+
+    override suspend fun resolveLink(target: LinkTarget.Internal, bookRevision: String?) =
+        delegate.resolveLink(target, bookRevision)
+
     suspend fun resolveNavigation(entry: EpubTocEntry) = delegate.resolveNavigation(entry)
     override fun close() = delegate.close()
 }

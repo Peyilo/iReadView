@@ -27,7 +27,10 @@ data class TextBookOptions(
     val title: String = "Text book",
     val charset: Charset = Charsets.UTF_8,
     /** Full trimmed line match. Null disables chapter detection. */
-    val chapterHeading: Regex? = Regex("(?:第[零〇一二三四五六七八九十百千万两0-9]+[章回节卷部篇].*|Chapter\\s+[0-9IVXLCDM]+(?:\\s.*)?)", RegexOption.IGNORE_CASE),
+    val chapterHeading: Regex? = Regex(
+        "(?:第[零〇一二三四五六七八九十百千万两0-9]+[章回节卷部篇].*|Chapter\\s+[0-9IVXLCDM]+(?:\\s.*)?)",
+        RegexOption.IGNORE_CASE
+    ),
     val preambleTitle: String = "Introduction",
     val maxInputBytes: Int = 32 * 1024 * 1024,
     /** Null uses memory; otherwise private records live in a managed child of this host directory.
@@ -55,17 +58,30 @@ class TextBookSource @JvmOverloads constructor(
     private val input: ReaderInput,
     private val options: TextBookOptions = TextBookOptions()
 ) : BookSource, AutoCloseable {
-    private data class ParsedChapter(val id: String, val title: String, val blocks: List<ContentBlock>)
-    private data class Snapshot(override val book: BookDescriptor, val chapters: Map<String, ChapterContent>) : TextSourceSnapshot {
-        override suspend fun chapter(chapterId: String) = chapters[chapterId] ?: throw NoSuchElementException("Unknown chapter: $chapterId")
+    private data class ParsedChapter(
+        val id: String,
+        val title: String,
+        val blocks: List<ContentBlock>
+    )
+
+    private data class Snapshot(
+        override val book: BookDescriptor,
+        val chapters: Map<String, ChapterContent>
+    ) : TextSourceSnapshot {
+        override suspend fun chapter(chapterId: String) =
+            chapters[chapterId] ?: throw NoSuchElementException("Unknown chapter: $chapterId")
+
         override fun close() {}
     }
+
     private val mutex = Mutex()
     private val lifecycle = Any()
     private var closed = false
     private var snapshot: TextSourceSnapshot? = null
 
-    init { require(bookId.isNotBlank()) }
+    init {
+        require(bookId.isNotBlank())
+    }
 
     override suspend fun loadBook(): BookDescriptor = withContext(Dispatchers.IO) {
         mutex.withLock {
@@ -75,31 +91,49 @@ class TextBookSource @JvmOverloads constructor(
         }
     }
 
-    override suspend fun loadChapter(chapterId: String): ChapterContent = withContext(Dispatchers.IO) {
-        mutex.withLock {
-            val current = synchronized(lifecycle) { checkOpen(); snapshot } ?: parseSnapshot().also { install(it) }
-            current.chapter(chapterId)
+    override suspend fun loadChapter(chapterId: String): ChapterContent =
+        withContext(Dispatchers.IO) {
+            mutex.withLock {
+                val current = synchronized(lifecycle) { checkOpen(); snapshot }
+                    ?: parseSnapshot().also { install(it) }
+                current.chapter(chapterId)
+            }
         }
-    }
 
     /** Permanent close. In-flight disk readers retain a lease until their stream closes. */
     override fun close() {
-        val old = synchronized(lifecycle) { if (closed) return; closed = true; snapshot.also { snapshot = null } }
+        val old = synchronized(lifecycle) {
+            if (closed) return; closed = true; snapshot.also {
+            snapshot = null
+        }
+        }
         old?.close()
     }
-    private fun checkOpen() { check(!closed) { "TextBookSource is closed" } }
+
+    private fun checkOpen() {
+        check(!closed) { "TextBookSource is closed" }
+    }
+
     private suspend fun install(fresh: TextSourceSnapshot) {
         try {
             currentCoroutineContext().ensureActive()
             val old = synchronized(lifecycle) { checkOpen(); snapshot.also { snapshot = fresh } }
             old?.close()
-        } catch (failure: Throwable) { fresh.close(); throw failure }
+        } catch (failure: Throwable) {
+            fresh.close(); throw failure
+        }
     }
+
     private suspend fun parseSnapshot(): TextSourceSnapshot {
         val coroutine = currentCoroutineContext()
         val checkActive = { coroutine.ensureActive(); synchronized(lifecycle) { checkOpen() } }
         checkActive()
-        return if (options.indexDirectory != null) DiskTextSnapshot.build(bookId, input, options, checkActive)
+        return if (options.indexDirectory != null) DiskTextSnapshot.build(
+            bookId,
+            input,
+            options,
+            checkActive
+        )
         else parseMemory(checkActive)
     }
 
@@ -120,17 +154,24 @@ class TextBookSource @JvmOverloads constructor(
         }
         checkActive()
         val decoded = options.charset.newDecoder().onMalformedInput(CodingErrorAction.REPORT)
-            .onUnmappableCharacter(CodingErrorAction.REPORT).decode(ByteBuffer.wrap(output.toByteArray())).toString()
+            .onUnmappableCharacter(CodingErrorAction.REPORT)
+            .decode(ByteBuffer.wrap(output.toByteArray())).toString()
         val parsedChapters = java.util.ArrayDeque<ParsedChapter>()
         val chapters = LinkedHashMap<String, ChapterContent>()
         val catalogue = ArrayList<TocEntry>()
         var blocks = ArrayList<ContentBlock>()
-        val parsedDigest = TextSnapshotParser.parse(StringReader(decoded), bookId, options, checkActive, onBlock = { id, text, heading ->
-            blocks.add(if (heading) HeadingBlock(id, text) else TextBlock(id, text))
-        }, onChapter = { id, title, _ ->
-            parsedChapters.addLast(ParsedChapter(id, title, blocks))
-            blocks = ArrayList()
-        })
+        val parsedDigest = TextSnapshotParser.parse(
+            StringReader(decoded),
+            bookId,
+            options,
+            checkActive,
+            onBlock = { id, text, heading ->
+                blocks.add(if (heading) HeadingBlock(id, text) else TextBlock(id, text))
+            },
+            onChapter = { id, title, _ ->
+                parsedChapters.addLast(ParsedChapter(id, title, blocks))
+                blocks = ArrayList()
+            })
         val revision = TextSnapshotParser.revision(digest.digest(), parsedDigest)
         while (parsedChapters.isNotEmpty()) {
             checkActive()

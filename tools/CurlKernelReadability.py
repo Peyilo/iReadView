@@ -471,7 +471,6 @@ def normalize_kernel_source(text):
     text = re.sub(r'(?<![\w.])4575657221408423936L\b', 'KernelLayout.POSITION_Z_ZERO_W_ONE', text)
     text = re.sub(r'(?<![\w.])144115188075855871L\b', 'KernelLayout.VERTEX_PAIR_INDEX_MASK', text)
     text = text.replace('0.00392156862745098', 'KernelTuning.NORMALIZED_CHANNEL_SCALE_DOUBLE')
-    text = text.replace('0.0078125', 'KernelTuning.SHADOW_PLANE_Z')
     # Data-record offsets are meaningful only relative to their owning record.
     offsets = {
         r'(?:materialInputAddress|materialAddress)': ('Material', {0:'FRONT_ENABLED',1:'BACK_ENABLED',8:'INVERSE_TRANSFORM',88:'INVERSE_Z_SCALE',136:'PAGE_BOUNDS',168:'SOURCE_BOUNDS',200:'NORMAL_X',208:'NORMAL_Y',216:'TANGENT_X',224:'TANGENT_Y',232:'FRONT_COLOR',240:'FRONT_MULTIPLIER',248:'BACK_COLOR',256:'BACK_SHADE',264:'LIGHTING_ENABLED',272:'SHADOW_COLOR',280:'OPACITY'}),

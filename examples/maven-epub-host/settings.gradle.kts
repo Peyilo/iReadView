@@ -6,7 +6,6 @@ dependencyResolutionManagement {
             url = uri(providers.gradleProperty("ireadRepository").getOrElse("../../app/ireadview/build/repository"))
             content {
                 includeModule("org.peyilo.ireadview", "ireadview")
-                includeModule("org.peyilo.ireadview", "ioscurl")
             }
         }
         maven {

@@ -19,28 +19,69 @@ open class ReaderView @JvmOverloads constructor(
     defStyleAttr: Int = R.attr.ireadReaderViewStyle,
     defStyleRes: Int = R.style.Widget_IRead_ReaderView
 ) : BookReadView(context, attrs, defStyleAttr, defStyleRes) {
-    override val supportedModes: Set<ReadingMode> = setOf(ReadingMode.PAGED, ReadingMode.CONTINUOUS_SCROLL)
+    override val supportedModes: Set<ReadingMode> =
+        setOf(ReadingMode.PAGED, ReadingMode.CONTINUOUS_SCROLL)
+
     init {
-        val values = context.obtainStyledAttributes(attrs, R.styleable.ReaderView, defStyleAttr, defStyleRes)
+        val values =
+            context.obtainStyledAttributes(attrs, R.styleable.ReaderView, defStyleAttr, defStyleRes)
         try {
-            setInitialReadingMode(if (values.getInt(R.styleable.ReaderView_ireadReadingMode, 0) == 1) ReadingMode.CONTINUOUS_SCROLL else ReadingMode.PAGED)
+            setInitialReadingMode(
+                if (values.getInt(
+                        R.styleable.ReaderView_ireadReadingMode,
+                        0
+                    ) == 1
+                ) ReadingMode.CONTINUOUS_SCROLL else ReadingMode.PAGED
+            )
             val axis = values.getInt(R.styleable.ReaderView_ireadPagingAxis, 0)
             require(axis == 0 || axis == 1) { "Unknown ireadPagingAxis: $axis" }
-            setInitialInputOptions(ReaderInputOptions(
-                gesturePagingEnabled = values.getBoolean(R.styleable.ReaderView_ireadGesturePagingEnabled, true),
-                tapPagingEnabled = values.getBoolean(R.styleable.ReaderView_ireadTapPagingEnabled, true),
-                keyboardPagingEnabled = values.getBoolean(R.styleable.ReaderView_ireadKeyboardPagingEnabled, true),
-                volumeKeyPagingEnabled = values.getBoolean(R.styleable.ReaderView_ireadVolumeKeyPagingEnabled, false),
-                pagingAxis = if (axis == 1) PagingAxis.Vertical else PagingAxis.Horizontal,
-                tapEdgeFraction = values.getFloat(R.styleable.ReaderView_ireadTapEdgeFraction, 0.3f)
-            ))
-            setInitialPageTurnOptions(PageTurnOptions(
-                durationMs = values.getInt(R.styleable.ReaderView_ireadTurnDurationMs, 240).toLong(),
-                reduceMotion = values.getBoolean(R.styleable.ReaderView_ireadReduceMotion, false),
-                commitDistanceFraction = values.getFloat(R.styleable.ReaderView_ireadCommitDistanceFraction, 0.33f),
-                flingVelocityDpPerSecond = values.getFloat(R.styleable.ReaderView_ireadFlingVelocityDpPerSecond, 600f),
-                minimumTurnIntervalMs = values.getInt(R.styleable.ReaderView_ireadMinimumTurnIntervalMs, 0).toLong()
-            ))
+            setInitialInputOptions(
+                ReaderInputOptions(
+                    gesturePagingEnabled = values.getBoolean(
+                        R.styleable.ReaderView_ireadGesturePagingEnabled,
+                        true
+                    ),
+                    tapPagingEnabled = values.getBoolean(
+                        R.styleable.ReaderView_ireadTapPagingEnabled,
+                        true
+                    ),
+                    keyboardPagingEnabled = values.getBoolean(
+                        R.styleable.ReaderView_ireadKeyboardPagingEnabled,
+                        true
+                    ),
+                    volumeKeyPagingEnabled = values.getBoolean(
+                        R.styleable.ReaderView_ireadVolumeKeyPagingEnabled,
+                        false
+                    ),
+                    pagingAxis = if (axis == 1) PagingAxis.Vertical else PagingAxis.Horizontal,
+                    tapEdgeFraction = values.getFloat(
+                        R.styleable.ReaderView_ireadTapEdgeFraction,
+                        0.3f
+                    )
+                )
+            )
+            setInitialPageTurnOptions(
+                PageTurnOptions(
+                    durationMs = values.getInt(R.styleable.ReaderView_ireadTurnDurationMs, 240)
+                        .toLong(),
+                    reduceMotion = values.getBoolean(
+                        R.styleable.ReaderView_ireadReduceMotion,
+                        false
+                    ),
+                    commitDistanceFraction = values.getFloat(
+                        R.styleable.ReaderView_ireadCommitDistanceFraction,
+                        0.33f
+                    ),
+                    flingVelocityDpPerSecond = values.getFloat(
+                        R.styleable.ReaderView_ireadFlingVelocityDpPerSecond,
+                        600f
+                    ),
+                    minimumTurnIntervalMs = values.getInt(
+                        R.styleable.ReaderView_ireadMinimumTurnIntervalMs,
+                        0
+                    ).toLong()
+                )
+            )
             val preset = values.getInt(R.styleable.ReaderView_ireadPageTurnEffect, 0)
             val factory = when (preset) {
                 0 -> PageTurnEffects.none()
@@ -53,8 +94,14 @@ open class ReaderView @JvmOverloads constructor(
             }
             setInitialPageTurnEffect(factory)
             setInitialStyle(ReaderStyleAttributes.read(context, values, style))
-        } finally { values.recycle() }
+        } finally {
+            values.recycle()
+        }
     }
-    override fun createPresentation(mode: ReadingMode, host: BookPresentationHost): BookPresentation =
+
+    override fun createPresentation(
+        mode: ReadingMode,
+        host: BookPresentationHost
+    ): BookPresentation =
         org.peyilo.ireadview.spi.presentation.BookPresentations.createNative(context, mode, host)
 }

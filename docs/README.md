@@ -1,42 +1,40 @@
-# 文档入口
+# 文档索引
 
-整理日期：2026-10-19。本文档集只保留当前契约、必要设计依据和有明确范围的验证记录，不再维护逐轮追加日志。
+文档按主题命名，不维护文件序号或聊天交接记录。所有命令从仓库根目录执行，路径均相对仓库；机器安装路径、临时日志和生成报告不属于项目文档。
 
-## 新对话最小阅读集合
+## 入门与设计
 
-1. [交接说明](03_IMPLEMENTATION_HANDOFF.md)：工作区、用户约束、最新改动、验证边界及待办。
-2. [当前架构](02_ARCHITECTURE_AND_PROJECT_STRUCTURE.md)：职责和扩展边界。
-3. 按任务读取下面一个专题。不要默认加载所有文档或原始 JVM 清单。
+| 文档 | 内容 |
+| --- | --- |
+| [构建与持续集成](building.md) | 环境要求、Gradle 任务、发布产物、CI 与诊断 |
+| [宿主接入](integration.md) | 创建 Widget、来源、导航、恢复和 Maven 消费 |
+| [产品范围](requirements.md) | 目标、功能要求和核心不变量 |
+| [架构](architecture.md) | 模块、职责、依赖方向与扩展边界 |
+| [API 契约](api-contracts.md) | 线程、身份、取消、所有权和生命周期 |
+| [兼容边界](compatibility.md) | 支持范围、已知限制和验证方式 |
 
-| 需要 | 文档 |
-|---|---|
-| 原始行为基线、FR编号和完整验收场景 | [产品需求](01_PRODUCT_REQUIREMENTS.md) |
-| 公共 API、线程、生命周期与所有权 | [API 契约](04_WIDGET_API_DESIGN.md) |
-| 能力查询、点击策略、选区定位和宿主笔记/书签 | [宿主场景API](HOST_API_SCENARIOS.md) |
-| 当前功能状态、已知缺口和证据 | [状态与验证](07_REQUIREMENT_IMPLEMENTATION_AUDIT.md) |
-| 组件可替换性、依赖边界和外部消费的审计 | [架构审计](ARCHITECTURE_AUDIT.md) |
-| 创建 Widget、来源、恢复、本地 Maven 接入 | [宿主接入](08_HOST_INTEGRATION_GUIDE.md) |
-| 多书源、TXT/EPUB/网络小说、图片和正文链接 | [内容与书源架构](CONTENT_SOURCES.md) |
-| 默认文字排版组合、图片加载/解码、预算和运行时切换 | [内容扩展](CONTENT_EXTENSIONS.md) |
-| 正文 View 抽象、文本/EPUB 的职责边界 | [正文层设计](READER_BODY.md) |
-| 独立替换正文绘制、选区交互/绘制、完整引擎与翻页 | [组件扩展API](EXTENSIONS.md) |
-| 文本/EPUB共用的三页缓存、所有权和切换API | [分页缓存](PAGE_CACHE.md) |
-| 自研 EPUB 正文、系统 WebView 与 API21 边界 | [EPUB 引擎接入](EPUB_ENGINE.md) |
-| 六位置默认模板及任意 View 自定义的两层边界 | [页眉页脚](PAGE_CHROME.md) |
-| 选择、跨页手柄、菜单、高亮、划线与统一标注 | [选择与标注](SELECTION_AND_ANNOTATIONS.md) |
-| iOSCurl、GoogleCurl、背景取色与渲染边界 | [翻页渲染](RENDERING.md) |
-| iOS 原版算法的 Kotlin 模块、单栏接入、双栏扩展和数值对照 | [Kotlin 仿真翻页](IOS_CURL_KOTLIN.md) |
-| 文本/EPUB全部翻页效果的性能对照与当前瓶颈 | [翻页性能测量](EPUB_TURN_PERFORMANCE.md) |
-| 手势首帧、跟手动画、正文交接与白闪回归 | [手势响应及正文交接](GESTURE_AND_EPUB_HANDOFF.md) |
-| 样式字段、单位与排版调节方法 | [排版 API](26_READER_PANELS_AND_TYPOGRAPHY_API.md) |
-| 发布摘要及 Java/JVM 签名导出方法 | [发布清单说明](09_RELEASE_JVM_API_REFERENCE.md) |
-| Demo目录与各示例用途 | [Demo说明](../app/README.md) |
+## 内容与定制
 
-## 可信度与维护
+| 文档 | 内容 |
+| --- | --- |
+| [内容与书源](content-sources.md) | TXT、EPUB、网络来源、图片和链接 |
+| [正文层](reader-body.md) | ReaderBodyView 与格式专属呈现 |
+| [EPUB 引擎](epub.md) | 容器、WebView、定位、交互及限制 |
+| [内容扩展](content-extensions.md) | 自定义块排版、图片读取和预算 |
+| [组件扩展](extensions.md) | 正文、选区、划线、呈现和效果替换 |
+| [宿主场景](host-scenarios.md) | 能力查询、点击策略、选区定位和业务动作 |
+| [分页缓存](page-cache.md) | 单页/三页策略、预加载和资源所有权 |
+| [页面模板](page-chrome.md) | 任意 View 扩展与默认六位置页眉页脚 |
+| [排版](typography.md) | 样式、单位、边距、字体和设置面板 |
+| [选择与标注](selection-annotations.md) | 选择、跨页拖动、菜单、高亮和划线 |
+| [翻页渲染](rendering.md) | 内置效果、背景、阴影与资源处理 |
+| [PageCurl Core 接入](pagecurl-core.md) | 外部算法库与 Android 适配层 |
+| [翻页性能](performance.md) | 页面准备、跟手动画、正文交接和测量 |
 
-- 当前实现以生产源码/KDoc为准；需求文档是行为目标，不等于已实现或验收。
-- 构建成功、有限单元/离屏检查、完整设备交互验收是不同证据。
-- generated 下的历史报告保留原日期、哈希和范围，不可改写成当前版本已通过。
-- 修改后更新当前专题及状态；避免再把同一过程追加到多篇文档。
-- 此次删除了原05实施计划、06长进度日志及23～45中的重复/被替代专题。有效内容归并至当前架构、API、状态和三个专题；被撤回方案、失败的局部修补结论不再作为指南。必要的反例在渲染/选择专题中保留。
-- 原始需求、可运行示例、生成工具、原始产物清单和有效历史证据保留，按需读取。
+## 维护规则
+
+- 可执行 API 以源码和 KDoc 为准；修改契约时同步更新所属专题。
+- 构建日志、JVM 导出、截图和性能原始记录输出到忽略的 `build/`，不提交为长期说明。
+- 构建、单元测试、设备交互与性能测量分别记录，使用对应提交的 CI 结果判断。
+- 删除或重命名文档时更新引用；运行 `python tools/check-docs.py` 检查相对链接和机器路径。
+- 平台安装路径通过环境变量或未跟踪的配置提供；示例不得依赖维护者的目录或设备编号。

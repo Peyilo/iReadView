@@ -25,6 +25,7 @@ interface PreparedRead<L : Any> {
     val surface: org.peyilo.ireadview.api.effect.PageSurface? get() = null
     val target: L
     val generation: Long
+
     /** Called once for a returned Ready candidate, including cancellation/obsolescence.
      * Release only candidate-owned resources; resources transferred by show belong to the adapter.
      */
@@ -53,6 +54,7 @@ interface ReadContentHost<L : Any> {
     suspend fun requestNavigation(target: ReadNavigation<L>): NavigationResult<L>
     fun reportVisiblePosition(location: L, generation: Long): ReaderResult<Unit>
     fun reportError(error: ReaderError)
+
     /** Visible geometry/window changed without necessarily changing its text anchor. */
     fun reportNavigationCapabilitiesChanged(generation: Long) {}
 }
@@ -60,11 +62,15 @@ interface ReadContentHost<L : Any> {
 interface ReadContentAdapter<L : Any> {
     val currentSurface: org.peyilo.ireadview.api.effect.PageSurface? get() = null
     val contentView: View
+
     /** Read-only main-thread query; must not load content, start layout or change position. */
-    fun navigationAvailability(target: ReadNavigation<L>): NavigationAvailability = NavigationAvailability.Unknown
+    fun navigationAvailability(target: ReadNavigation<L>): NavigationAvailability =
+        NavigationAvailability.Unknown
+
     fun attach(host: ReadContentHost<L>)
     fun onViewportChanged(viewport: ReadViewport)
     suspend fun prepare(target: ReadNavigation<L>): ReadPreparation<L>
+
     /** Cancellation must restore the last committed content, if this generation still owns it. */
     suspend fun show(candidate: PreparedRead<L>): L
     fun detach()

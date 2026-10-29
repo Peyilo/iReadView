@@ -1,38 +1,37 @@
 # iReadView
 
-可嵌入Android View Widget库，默认入口`org.peyilo.ireadview.widget.ReaderView`，支持XML或代码创建。项目以库和示例宿主分离，不提供内置书架、账号或业务存储。
+可嵌入 Android 应用的阅读组件。通过同一个 `ReaderView` 显示 TXT、EPUB 和网络章节，提供分页、连续滚动、选择、标注、页面模板和可替换翻页效果。书架、账号、网络协议和业务持久化由宿主实现。
 
-## 开始阅读
+## 快速开始
 
-- **换对话继续开发**：先读[交接说明](docs/03_IMPLEMENTATION_HANDOFF.md)和[架构](docs/02_ARCHITECTURE_AND_PROJECT_STRUCTURE.md)。
-- **集成到App**：[宿主接入](docs/08_HOST_INTEGRATION_GUIDE.md)。
-- **EPUB 原书图文与 CSS**：[可选 EPUB 引擎](docs/EPUB_ENGINE.md)，支持 API21；默认展示《The Art of ARM Assembly》，另有两本原创 EPUB 示例。
-- **按任务找设计**：[文档索引](docs/README.md)。
-- [Demo结构与流程](app/README.md)、[独立Maven宿主](examples/maven-host/README.md)、[第三方说明](THIRD_PARTY_NOTICES.md)。
+需要 JDK 17、Android SDK Platform 36 和 Build Tools 36.0.0。设置 `ANDROID_HOME`，或在不纳入版本控制的 `local.properties` 中设置 `sdk.dir`。
 
-## 模块与能力
-
-`:app:ireadview`为库，`:app`为Demo。当前有分页/连续滚动、源锚点导航与恢复、TXT/EPUB文字、图片与链接、显式全书页索引、选区/书签/高亮/划线、多种效果、任意View扩展与六位置默认页眉页脚。多格式与网络来源的接口及范围见[内容与书源架构](docs/CONTENT_SOURCES.md)。
-
-Demo提供内置小说、本地TXT/EPUB和网络书源；TXT/网络主阅读页全屏、正文中部打开底部菜单，通过公开模板/样式API配置。EPUB 默认通过可选 `:app:ireadview-epub` 保留原书排版，位置使用 Locator；原块模型 EPUB 仍供简化接入。网络来源属于Demo，核心库不请求网络或文件权限。
-
-已有能力不等于验收通过：最近选择、模板和电量实现主要有构建证据；完整设备/无障碍/性能回归未完成。跨章选择、笔记/自定义标注类型、搜索、Compose、完整EPUB媒体等不作为当前已交付能力，见[状态](docs/07_REQUIREMENT_IMPLEMENTATION_AUDIT.md)。
-
-## 构建
-
-JDK17、Android SDK；本机路径及Git工作区状态见交接说明。
-
-```powershell
-./gradlew.bat :app:assembleDebug
-./gradlew.bat :app:ireadview:assembleRelease :app:ireadview:bundleReleaseRepository
+```sh
+./gradlew :app:assembleDebug
 ```
 
-APK：`app/build/outputs/apk/debug/app-debug.apk`；AAR：`app/ireadview/build/outputs/aar/ireadview-release.aar`。
-本地Maven开发坐标：`org.peyilo.ireadview:ireadview:0.1.0-SNAPSHOT`；ZIP有依赖元数据，不嵌入第三方依赖。尚未配置正式在线发布。
+Windows 使用 `gradlew.bat` 运行相同任务。Gradle、AGP 和 Kotlin 版本由仓库固定，应用及两个库模块的最低 Android 版本均为 API 21。
 
-正文架构现分为 `TextReaderBodyView` 与自研 `EpubReaderBodyView`，统一继承 `ReaderBodyView` 并使用同一 ReaderView 入口；不依赖 Readium 运行时。参见[正文层设计](docs/READER_BODY.md)。
+- [宿主接入](docs/integration.md)：创建控件、打开书籍、保存和恢复位置。
+- [构建与持续集成](docs/building.md)：构建、测试、发布和错误报告。
+- [文档索引](docs/README.md)：架构、API 及各专题。
+- [Demo](app/README.md)、[文本 Maven 宿主](examples/maven-host/README.md)、[EPUB Maven 宿主](examples/maven-epub-host/README.md)。
+
+## 模块
+
+| 模块 | 职责 |
+| --- | --- |
+| `:app:ireadview` | View Widget、TXT/块内容、导航、选区、页面模板和效果适配 |
+| `:app:ireadview-epub` | 系统 WebView 与自研脚本组成的 EPUB 正文引擎 |
+| `:app` | 文件导入、网络来源、阅读界面和配置持久化示例 |
+
+EPUB 与文本共用 `ReaderBodyView`、页面模板和导航入口。iOSCurl 依赖 Maven Central 的 `org.peyilo.pagecurl:pagecurl-core:0.1.0`；GoogleCurl 在阅读库中实现。宿主通过 `PageTurnEffects` 配置效果。
+
+库可生成 AAR 和包含依赖元数据的 Maven 仓库 ZIP。iReadView 当前使用开发坐标 `org.peyilo.ireadview:ireadview:0.1.0-SNAPSHOT`；[发布说明](docs/building.md)列出产物和消费方式。
+
+功能与兼容范围见[兼容边界](docs/compatibility.md)，第三方依赖及示例书籍说明见[第三方声明](THIRD_PARTY_NOTICES.md)。
 
 ## 贡献者
 
 - [Peyilo](https://github.com/Peyilo)：项目维护。
-- [Codex（OpenAI）](https://developers.openai.com/codex/)：AI 辅助开发，参与 ioscurl 的 Kotlin 移植与内核整理、EPUB 翻页问题修复及回归测试。
+- [Codex（OpenAI）](https://developers.openai.com/codex/)：AI 辅助开发，参与 Kotlin 移植、内核整理、EPUB 翻页修复及回归验证。

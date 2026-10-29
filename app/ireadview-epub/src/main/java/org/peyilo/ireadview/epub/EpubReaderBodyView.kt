@@ -12,17 +12,12 @@ import org.peyilo.ireadview.spi.selection.ReaderSelectionHandle
 import android.net.Uri
 import android.view.*
 import android.webkit.*
-import java.io.ByteArrayInputStream
 import java.io.IOException
-import java.util.UUID
 import kotlin.coroutines.resume
 import kotlinx.coroutines.*
 import org.json.JSONObject
 import org.json.JSONArray
 import org.json.JSONTokener
-import org.jsoup.Jsoup
-import org.jsoup.parser.Parser
-import org.jsoup.nodes.XmlDeclaration
 import org.peyilo.ireadview.api.model.ReadingMode
 import org.peyilo.ireadview.api.model.*
 import org.peyilo.ireadview.api.style.*
@@ -32,11 +27,10 @@ import org.peyilo.ireadview.spi.content.TextLineSegment
 
 /** Project-owned EPUB body. WebView is only the HTML/CSS layout surface. Main-thread lifecycle. */
 @SuppressLint("SetJavaScriptEnabled", "ViewConstructor", "ClickableViewAccessibility")
-class EpubReaderBodyView(context: Context) : ReaderBodyView(context) {
+class EpubReaderBodyView internal constructor(context: Context, cache: EpubResourceCache) : ReaderBodyView(context) {
+    constructor(context: Context) : this(context, EpubResourceCache())
+    private val localResources = EpubWebResources(cache)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-    private val originHost = "${UUID.randomUUID()}.epub.iread.invalid"
-    private val origin = "https://$originHost/"
-    @Volatile private var publication: EpubPublication? = null
     @Volatile private var released = false
     private var binding = 0L
     private var loaded: CompletableDeferred<Unit>? = null
@@ -73,6 +67,8 @@ class EpubReaderBodyView(context: Context) : ReaderBodyView(context) {
             }
         }
     }
+    private val visualState = EpubVisualState(web)
+    private val renderReadiness = EpubRenderReadiness(scope, visualState::awaitReady)
     private val scrollReport = Runnable {
         if (!released && initialized) scope.launch {
             val epoch = binding
@@ -110,20 +106,23 @@ class EpubReaderBodyView(context: Context) : ReaderBodyView(context) {
         web.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView, url: String): Boolean = true
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean = true
-            override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse = response(request.url)
-            override fun onPageFinished(view: WebView, url: String) { if (url.startsWith(origin)) loaded?.complete(Unit) }
+            override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse = localResources.respond(request.url)
+            override fun onPageFinished(view: WebView, url: String) { android.util.Log.i("EpubStage", "finished $url"); if (localResources.owns(url)) loaded?.complete(Unit) }
             @Deprecated("API21 error callback")
             override fun onReceivedError(view: WebView, errorCode: Int, description: String, failingUrl: String) {
-                if (failingUrl.startsWith(origin)) loaded?.completeExceptionally(IOException(description))
+                if (localResources.owns(failingUrl)) loaded?.completeExceptionally(IOException(description))
             }
         }
     }
 
     /** Bind only after mounting in a measured page template. Returned locator includes a DOM text anchor. */
-    suspend fun bind(publication: EpubPublication, path: String, style: ReaderStyle, mode: ReadingMode, locator: JSONObject): JSONObject {
+    suspend fun bind(publication: EpubPublication, path: String, style: ReaderStyle, mode: ReadingMode, locator: JSONObject): JSONObject =
+        prepareBinding(publication, path, style, mode, locator, null).also { awaitReady() }
+
+    internal suspend fun prepareBinding(publication: EpubPublication, path: String, style: ReaderStyle, mode: ReadingMode, locator: JSONObject, initialPage: Int?): JSONObject {
         check(!released)
         clearContentBinding()
-        this.publication = publication
+        localResources.bind(publication)
         val epoch = binding
         appearance = style.selectionStyle
         clampHandles = mode == ReadingMode.PAGED
@@ -137,8 +136,11 @@ class EpubReaderBodyView(context: Context) : ReaderBodyView(context) {
         require(web.width > 0 && web.height > 0) { "Body insets leave no EPUB viewport" }
         val ready = CompletableDeferred<Unit>()
         loaded = ready
-        web.loadUrl(origin + encodePath(path))
+        var stamp=System.nanoTime()
+        fun stage(name:String) { val now=System.nanoTime(); android.util.Log.i("EpubStage", "body $name ${(now-stamp)/1e6}ms"); stamp=now }
+        web.loadUrl(localResources.url(path))
         withTimeout(30000) { ready.await() }
+        stage("load")
         // onPageFinished covers images/styles; fonts may finish their first layout later.
         var remaining = 20
         while (remaining-- > 0) {
@@ -146,42 +148,30 @@ class EpubReaderBodyView(context: Context) : ReaderBodyView(context) {
             delay(50)
         }
         currentCoroutineContext().ensureActive()
+        stage("fonts")
         check(binding == epoch && !released)
         val script = context.assets.open("iread/epub-body.js").bufferedReader().use { it.readText() }
         val config = JSONObject().put("paged", mode == ReadingMode.PAGED).put("fixed", publication.fixedLayout).put("href", path)
             .put("width", web.width / density).put("height", web.height / density)
-            .put("css", css(style)).put("locator", locator)
+            .put("css", css(style)).put("locator", locator).put("initialPage", initialPage)
         val state = evaluate("$script($config)") ?: throw IOException("EPUB layout returned no location")
+        stage("layout")
         initialized = true
         refreshGeometry()
-        awaitRender()
+        stage("geometry")
+        renderReadiness.changed()
         return state
     }
-    internal suspend fun goToPage(page: Int): JSONObject {
-        val result = evaluate("({location:window.__iread.goToPage($page),selected:window.__iread.selection(),links:window.__iread.links(),marks:window.__iread.marks(),geometry:window.__iread.decorationGeometry()})")
+    internal suspend fun preparePage(page: Int): JSONObject {
+        val result = evaluate("(function(){var v={}, times={},t=Date.now();function part(n,f){v[n]=f();times[n]=Date.now()-t;t=Date.now();}part('location',function(){return window.__iread.goToPage($page);});part('selected',window.__iread.selection);part('links',window.__iread.links);part('marks',window.__iread.marks);part('geometry',window.__iread.decorationGeometry);v.times=times;return v;})()")
             ?: run { initialized = false; throw IOException("EPUB page navigation failed") }
         acceptViewportGeometry(result)
-        awaitRender()
+        android.util.Log.i("EpubStage", "page JS=${result.optJSONObject("times")}")
+        renderReadiness.changed()
         return result.getJSONObject("location")
     }
-    // evaluateJavascript returning only acknowledges DOM work. Page-turn snapshots must
-    // also wait for Chromium's updated display list instead of capturing the old column.
-    private suspend fun awaitRender() = withTimeout(5000) {
-        if (android.os.Build.VERSION.SDK_INT >= 23) suspendCancellableCoroutine<Unit> { continuation ->
-            web.postVisualStateCallback(binding, object : WebView.VisualStateCallback() {
-                override fun onComplete(requestId: Long) {
-                    if (continuation.isActive) continuation.resume(Unit)
-                }
-            })
-        } else {
-            org.peyilo.ireadview.spi.selection.ReaderSelectionScrollPolicy.nextFrame(web)
-            org.peyilo.ireadview.spi.selection.ReaderSelectionScrollPolicy.nextFrame(web)
-        }
-    }
-    internal suspend fun awaitPresented() {
-        awaitRender()
-        org.peyilo.ireadview.spi.selection.ReaderSelectionScrollPolicy.nextFrame(web)
-    }
+    internal suspend fun awaitReady() = renderReadiness.awaitReady()
+    internal suspend fun awaitPresented() = visualState.awaitPresented()
     internal fun linkAt(x: Float, y: Float): String? = visibleLinks.firstOrNull { it.first.contains(x, y) }?.second
     internal fun highlightAt(x: Float, y: Float): String? = visibleMarks.asReversed().firstOrNull { it.first.contains(x, y) }?.second
     internal fun selectionHandleAt(x: Float, y: Float): Boolean? = selectionPainter.handleAt(handles, x, y, appearance, resources.displayMetrics.density)
@@ -314,6 +304,7 @@ class EpubReaderBodyView(context: Context) : ReaderBodyView(context) {
         val result = evaluate("window.__iread.applyDecorations($values)") ?: throw IOException("EPUB annotation rendering failed")
         acceptGeometry(result.optJSONArray("geometry") ?: JSONArray())
         refreshGeometry()
+        renderReadiness.changed()
         val statuses = result.optJSONArray("statuses") ?: JSONArray()
         return items.associate { it.id to (AnnotationStatus.Invalid(AnnotationInvalidReason.InvalidRange) as AnnotationStatus) }.toMutableMap().apply {
             for (index in 0 until statuses.length()) {
@@ -357,6 +348,7 @@ class EpubReaderBodyView(context: Context) : ReaderBodyView(context) {
         selectionPainter.handleBounds(it, appearance, resources.displayMetrics.density)
     }
     override fun clearContentBinding() {
+        renderReadiness.clear()
         binding++; initialized = false
         decorationKey = "[]"; decorationStatuses = emptyMap()
         onScrollLocation = null; onGeometryChanged = null
@@ -364,7 +356,7 @@ class EpubReaderBodyView(context: Context) : ReaderBodyView(context) {
         loaded?.cancel(); loaded = null
         selected = null; bounds = null; unclippedSelectionBounds = null; handles = emptyList(); visibleLinks = emptyList(); visibleMarks = emptyList(); selectionPath.reset()
         web.removeCallbacks(scrollReport)
-        publication = null
+        localResources.clear()
         if (!released) { web.stopLoading(); web.loadUrl("about:blank") }
     }
     override fun onRelease() {
@@ -392,37 +384,6 @@ class EpubReaderBodyView(context: Context) : ReaderBodyView(context) {
             continuation.resume(if (value is JSONObject) value else if (value is String) runCatching { JSONObject(value) }.getOrNull() else null)
         }
     }
-    private fun response(uri: Uri): WebResourceResponse {
-        fun denied() = WebResourceResponse("text/plain", "utf-8", 404, "Not Found", emptyMap(), ByteArrayInputStream(ByteArray(0)))
-        if (released || uri.scheme != "https" || uri.host != originHost || uri.port != -1 || uri.query != null) return denied()
-        val current = publication ?: return denied()
-        val path = uri.path?.removePrefix("/") ?: return denied()
-        val item = current.resources.firstOrNull { it.path == path } ?: return denied()
-        return try {
-            var bytes = runBlocking { current.readResource(path) }
-            if (item.mediaType == "application/xhtml+xml" || item.mediaType == "text/html") bytes = sanitize(bytes)
-            val policy = "default-src 'none'; img-src https://$originHost data:; style-src https://$originHost 'unsafe-inline'; font-src https://$originHost data:; media-src https://$originHost; script-src 'none'; connect-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'"
-            WebResourceResponse(item.mediaType, if (item.mediaType == "application/xhtml+xml" || item.mediaType == "text/html") "utf-8" else null,
-                200, "OK", mapOf("Content-Security-Policy" to policy, "Cache-Control" to "no-store"), ByteArrayInputStream(bytes))
-        } catch (failure: Exception) { denied() }
-    }
-    private fun sanitize(bytes: ByteArray): ByteArray {
-        val document = Jsoup.parse(ByteArrayInputStream(bytes), null, origin, Parser.xmlParser())
-        // Serialized bytes are UTF-8 even when a source XML declaration specified another charset.
-        document.childNodes().filterIsInstance<XmlDeclaration>().filter { it.name() == "xml" }.forEach { it.remove() }
-        document.select("script,iframe,frame,object,embed,base,form").remove()
-        document.getAllElements().forEach { element ->
-            element.attributes().asList().filter { it.key.startsWith("on", true) }.forEach { element.removeAttr(it.key) }
-        }
-        document.select("meta[http-equiv]").remove()
-        document.select("meta[name=viewport]").first()?.let { meta ->
-            document.getElementsByTag("html").first()?.attr("data-iread-viewport", meta.attr("content"))
-        }
-        document.select("meta[name=viewport]").remove()
-        val head = document.getElementsByTag("head").first()
-        head?.prependElement("meta")?.attr("name", "viewport")?.attr("content", "width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no")
-        return document.outerHtml().toByteArray(Charsets.UTF_8)
-    }
     private fun css(style: ReaderStyle): String {
         val body = style.body; val title = style.title
         val fontScale = resources.configuration.fontScale
@@ -439,5 +400,4 @@ class EpubReaderBodyView(context: Context) : ReaderBodyView(context) {
             "padding:${insets(title.padding)}!important;margin-bottom:${title.spacingAfterDp}px!important;${family(title.readerFont)}}"
     }
     private fun cssColor(value: Int): String = "rgba(${value ushr 16 and 255},${value ushr 8 and 255},${value and 255},${(value ushr 24) / 255.0})"
-    private fun encodePath(path: String) = path.split('/').joinToString("/") { Uri.encode(it) }
 }

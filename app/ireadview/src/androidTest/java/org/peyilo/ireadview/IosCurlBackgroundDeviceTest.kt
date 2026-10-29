@@ -10,10 +10,10 @@ import org.peyilo.ireadview.api.effect.*
 import org.peyilo.ireadview.internal.effect.ioscurl.IosCurlMaterial
 import org.peyilo.ireadview.internal.effect.ioscurl.render.IosCurlRenderer
 import org.peyilo.ireadview.spi.presentation.ReadViewport
-import org.peyilo.ioscurl.mesh.CurlMaterial
-import org.peyilo.ioscurl.mesh.CurlMesh
-import org.peyilo.ioscurl.mesh.CurlMeshInput
-import org.peyilo.ioscurl.model.CurlValues
+import org.peyilo.pagecurl.mesh.CurlMaterial
+import org.peyilo.pagecurl.mesh.CurlMesh
+import org.peyilo.pagecurl.mesh.CurlMeshInput
+import org.peyilo.pagecurl.model.CurlValues
 
 @RunWith(AndroidJUnit4::class)
 class IosCurlBackgroundDeviceTest {

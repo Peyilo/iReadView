@@ -74,20 +74,33 @@ class EpubTextBookSource @JvmOverloads constructor(
             initialDiagnostics.forEach { put(it.code to it.resourcePath, it) }
         }
     }
+
     private val mutex = Mutex()
     private val lifecycle = Any()
-    private val xmlLimits = EpubXmlLimits(options.maxXmlDepth, options.maxXmlElements, options.maxXmlCharacters, options.maxFallbackDepth)
+    private val xmlLimits = EpubXmlLimits(
+        options.maxXmlDepth,
+        options.maxXmlElements,
+        options.maxXmlCharacters,
+        options.maxFallbackDepth
+    )
     private var closed = false
     private var snapshot: Snapshot? = null
 
-    init { require(bookId.isNotBlank()) }
+    init {
+        require(bookId.isNotBlank())
+    }
 
     /** Snapshot copy of metadata and successfully loaded chapter diagnostics; empty before opening/after close. */
-    val diagnostics: List<EpubDiagnostic> get() = synchronized(lifecycle) {
-        Collections.unmodifiableList(ArrayList(snapshot?.diagnostics?.values ?: emptyList()))
-    }
+    val diagnostics: List<EpubDiagnostic>
+        get() = synchronized(lifecycle) {
+            Collections.unmodifiableList(ArrayList(snapshot?.diagnostics?.values ?: emptyList()))
+        }
+
     /** Original nav/NCX tree, separate from the BookDescriptor catalogue in spine order. */
-    val navigation: List<EpubTocEntry> get() = synchronized(lifecycle) { snapshot?.navigation ?: emptyList() }
+    val navigation: List<EpubTocEntry>
+        get() = synchronized(lifecycle) {
+            snapshot?.navigation ?: emptyList()
+        }
 
     override suspend fun loadBook(): BookDescriptor = withContext(Dispatchers.IO) {
         mutex.withLock {
@@ -97,38 +110,56 @@ class EpubTextBookSource @JvmOverloads constructor(
         }
     }
 
-    override suspend fun loadChapter(chapterId: String): ChapterContent = withContext(Dispatchers.IO) {
-        mutex.withLock {
-            val current = synchronized(lifecycle) { checkOpen(); snapshot } ?: parseSnapshot().also { install(it) }
-            val path = current.paths[chapterId] ?: throw NoSuchElementException("Unknown chapter: $chapterId")
-            val document = readDocument(current, path)
-            ChapterContent(bookId, chapterId, current.book.revision, document.blocks)
+    override suspend fun loadChapter(chapterId: String): ChapterContent =
+        withContext(Dispatchers.IO) {
+            mutex.withLock {
+                val current = synchronized(lifecycle) { checkOpen(); snapshot }
+                    ?: parseSnapshot().also { install(it) }
+                val path = current.paths[chapterId]
+                    ?: throw NoSuchElementException("Unknown chapter: $chapterId")
+                val document = readDocument(current, path)
+                ChapterContent(bookId, chapterId, current.book.revision, document.blocks)
+            }
         }
-    }
 
     /**
      * Null means a stale entry, non-spine resource, or missing/omitted fragment; no chapter-start fallback.
      * XML and archive errors propagate. Does not navigate the Widget or retain chapter text.
      */
-    suspend fun resolveNavigation(entry: EpubTocEntry): ReadingPosition? = withContext(Dispatchers.IO) {
-        mutex.withLock {
-            val current = synchronized(lifecycle) { checkOpen(); snapshot } ?: return@withLock null
-            fun belongs(entries: List<EpubTocEntry>): Boolean = entries.any { it === entry || belongs(it.children) }
-            if (!belongs(current.navigation)) return@withLock null
-            val path = entry.resourcePath ?: return@withLock null
-            val chapterId = current.paths.entries.firstOrNull { it.value == path }?.key ?: return@withLock null
-            val fragment = entry.fragment?.takeIf { it.isNotEmpty() }
-            val anchor = if (fragment != null) {
-                readDocument(current, path).anchors[fragment] ?: return@withLock null
-            } else null
-            currentCoroutineContext().ensureActive()
-            synchronized(lifecycle) { checkOpen(); check(snapshot === current) }
-            ReadingPosition(bookId, chapterId, anchor, current.book.revision, chapterNumberHint = current.book.chapters.indexOfFirst { it.chapterId == chapterId } + 1)
+    suspend fun resolveNavigation(entry: EpubTocEntry): ReadingPosition? =
+        withContext(Dispatchers.IO) {
+            mutex.withLock {
+                val current =
+                    synchronized(lifecycle) { checkOpen(); snapshot } ?: return@withLock null
+
+                fun belongs(entries: List<EpubTocEntry>): Boolean =
+                    entries.any { it === entry || belongs(it.children) }
+                if (!belongs(current.navigation)) return@withLock null
+                val path = entry.resourcePath ?: return@withLock null
+                val chapterId = current.paths.entries.firstOrNull { it.value == path }?.key
+                    ?: return@withLock null
+                val fragment = entry.fragment?.takeIf { it.isNotEmpty() }
+                val anchor = if (fragment != null) {
+                    readDocument(current, path).anchors[fragment] ?: return@withLock null
+                } else null
+                currentCoroutineContext().ensureActive()
+                synchronized(lifecycle) { checkOpen(); check(snapshot === current) }
+                ReadingPosition(
+                    bookId,
+                    chapterId,
+                    anchor,
+                    current.book.revision,
+                    chapterNumberHint = current.book.chapters.indexOfFirst { it.chapterId == chapterId } + 1)
+            }
         }
-    }
 
     private suspend fun readDocument(current: Snapshot, path: String): EpubTextDocument {
-        val document = EpubXhtmlParser.load(current.archive, path, xmlLimits, options.contentMode == EpubContentMode.Flow)
+        val document = EpubXhtmlParser.load(
+            current.archive,
+            path,
+            xmlLimits,
+            options.contentMode == EpubContentMode.Flow
+        )
         currentCoroutineContext().ensureActive()
         synchronized(lifecycle) {
             checkOpen()
@@ -150,10 +181,15 @@ class EpubTextBookSource @JvmOverloads constructor(
         old?.archive?.close()
     }
 
-    override suspend fun loadResource(resourceId: String, bookRevision: String?, maxBytes: Int): ByteArray = withContext(Dispatchers.IO) {
+    override suspend fun loadResource(
+        resourceId: String,
+        bookRevision: String?,
+        maxBytes: Int
+    ): ByteArray = withContext(Dispatchers.IO) {
         require(maxBytes > 0)
         mutex.withLock {
-            val current = synchronized(lifecycle) { checkOpen(); snapshot } ?: error("EPUB is not open")
+            val current =
+                synchronized(lifecycle) { checkOpen(); snapshot } ?: error("EPUB is not open")
             require(bookRevision == current.book.revision) { "Stale EPUB resource revision" }
             current.archive.read(resourceId) { stream ->
                 val output = java.io.ByteArrayOutputStream()
@@ -172,54 +208,95 @@ class EpubTextBookSource @JvmOverloads constructor(
         }
     }
 
-    override suspend fun resolveLink(target: LinkTarget.Internal, bookRevision: String?): ReadingPosition? = withContext(Dispatchers.IO) {
+    override suspend fun resolveLink(
+        target: LinkTarget.Internal,
+        bookRevision: String?
+    ): ReadingPosition? = withContext(Dispatchers.IO) {
         mutex.withLock {
             val current = synchronized(lifecycle) { checkOpen(); snapshot } ?: return@withLock null
             if (bookRevision != current.book.revision) return@withLock null
-            val chapterId = current.paths.entries.firstOrNull { it.value == target.resourceId }?.key ?: return@withLock null
+            val chapterId = current.paths.entries.firstOrNull { it.value == target.resourceId }?.key
+                ?: return@withLock null
             val fragment = target.fragment?.takeIf { it.isNotEmpty() }
-            val anchor = if (fragment != null) readDocument(current, target.resourceId).anchors[fragment] ?: return@withLock null else null
+            val anchor =
+                if (fragment != null) readDocument(current, target.resourceId).anchors[fragment]
+                    ?: return@withLock null else null
             currentCoroutineContext().ensureActive()
             synchronized(lifecycle) { checkOpen(); check(snapshot === current) }
             ReadingPosition(bookId, chapterId, anchor, current.book.revision)
         }
     }
 
-    private fun checkOpen() { check(!closed) { "EpubTextBookSource is closed" } }
+    private fun checkOpen() {
+        check(!closed) { "EpubTextBookSource is closed" }
+    }
 
     private suspend fun install(fresh: Snapshot) {
         try {
             currentCoroutineContext().ensureActive()
             val old = synchronized(lifecycle) { checkOpen(); snapshot.also { snapshot = fresh } }
             old?.archive?.close()
-        } catch (failure: Throwable) { fresh.archive.close(); throw failure }
+        } catch (failure: Throwable) {
+            fresh.archive.close(); throw failure
+        }
     }
 
     private suspend fun parseSnapshot(): Snapshot {
         synchronized(lifecycle) { checkOpen() }
-        val archive = EpubArchive.open(input, cacheDirectory, EpubArchiveLimits(
-            options.maxArchiveBytes, options.maxEntryBytes, options.maxExpandedBytes, options.maxEntries))
+        val archive = EpubArchive.open(
+            input, cacheDirectory, EpubArchiveLimits(
+                options.maxArchiveBytes,
+                options.maxEntryBytes,
+                options.maxExpandedBytes,
+                options.maxEntries
+            )
+        )
         try {
             synchronized(lifecycle) { checkOpen() }
             val metadata = EpubPackageParser.load(archive, xmlLimits)
             val navigation = EpubNavigationParser.load(archive, metadata, xmlLimits)
             val labels = navigation.chapterLabels()
-            val revision = if (options.contentMode == EpubContentMode.Flow) "${archive.revision}:flow-v1" else archive.revision
+            val revision =
+                if (options.contentMode == EpubContentMode.Flow) "${archive.revision}:flow-v1" else archive.revision
             val paths = LinkedHashMap<String, String>()
             val catalogue = metadata.readingOrder.map { item ->
                 paths[item.id] = item.path
                 TocEntry.Chapter(ChapterDescriptor(item.id, labels[item.path] ?: item.id, revision))
             }
+
             fun convert(entries: List<EpubNavigationEntry>): List<EpubTocEntry> = entries.map {
-                EpubTocEntry(it.label, it.resource?.path, it.resource?.fragment, convert(it.children))
+                EpubTocEntry(
+                    it.label,
+                    it.resource?.path,
+                    it.resource?.fragment,
+                    convert(it.children)
+                )
             }
-            val diagnostics = (metadata.diagnostics + navigation.diagnostics).map { it.toPublic() } +
-                EpubDiagnostic("CatalogueUsesSpineOrder", metadata.path, "The Widget catalogue follows spine order; original navigation groups and fragments are available separately")
+
+            val diagnostics =
+                (metadata.diagnostics + navigation.diagnostics).map { it.toPublic() } +
+                        EpubDiagnostic(
+                            "CatalogueUsesSpineOrder",
+                            metadata.path,
+                            "The Widget catalogue follows spine order; original navigation groups and fragments are available separately"
+                        )
             currentCoroutineContext().ensureActive()
             synchronized(lifecycle) { checkOpen() }
-            return Snapshot(archive, BookDescriptor(bookId, metadata.title ?: options.fallbackTitle, revision, catalogue),
-                Collections.unmodifiableMap(paths), Collections.unmodifiableList(convert(navigation.entries)), diagnostics)
-        } catch (failure: Throwable) { archive.close(); throw failure }
+            return Snapshot(
+                archive,
+                BookDescriptor(
+                    bookId,
+                    metadata.title ?: options.fallbackTitle,
+                    revision,
+                    catalogue
+                ),
+                Collections.unmodifiableMap(paths),
+                Collections.unmodifiableList(convert(navigation.entries)),
+                diagnostics
+            )
+        } catch (failure: Throwable) {
+            archive.close(); throw failure
+        }
     }
 
     private fun EpubPackageDiagnostic.toPublic() = EpubDiagnostic(code, path, message)

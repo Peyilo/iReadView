@@ -33,21 +33,29 @@ data class ReaderPageContext(
  * Each create returns an independent unowned template/root; preparation may overlap across Widgets.
  * The factory releases its own partial resources if creation fails before returning a valid template.
  */
-fun interface ReaderPageFactory { fun create(context: Context): ReaderPageTemplate }
+fun interface ReaderPageFactory {
+    fun create(context: Context): ReaderPageTemplate
+}
 
 object ReaderPageFactories {
     /** High-level ready-made template implementing the same SPI available to custom factories.
      * Six-position/back-button policies belong to this template, not ReaderPageTemplate.
      */
-    @JvmStatic fun default(): ReaderPageFactory = org.peyilo.ireadview.internal.render.DefaultReaderPageFactory()
+    @JvmStatic
+    fun default(): ReaderPageFactory =
+        org.peyilo.ireadview.internal.render.DefaultReaderPageFactory()
+
     /** Low-level decoration composition. Null preserves the built-in region; a supplied
      * factory completely replaces that region with any View/ViewGroup, independent of
      * ReaderPageChromeSlot, column count, content enum or built-in back-button policy.
      */
-    @JvmStatic @JvmOverloads fun withDecorations(
+    @JvmStatic
+    @JvmOverloads
+    fun withDecorations(
         header: ReaderPageDecorationFactory? = null,
         footer: ReaderPageDecorationFactory? = null
-    ): ReaderPageFactory = org.peyilo.ireadview.internal.render.DecoratedReaderPageFactory(header, footer)
+    ): ReaderPageFactory =
+        org.peyilo.ireadview.internal.render.DecoratedReaderPageFactory(header, footer)
 }
 
 /** Structural page SPI. No required column count, built-in content types or navigation button.
@@ -60,10 +68,12 @@ interface ReaderPageTemplate {
     val bodyHost: ViewGroup
     fun bind(context: ReaderPageContext)
     fun unbind()
+
     /** Refresh chrome content/actions only, retaining body and measured slot geometry.
      * Custom templates may override; custom multiline/height changes require setPageFactory.
      */
     fun refreshChrome() {}
+
     /** Opt in to minute updates for the active visible page; hidden candidates receive only bind time. */
     val needsTimeUpdates: Boolean get() = false
     fun onTimeChanged(timeMillis: Long) {}

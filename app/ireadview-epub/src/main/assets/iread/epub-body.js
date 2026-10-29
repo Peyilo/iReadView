@@ -122,7 +122,15 @@
                 var at=document.caretRangeFromPoint && document.caretRangeFromPoint(
                     Math.max(1,first.x-window.pageXOffset+1),Math.max(1,first.y+1));
                 if(at && at.startContainer.nodeType===3)return endpoint(at.startContainer,at.startOffset);
+                var low=0, high=first.node.length;
+                while(low<high) {
+                    var mid=Math.floor((low+high)/2), rect=point(first.node,mid);
+                    var column=rect ? Math.floor((rect.left+window.pageXOffset+1)/width) : -1;
+                    if(column<Math.round(window.pageXOffset/width))low=mid+1;else high=mid;
+                }
+                return endpoint(first.node,low);
             }
+            return null;
         }
         var walker = document.createTreeWalker(body, 4, null, false), node, range = document.createRange();
         while ((node = walker.nextNode())) {
@@ -365,5 +373,6 @@
         selection:selection,hit:hit,applyDecorations:applyDecorations,decorationGeometry:decorationGeometry,
         paragraphAt:paragraphAt,caretAt:caretAt,extendSelection:extendSelection,select:select,pageForPoint:pageForPoint,links:links,marks:marks,scrollSelection:scrollSelection,
         clearSelection:function(){logicalSelection=null;}};
+    if (typeof config.initialPage === 'number') { go(config.initialPage - 1); return state(); }
     return locate(config.locator);
 })

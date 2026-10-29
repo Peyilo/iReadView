@@ -8,11 +8,11 @@ import org.peyilo.ireadview.spi.presentation.ReadViewport
 import org.peyilo.ireadview.internal.effect.*
 import org.peyilo.ireadview.internal.effect.input.*
 import org.peyilo.ireadview.internal.effect.ioscurl.render.IosCurlRenderer
-import org.peyilo.ioscurl.control.*
-import org.peyilo.ioscurl.gesture.CurlNavigation
-import org.peyilo.ioscurl.layout.*
-import org.peyilo.ioscurl.mesh.*
-import org.peyilo.ioscurl.model.*
+import org.peyilo.pagecurl.control.*
+import org.peyilo.pagecurl.gesture.CurlNavigation
+import org.peyilo.pagecurl.layout.*
+import org.peyilo.pagecurl.mesh.*
+import org.peyilo.pagecurl.model.*
 
 /** Transaction adapter: Kotlin algorithms know neither Android pages nor the navigation manager. */
 internal class IosCurlEffect(private val options: IosCurlOptions) : SnapshotPageTurnEffect,

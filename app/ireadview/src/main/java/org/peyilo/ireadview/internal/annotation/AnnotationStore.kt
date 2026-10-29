@@ -92,7 +92,7 @@ internal class AnnotationStore {
         if (range.contentRevision != null && range.contentRevision != content.revision) return invalid(AnnotationInvalidReason.RevisionMismatch)
         val start = content.blockIndexForId(range.start.blockId)
         val end = content.blockIndexForId(range.endExclusive.blockId)
-        if (start < 0 || end < start) return invalid(AnnotationInvalidReason.InvalidRange)
+        if (start !in 0..end) return invalid(AnnotationInvalidReason.InvalidRange)
         var quoteOffset = 0
         for (index in start..end) {
             val value = text(content.blocks[index]) ?: return invalid(AnnotationInvalidReason.UnsupportedContent)

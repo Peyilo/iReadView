@@ -83,7 +83,7 @@ internal class GoogleCurlEffect(private val options: GoogleCurlOptions) : Snapsh
         val height = context.viewport.heightPx.toFloat()
         val origin = canonical(context.touchOrigin, context)
         val current = canonical(touch, context)
-        val initialY = (origin?.yPx ?: height * .65f).coerceIn(0f, height)
+        val initialY = ((origin?.yPx ?: (height * .65f))).coerceIn(0f, height)
         val vertical = if (origin != null && current != null) current.yPx - origin.yPx else 0f
         val point = TurnPoint(width * (1f - 2f * progress),
             (initialY + vertical * sin(PI.toFloat() * progress)).coerceIn(-height, 2f * height))

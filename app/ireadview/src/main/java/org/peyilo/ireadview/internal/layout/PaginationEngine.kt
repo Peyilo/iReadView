@@ -10,7 +10,12 @@ import org.peyilo.ireadview.internal.selection.TextCharacterBoundaries
 
 /** Packs whole layout units and coalesces adjacent lines into a single clipped draw. */
 internal class PaginationEngine {
-    fun paginate(content: ChapterContent, context: BlockLayoutContext, providers: List<BlockLayoutProvider>, key: String): ChapterLayout {
+    fun paginate(
+        content: ChapterContent,
+        context: BlockLayoutContext,
+        providers: List<BlockLayoutProvider>,
+        key: String
+    ): ChapterLayout {
         require(context.viewport.isValid) { "Invalid body viewport" }
         val pages = ArrayList<List<BlockLayoutFragment>>()
         val continuous = ArrayList<ContinuousFragment>()
@@ -18,7 +23,11 @@ internal class PaginationEngine {
         var fragments = ArrayList<BlockLayoutFragment>()
         var y = 0f
         var retainedBytes = RetainedSize.content(content, context.checkCancellation)
-        fun endPage() { if (fragments.isNotEmpty()) { pages.add(immutableList(fragments)); fragments = ArrayList(); y = 0f } }
+        fun endPage() {
+            if (fragments.isNotEmpty()) {
+                pages.add(immutableList(fragments)); fragments = ArrayList(); y = 0f
+            }
+        }
         // Source snapshots keep blank lines/IDs. Only terminal whitespace is
         // excluded from visual pagination; interior blank paragraphs remain real.
         val lastVisibleBlock = content.blocks.indexOfLast { block ->
@@ -29,15 +38,18 @@ internal class PaginationEngine {
             context.checkCancellation()
             if (blockIndex > lastVisibleBlock && block is TextContentBlock) {
                 val lastPage = maxOf(1, pages.size + if (fragments.isNotEmpty()) 1 else 0)
-                anchorPages.getOrPut(block.blockId) { ArrayList() }.add(AnchorPage(lastPage, 0, block.text.length))
+                anchorPages.getOrPut(block.blockId) { ArrayList() }
+                    .add(AnchorPage(lastPage, 0, block.text.length))
                 return@forEachIndexed
             }
-            val provider = providers.firstOrNull { context.checkCancellation(); it.supports(block) } ?: throw IllegalArgumentException("Unsupported block: ${block.javaClass.name}")
+            val provider = providers.firstOrNull { context.checkCancellation(); it.supports(block) }
+                ?: throw IllegalArgumentException("Unsupported block: ${block.javaClass.name}")
             context.checkCancellation()
             val layout = measurePaddedBlock(provider, block, context)
             context.checkCancellation()
             retainedBytes = retainedBytes?.let { total ->
-                layout.estimatedRetainedBytes?.takeIf { it >= 0 }?.let { RetainedSize.add(total, it) }
+                layout.estimatedRetainedBytes?.takeIf { it >= 0 }
+                    ?.let { RetainedSize.add(total, it) }
             }
             require(layout.blockId == block.blockId) { "Provider changed block identity" }
             require(layout.spacingAfterPx.isFinite() && layout.spacingAfterPx >= 0f) { "Provider returned invalid paragraph spacing" }
@@ -72,7 +84,9 @@ internal class PaginationEngine {
                     last++
                 }
                 if (last == first) {
-                    if (fragments.isNotEmpty()) { endPage(); continue }
+                    if (fragments.isNotEmpty()) {
+                        endPage(); continue
+                    }
                     throw IllegalArgumentException("A content line/fragment exceeds the body viewport height")
                 }
                 val fragment = layout.fragment(first, last)
@@ -84,8 +98,14 @@ internal class PaginationEngine {
                 require(fragment.leftPx.isFinite() && fragment.topPx.isFinite()) { "Provider returned invalid fragment origin" }
                 require(fragment.heightPx.isFinite() && fragment.heightPx > 0 && fragment.heightPx <= context.viewport.heightPx - y + 1) { "Provider returned invalid fragment geometry" }
                 fragments.add(PositionedFragment(fragment, y))
-                continuous.add(ContinuousFragment(fragment, if (last == unitLimit) layout.spacingAfterPx else 0f))
-                anchorPages.getOrPut(block.blockId) { ArrayList() }.add(AnchorPage(pages.size + 1, start ?: 0, end ?: 0))
+                continuous.add(
+                    ContinuousFragment(
+                        fragment,
+                        if (last == unitLimit) layout.spacingAfterPx else 0f
+                    )
+                )
+                anchorPages.getOrPut(block.blockId) { ArrayList() }
+                    .add(AnchorPage(pages.size + 1, start ?: 0, end ?: 0))
                 y += fragment.heightPx
                 first = last
                 if (first < unitLimit) endPage()
@@ -95,26 +115,45 @@ internal class PaginationEngine {
         endPage()
         context.checkCancellation()
         if (pages.isEmpty()) pages.add(emptyList())
-        retainedBytes = retainedBytes?.let { RetainedSize.add(it,
-            512L + pages.size.toLong() * 64 + continuous.size.toLong() * 320 + anchorPages.size.toLong() * 128) }
+        retainedBytes = retainedBytes?.let {
+            RetainedSize.add(
+                it,
+                512L + pages.size.toLong() * 64 + continuous.size.toLong() * 320 + anchorPages.size.toLong() * 128
+            )
+        }
         val frozenAnchorPages = anchorPages.mapValues { (_, entries) ->
             context.checkCancellation()
             immutableList(entries)
         }
         context.checkCancellation()
-        return PaginatedChapter(content, key, immutableList(pages), immutableList(continuous), frozenAnchorPages, retainedBytes)
+        return PaginatedChapter(
+            content,
+            key,
+            immutableList(pages),
+            immutableList(continuous),
+            frozenAnchorPages,
+            retainedBytes
+        )
     }
 }
 
 /** Optional endpoints remain supported, but known offsets cannot escape the source string. */
 private fun validateOffsets(start: Int?, end: Int?, textLength: Int?) {
-    require((start == null || start >= 0) && (end == null || end >= 0) &&
-        (start == null || end == null || end >= start)) { "Provider returned invalid source offsets" }
-    if (textLength != null) require((start == null || start <= textLength) &&
-        (end == null || end <= textLength)) { "Provider offsets exceed source text" }
+    require(
+        (start == null || start >= 0) && (end == null || end >= 0) &&
+                (start == null || end == null || end >= start)
+    ) { "Provider returned invalid source offsets" }
+    if (textLength != null) require(
+        (start == null || start <= textLength) &&
+                (end == null || end <= textLength)
+    ) { "Provider offsets exceed source text" }
 }
 
-private class PositionedFragment(private val wrapped: BlockLayoutFragment, override val topPx: Float) : BlockLayoutFragment by wrapped
+private class PositionedFragment(
+    private val wrapped: BlockLayoutFragment,
+    override val topPx: Float
+) : BlockLayoutFragment by wrapped
+
 private data class AnchorPage(val pageNumber: Int, val start: Int, val end: Int)
 
 private class PaginatedChapter(
@@ -129,28 +168,39 @@ private class PaginatedChapter(
     override val contentRevision = content.revision
     override val contentSnapshot get() = content
     override val pageCount get() = pages.size
-    override fun continuousFragments(): ReaderResult<List<ContinuousFragment>> = ReaderResult.Success(continuous)
+    override fun continuousFragments(): ReaderResult<List<ContinuousFragment>> =
+        ReaderResult.Success(continuous)
 
     override fun rangesForText(range: TextRange): ReaderResult<List<BlockTextRange>> {
         if (range.bookId != content.bookId) return ReaderResult.Rejected(ReaderRejection.BookMismatch)
-        if (range.chapterId != chapterId || range.contentRevision != null && range.contentRevision != contentRevision) return ReaderResult.Rejected(ReaderRejection.InvalidAnchor)
+        if (range.chapterId != chapterId || range.contentRevision != null && range.contentRevision != contentRevision) return ReaderResult.Rejected(
+            ReaderRejection.InvalidAnchor
+        )
         val first = content.blockIndexForId(range.start.blockId)
         val last = content.blockIndexForId(range.endExclusive.blockId)
-        if (first < 0 || last < first) return ReaderResult.Rejected(ReaderRejection.InvalidAnchor)
+        if (first !in 0..last) return ReaderResult.Rejected(ReaderRejection.InvalidAnchor)
         val ranges = ArrayList<BlockTextRange>()
         for (index in first..last) {
             val block = content.blocks[index]
-            val text = when (block) { is TextContentBlock -> block.text; else -> return ReaderResult.Rejected(ReaderRejection.Unsupported) }
+            val text = when (block) {
+                is TextContentBlock -> block.text; else -> return ReaderResult.Rejected(
+                    ReaderRejection.Unsupported
+                )
+            }
             val from = if (index == first) range.start.offset else 0
             val to = if (index == last) range.endExclusive.offset else text.length
-            if (!TextCharacterBoundaries.isRange(text, from, to)) return ReaderResult.Rejected(ReaderRejection.InvalidAnchor)
+            if (!TextCharacterBoundaries.isRange(text, from, to)) return ReaderResult.Rejected(
+                ReaderRejection.InvalidAnchor
+            )
             ranges.add(BlockTextRange(block.blockId, from, to))
         }
         return ReaderResult.Success(immutableList(ranges))
     }
 
     override fun pageForAnchor(anchor: ContentAnchor): ReaderResult<Int> {
-        val block = content.blockForId(anchor.blockId) ?: return ReaderResult.Rejected(ReaderRejection.InvalidAnchor)
+        val block = content.blockForId(anchor.blockId) ?: return ReaderResult.Rejected(
+            ReaderRejection.InvalidAnchor
+        )
         val validOffset = when (block) {
             is TextContentBlock -> TextCharacterBoundaries.isBoundary(block.text, anchor.offset)
             else -> anchor.offset == 0
@@ -162,7 +212,8 @@ private class PaginatedChapter(
             if (anchor.offset >= entry.start && (anchor.offset < entry.end || entry.start == entry.end && anchor.offset == entry.start))
                 return ReaderResult.Success(entry.pageNumber)
         }
-        return lastMatch?.let { ReaderResult.Success(it) } ?: ReaderResult.Rejected(ReaderRejection.InvalidAnchor)
+        return lastMatch?.let { ReaderResult.Success(it) }
+            ?: ReaderResult.Rejected(ReaderRejection.InvalidAnchor)
     }
 
     override fun anchorForPage(pageNumber: Int): ReaderResult<ContentAnchor?> =

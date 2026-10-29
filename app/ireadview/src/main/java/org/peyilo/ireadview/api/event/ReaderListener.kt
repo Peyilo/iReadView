@@ -4,7 +4,6 @@ import org.peyilo.ireadview.api.model.BookDescriptor
 import org.peyilo.ireadview.api.model.ReadingPosition
 import org.peyilo.ireadview.api.model.AnnotationSnapshot
 import org.peyilo.ireadview.api.model.AnnotationStatus
-import org.peyilo.ireadview.api.model.Highlight
 import org.peyilo.ireadview.api.model.ReaderSelection
 import org.peyilo.ireadview.api.state.*
 import org.peyilo.ireadview.api.effect.EffectFallbackReason

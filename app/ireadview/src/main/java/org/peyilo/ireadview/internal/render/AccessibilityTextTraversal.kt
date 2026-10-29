@@ -8,19 +8,29 @@ import org.peyilo.ireadview.internal.selection.TextCharacterBoundaries
 /** Node-local UTF-16 ranges, using the same platform character boundaries as selection. */
 internal object AccessibilityTextTraversal {
     data class Step(val start: Int, val end: Int, val caret: Int)
+
     const val GRANULARITIES = AccessibilityNodeInfoCompat.MOVEMENT_GRANULARITY_CHARACTER or
-        AccessibilityNodeInfoCompat.MOVEMENT_GRANULARITY_WORD or AccessibilityNodeInfoCompat.MOVEMENT_GRANULARITY_PARAGRAPH
+            AccessibilityNodeInfoCompat.MOVEMENT_GRANULARITY_WORD or AccessibilityNodeInfoCompat.MOVEMENT_GRANULARITY_PARAGRAPH
 
-    fun isCharacterBoundary(text: String, offset: Int): Boolean = TextCharacterBoundaries.isBoundary(text, offset)
+    fun isCharacterBoundary(text: String, offset: Int): Boolean =
+        TextCharacterBoundaries.isBoundary(text, offset)
 
-    fun step(text: String, offset: Int?, granularity: Int, forward: Boolean,
-        checkCancellation: () -> Unit = {}): Step? {
+    fun step(
+        text: String, offset: Int?, granularity: Int, forward: Boolean,
+        checkCancellation: () -> Unit = {}
+    ): Step? {
         checkCancellation()
         val cursor = (offset ?: if (forward) 0 else text.length).coerceIn(0, text.length)
         if (forward && cursor == text.length || !forward && cursor == 0) return null
         val iterator = when (granularity) {
-            AccessibilityNodeInfoCompat.MOVEMENT_GRANULARITY_CHARACTER -> BreakIterator.getCharacterInstance(Locale.getDefault())
-            AccessibilityNodeInfoCompat.MOVEMENT_GRANULARITY_WORD -> BreakIterator.getWordInstance(Locale.getDefault())
+            AccessibilityNodeInfoCompat.MOVEMENT_GRANULARITY_CHARACTER -> BreakIterator.getCharacterInstance(
+                Locale.getDefault()
+            )
+
+            AccessibilityNodeInfoCompat.MOVEMENT_GRANULARITY_WORD -> BreakIterator.getWordInstance(
+                Locale.getDefault()
+            )
+
             AccessibilityNodeInfoCompat.MOVEMENT_GRANULARITY_PARAGRAPH -> null
             else -> return null
         }
@@ -34,7 +44,8 @@ internal object AccessibilityTextTraversal {
                 val start = minOf(from, to)
                 val end = maxOf(from, to)
                 if (granularity != AccessibilityNodeInfoCompat.MOVEMENT_GRANULARITY_WORD ||
-                    containsWordCharacter(text, start, end, checkCancellation)) return Step(start, end, to)
+                    containsWordCharacter(text, start, end, checkCancellation)
+                ) return Step(start, end, to)
                 from = to
             }
         }
@@ -51,7 +62,12 @@ internal object AccessibilityTextTraversal {
         return Step(start, from, start)
     }
 
-    private fun containsWordCharacter(text: String, start: Int, end: Int, checkCancellation: () -> Unit): Boolean {
+    private fun containsWordCharacter(
+        text: String,
+        start: Int,
+        end: Int,
+        checkCancellation: () -> Unit
+    ): Boolean {
         var index = start
         while (index < end) {
             checkCancellation()

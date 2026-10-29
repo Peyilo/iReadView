@@ -9,9 +9,12 @@ object ReaderSelectionScrollPolicy {
     fun speed(y: Float, top: Float, bottom: Float, density: Float): Float {
         val edge = 28f * density
         if (bottom - top < edge * 2f) return 0f
-        val depth = when { y < top + edge -> -(top + edge - y) / edge
-            y > bottom - edge -> (y - bottom + edge) / edge; else -> 0f }
+        val depth = when {
+            y < top + edge -> -(top + edge - y) / edge
+            y > bottom - edge -> (y - bottom + edge) / edge; else -> 0f
+        }
         return depth.coerceIn(-1f, 1f) * 420f * density
     }
+
     suspend fun nextFrame(view: View): Long = view.awaitAnimationFrame()
 }

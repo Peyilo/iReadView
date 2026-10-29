@@ -21,6 +21,7 @@ interface ReaderPageDecoration {
      * Unconsumed input may reach the Widget's ordinary tap/page-turn handling.
      */
     val view: View
+
     /** Main thread; may run repeatedly, including before position/pageCount are known.
      * Keep the measured height stable when filling in page numbers, and replace old listeners.
      * Slot visibility/height follow ChromeStyle; other appearance belongs to this decoration.
@@ -28,10 +29,13 @@ interface ReaderPageDecoration {
      * the View's own padding remains independent.
      */
     fun bind(context: ReaderPageContext)
+
     /** Release listeners, tasks and page references. May also follow partial/failed binding. */
     fun unbind() {}
+
     /** Opt in to the Widget's existing clock; do not create a separate polling timer. */
     val needsTimeUpdates: Boolean get() = false
+
     /** Main-thread update for the active visible slot. Hidden candidates receive bind time only.
      * If this callback closes or rebinds the page, the wrapper stops the remaining slot updates.
      */

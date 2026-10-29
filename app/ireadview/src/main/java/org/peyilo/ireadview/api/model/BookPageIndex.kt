@@ -44,7 +44,7 @@ class BookPageIndex internal constructor(
     }
     internal fun chapterForId(chapterId: String): IndexedChapter? = chapterIndices[chapterId]?.let { chapters[it] }
     fun positionForPage(pageNumber: Long): ReaderResult<ReadingPosition> {
-        if (pageNumber < 1 || pageNumber > totalPageCount) return ReaderResult.Rejected(ReaderRejection.InvalidPage)
+        if (pageNumber !in 1..totalPageCount) return ReaderResult.Rejected(ReaderRejection.InvalidPage)
         var low = 0
         var high = chapters.lastIndex
         while (low < high) {

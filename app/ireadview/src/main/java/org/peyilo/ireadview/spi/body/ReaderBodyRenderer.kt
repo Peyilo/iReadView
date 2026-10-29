@@ -14,11 +14,16 @@ interface ReaderBodyRenderer : AutoCloseable {
     override fun close() {}
 }
 
-fun interface ReaderBodyRendererFactory { fun create(context: Context): ReaderBodyRenderer }
+fun interface ReaderBodyRendererFactory {
+    fun create(context: Context): ReaderBodyRenderer
+}
 
 /** Optional native-block capability, without requiring document bodies to invent fragments. */
-interface BlockReaderBodyContent { val fragments: List<BlockLayoutFragment> }
+interface BlockReaderBodyContent {
+    val fragments: List<BlockLayoutFragment>
+}
 
 object DefaultReaderBodyRenderer : ReaderBodyRenderer {
-    override fun draw(canvas: Canvas, body: ReaderBodyView, drawDefault: (Canvas) -> Unit) = drawDefault(canvas)
+    override fun draw(canvas: Canvas, body: ReaderBodyView, drawDefault: (Canvas) -> Unit) =
+        drawDefault(canvas)
 }

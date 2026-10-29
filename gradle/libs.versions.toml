@@ -12,8 +12,10 @@ customview = "1.2.0"
 jsoup = "1.23.2"
 desugar = "2.1.5"
 material = "1.10.0"
+pagecurl = "0.1.0"
 
 [libraries]
+pagecurl-core = { group = "org.peyilo.pagecurl", name = "pagecurl-core", version.ref = "pagecurl" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-recyclerview = { group = "androidx.recyclerview", name = "recyclerview", version.ref = "recyclerview" }
 androidx-customview = { group = "androidx.customview", name = "customview", version.ref = "customview" }
@@ -30,5 +32,4 @@ desugar-jdk-nio = { group = "com.android.tools", name = "desugar_jdk_libs_nio", 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 android-library = { id = "com.android.library", version.ref = "agp" }
