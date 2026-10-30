@@ -10,6 +10,8 @@ from statistics import median
 def analyze(path):
     stacks = defaultdict(list)
     samples = defaultdict(list)
+    uploads = {}
+    presented = {}
     marker = re.compile(r"-(\d+)\s+.*?\s(\d+\.\d+): tracing_mark_write: ([BE])(?:\|(\d+)\|(.+))?")
     with path.open(encoding="utf-8", errors="replace") as trace:
         for line in trace:
@@ -24,6 +26,14 @@ def analyze(path):
                 started, name = stacks[thread].pop()
                 if name and name.startswith("iRead.curl."):
                     samples[name].append((timestamp - started) * 1000)
+                    if name == "iRead.curl.upload":
+                        uploads[thread] = started
+                    elif name == "iRead.curl.present":
+                        presented[thread] = timestamp
+                    elif name == "iRead.curl.frame" and thread in uploads:
+                        upload = uploads.pop(thread)
+                        if presented.get(thread, -1) >= started:
+                            samples["iRead.curl.uploadToFirstSubmit"].append((timestamp - upload) * 1000)
     return {
         name: {"count": len(values), "medianMs": median(values),
                "p95Ms": sorted(values)[int((len(values) - 1) * .95)], "maxMs": max(values)}

@@ -13,7 +13,9 @@ import org.peyilo.ireadview.internal.effect.EffectResourceUnavailable
 import org.peyilo.ireadview.internal.effect.PageTurnSnapshots
 import org.peyilo.pagecurl.mesh.CurlMesh
 
-/** Owns its EGL context and a single latest-frame mailbox, never a queue of stale poses. */
+/** Owns its EGL context, two reusable texture allocations and one latest-frame mailbox.
+ * Every begin replaces both textures' pixels; page content is never reused by object identity.
+ */
 internal class IosCurlGpuWorker(
     private val surface: Surface,
     width: Int,
@@ -79,7 +81,6 @@ internal class IosCurlGpuWorker(
             try {
                 val renderer = renderer ?: return@post
                 if (token != generation.get() || closed.get()) return@post
-                renderer.releasePages()
                 trace("iRead.curl.upload") {
                     renderer.upload(capture.current.bitmap, capture.target.bitmap)
                 }
@@ -156,7 +157,6 @@ internal class IosCurlGpuWorker(
                     requireNotNull(renderer).presentationTimeNanos = System.nanoTime()
                     finalScene.draw(mesh, requireNotNull(renderer))
                 }
-                renderer?.releasePages()
                 lastScene = null
                 activeGeneration = -1L
             } catch (error: RuntimeException) {

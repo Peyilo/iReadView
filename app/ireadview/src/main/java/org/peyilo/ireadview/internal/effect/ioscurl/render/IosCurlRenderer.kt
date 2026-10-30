@@ -18,7 +18,7 @@ internal class IosCurlRenderer(private val retainContext: Boolean = false) : Aut
     private var surface = EGL14.EGL_NO_SURFACE
     private var config: EGLConfig? = null
     private val programs = IntArray(3)
-    private val textures = IntArray(2)
+    private val textures = IosCurlPageTextures()
     private val matrices = IntArray(3)
     private val texSizes = IntArray(3)
     private var vertexBuffer: IosCurlVertexBuffer? = null
@@ -163,35 +163,7 @@ internal class IosCurlRenderer(private val retainContext: Boolean = false) : Aut
     }
 
     fun upload(current: Bitmap, target: Bitmap) = withCurrent {
-        GLES20.glGenTextures(2, textures, 0)
-        for ((index, bitmap) in arrayOf(current, target).withIndex()) {
-            GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
-            GLES20.glBindTexture(
-                GLES20.GL_TEXTURE_2D,
-                textures[index],
-            )
-            trace("iRead.curl.uploadPage") { GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0) }
-            GLES20.glTexParameteri(
-                GLES20.GL_TEXTURE_2D,
-                GLES20.GL_TEXTURE_MIN_FILTER,
-                GLES20.GL_LINEAR,
-            )
-            GLES20.glTexParameteri(
-                GLES20.GL_TEXTURE_2D,
-                GLES20.GL_TEXTURE_MAG_FILTER,
-                GLES20.GL_LINEAR,
-            )
-            GLES20.glTexParameteri(
-                GLES20.GL_TEXTURE_2D,
-                GLES20.GL_TEXTURE_WRAP_S,
-                GLES20.GL_CLAMP_TO_EDGE,
-            )
-            GLES20.glTexParameteri(
-                GLES20.GL_TEXTURE_2D,
-                GLES20.GL_TEXTURE_WRAP_T,
-                GLES20.GL_CLAMP_TO_EDGE,
-            )
-        }
+        textures.upload(current, target)
         boundTexture = 1
         trace("iRead.curl.uploadCheck") { checkGl("texture upload") }
     }
@@ -269,8 +241,7 @@ internal class IosCurlRenderer(private val retainContext: Boolean = false) : Aut
     fun releasePages() {
         if (context == EGL14.EGL_NO_CONTEXT || surface == EGL14.EGL_NO_SURFACE) return
         withCurrent {
-            if (textures.any { it != 0 }) GLES20.glDeleteTextures(2, textures, 0)
-            textures.fill(0)
+            textures.close()
             boundTexture = -1
         }
         output = null
@@ -459,12 +430,7 @@ internal class IosCurlRenderer(private val retainContext: Boolean = false) : Aut
         if (context != EGL14.EGL_NO_CONTEXT && surface != EGL14.EGL_NO_SURFACE)
             runCatching {
                 withCurrent {
-                    if (textures.any { it != 0 })
-                        GLES20.glDeleteTextures(
-                            2,
-                            textures,
-                            0,
-                        )
+                    textures.close()
                     vertexBuffer?.close()
                     vertexBuffer = null
                     for (program in programs) if (program != 0) GLES20.glDeleteProgram(program)
@@ -486,7 +452,6 @@ internal class IosCurlRenderer(private val retainContext: Boolean = false) : Aut
         nativeWindow = null
         windowOutput = false
         programs.fill(0)
-        textures.fill(0)
     }
 
     private companion object {
