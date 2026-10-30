@@ -12,11 +12,15 @@ Demo 阅读设置的“仿真效果”和翻页示例只列出 **iOSCurl / Googl
 
 `PageTurnSnapshots` 在事务开始时捕获 current/target。支持独立读租约的宿主将两张图交给 iOSCurl 工作线程上传；事务可先关闭原租约，最后一个读者结束后才允许位图回池。硬件路径直接合成 GPU 图像，不借用逐帧输出位图；软件宿主保留离屏位图输出。完成、取消、异常及 detach 释放事务资源，工作线程异步清理自己的 EGL 资源。
 
+`RecordedPageSurface` 表示可独立于可见层级回放的命令，不保证它引用的 Bitmap 像素不变；软件 Picture 也可能保留可变图片引用。纹理缓存不能只比较录制对象或 View 的身份。需要固定像素的效果仍捕获事务独占的图像，GPU 像素回归覆盖同一表面对象在两轮之间更新图片的情况。
+
 `ViewPageTurnEffect` 可提供提前挂载的合成 View，用空闲时间准备 Surface 和着色器。`SnapshotPageTurnEffect.usesPageSnapshots` 是动态就绪状态：首帧尚未被合成器接收时保持正文，接收到本次事务图像后才暂停正文绘制；后端不接管时使用 alpha 隐藏。取消、Surface 丢失及配置变化沿统一事务边界恢复正文。
 
 `ReadVisualHandoff.setSnapshotPlayback` 允许正文后端接管可逆的绘制抑制，避免透明视图仍注册 WebView 绘制回调。默认返回 false，使用 Widget 的 alpha 策略。Widget 在目标页交接前和取消/异常终态恢复绘制；后端不能借此改变位置或销毁正文。EPUB 在覆盖期间跳过正文子树，保留 View 和 DOM；停放页使用空裁剪准备绘制状态，不创建透明离屏图层。
 
 EPUB 分页视口使用 WebView 硬件层缓存，减少父窗口重绘时重复调用 WebView 绘制器；内容失效仍更新图层，CSS 动画继续运行。连续滚动使用默认图层。缓存增加视口大小的 GPU 纹理开销，数量受单页/三页缓存策略约束。软件快照直接绘制 WebView，避开停放硬件层可能为空的框架绘图缓存；正常硬件绘制仍走框架路径。
+
+取消时刷新当前 WebView 的硬件层，使保留候选后恢复的窗口不复用过期图层；刷新位于取消交接边界，不在每次截图后重复执行。软件窗口不额外触发该失效，避免形成重复绘制循环。候选取消的资源归还规则见[分页缓存](page-cache.md)。
 
 ## iOSCurl
 

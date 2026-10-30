@@ -80,6 +80,24 @@ class ReaderPageCacheIntegrationTest {
                     assertTrue(turning.poll(40,TimeUnit.SECONDS) is ReaderCompletion.Completed)
                     scenario.onActivity { assertTrue("$epub next page was not preloaded",displayed(it.findViewById(R.id.reader)) in oldBodies) }
                     request<NavigationResult<ReadingPosition>>(scenario) { r,c -> r.previousPage(NavigationOptions(animated=false,respectInterval=false),c) }
+                    SystemClock.sleep(600)
+                    await(scenario) { bodies(it).size==3 }
+                    var cancelBodies=emptySet<ReaderBodyView>()
+                    val cancelling=LinkedBlockingQueue<ReaderCompletion<NavigationResult<ReadingPosition>>>()
+                    scenario.onActivity {
+                        val r=it.findViewById<ReaderView>(R.id.reader)
+                        cancelBodies=bodies(r).toSet()
+                        r.setPageTurnOptions(org.peyilo.ireadview.api.effect.PageTurnOptions(durationMs=1200))
+                        r.nextPage(NavigationOptions(respectInterval=false),ReaderCallback { result -> cancelling.add(result) })
+                    }
+                    await(scenario) { it.navigationState==ReadNavigationState.Settling }
+                    scenario.onActivity { it.findViewById<ReaderView>(R.id.reader).cancelTransition() }
+                    assertEquals(ReaderCompletion.Cancelled,cancelling.poll(40,TimeUnit.SECONDS))
+                    scenario.onActivity {
+                        val r=it.findViewById<ReaderView>(R.id.reader)
+                        assertEquals("$epub cancelled navigation changed position",before,r.currentPosition)
+                        assertEquals("$epub cancelled prepared page was recreated",cancelBodies,bodies(r).toSet())
+                    }
                     scenario.onActivity {
                         val r=it.findViewById<ReaderView>(R.id.reader)
                         assertSame("$epub reverse page was recreated",previous,displayed(r))

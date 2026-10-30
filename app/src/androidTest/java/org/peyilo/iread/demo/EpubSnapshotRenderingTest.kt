@@ -27,6 +27,7 @@ import org.peyilo.ireadview.api.source.ReaderInput
 import org.peyilo.ireadview.api.state.*
 import org.peyilo.ireadview.epub.EpubReaderBodyView
 import org.peyilo.ireadview.epub.EpubReaderBookSource
+import org.peyilo.ireadview.spi.page.*
 import org.peyilo.ireadview.widget.ReaderView
 
 /** The optimized capture must match the platform's original software child rendering exactly. */
@@ -349,12 +350,102 @@ class EpubSnapshotRenderingTest {
         return out.toByteArray()
     }
 
+    @Test
+    fun spareDocumentsDoNotShowThroughTranslucentTemplates() {
+        ActivityScenario.launch(ReaderActivity::class.java).use { scenario ->
+            val deadline = SystemClock.uptimeMillis() + 30000
+            while (true) {
+                var ready = false
+                scenario.onActivity {
+                    ready =
+                        it.findViewById<ReaderView>(R.id.reader).readerState.phase ==
+                            ReaderPhase.Ready
+                }
+                if (ready) break
+                check(SystemClock.uptimeMillis() < deadline)
+                SystemClock.sleep(25)
+            }
+            request<ReaderResult<ModeChange>>(scenario) { r, c ->
+                r.setReadingMode(ReadingMode.PAGED, c)
+            }
+            scenario.onActivity {
+                val reader = it.findViewById<ReaderView>(R.id.reader)
+                reader.closeBook()
+                reader.setPageTurnEffect(PageTurnEffects.none())
+                reader.setPageCacheMode(ReaderPageCacheMode.SINGLE_PAGE)
+                val defaults = ReaderPageFactories.default()
+                reader.setPageFactory(
+                    ReaderPageFactory { context ->
+                        val template = defaults.create(context)
+                        object : ReaderPageTemplate by template {
+                            override fun bind(context: ReaderPageContext) {
+                                template.bind(context)
+                                root.setBackgroundColor(0x40ffeedd)
+                            }
+                        }
+                    }
+                )
+            }
+            lateinit var source: EpubReaderBookSource
+            assertTrue(
+                request<OpenResult>(scenario) { r, c ->
+                    source =
+                        EpubReaderBookSource(
+                            "translucent-${System.nanoTime()}",
+                            ReaderInput.fromAsset(r.context, "epubs/illustrated-flow.epub"),
+                            File(r.context.cacheDir, "translucent-snapshots"),
+                        )
+                    r.openBook(source, callback = c)
+                }
+                    is OpenResult.Opened
+            )
+            try {
+                lateinit var current: EpubReaderBodyView
+                scenario.onActivity { current = bodies(it.findViewById(R.id.reader)).single() }
+                val reference = liveCapture(scenario, View.LAYER_TYPE_HARDWARE, current)
+                try {
+                    scenario.onActivity {
+                        it.findViewById<ReaderView>(R.id.reader)
+                            .setPageCacheMode(ReaderPageCacheMode.THREE_PAGE)
+                    }
+                    repeat(10) {
+                        SystemClock.sleep(100)
+                        val actual = liveCapture(scenario, View.LAYER_TYPE_HARDWARE, current)
+                        try {
+                            assertTrue(
+                                "A parked document leaked through the current page at sample $it",
+                                reference.sameAs(actual),
+                            )
+                        } finally {
+                            actual.recycle()
+                        }
+                    }
+                    scenario.onActivity {
+                        assertTrue(
+                            "No spare document prepared",
+                            bodies(it.findViewById(R.id.reader)).size > 1,
+                        )
+                    }
+                } finally {
+                    reference.recycle()
+                }
+            } finally {
+                scenario.onActivity { it.findViewById<ReaderView>(R.id.reader).closeBook() }
+                source.close()
+            }
+        }
+    }
+
     private var serial = 0L
 
-    private fun liveCapture(scenario: ActivityScenario<ReaderActivity>, layer: Int): Bitmap {
+    private fun liveCapture(
+        scenario: ActivityScenario<ReaderActivity>,
+        layer: Int,
+        current: EpubReaderBodyView? = null,
+    ): Bitmap {
         val result = LinkedBlockingQueue<Pair<Int, Bitmap>>()
         scenario.onActivity { activity ->
-            val body = bodies(activity.findViewById(R.id.reader)).single()
+            val body = current ?: bodies(activity.findViewById(R.id.reader)).single()
             val web =
                 EpubReaderBodyView::class
                     .java

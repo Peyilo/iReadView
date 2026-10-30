@@ -46,13 +46,13 @@ EPUB 的硬件录制持有真实页面的子 RenderNode，能够在硬件 Canvas
 adb shell am instrument -w -r \
   -e class org.peyilo.iread.demo.IosCurlPerformanceTest \
   -e formats text,epub,arm -e effects ios_curl -e turns 8 -e gesturePairs 4 \
-  -e rawFrames true \
+  -e cacheMode three -e rawFrames true \
   org.peyilo.iread.demo.test/androidx.test.runner.AndroidJUnitRunner
 ```
 
 用 `adb -s` 显式指定设备，避免操作其他正在使用的模拟器。测试设备需解锁，并完成首次全屏模式提示。手势注入必须标明触屏来源，并验证完成/取消后的实际位置；没有触发翻页的采样无效。报告写入 Demo 私有目录的 `files/ioscurl-performance.json`。
 
-默认每种内容执行 8 次自动翻页和 4 组提交/取消手势，共 8 次真实拖动。`rawFrames` 可选，启用后保存带 vsync 和导航状态的逐帧数据。性能采样应串行运行，避免并行构建、其他设备用例或采样分析器争用宿主资源。
+默认每种内容执行 8 次自动翻页和 4 组提交/取消手势，共 8 次真实拖动。`cacheMode` 可选 `three`（默认）或 `single`，结果记录实际缓存模式。`rawFrames` 可选，启用后保存带 vsync 和导航状态的逐帧数据。性能采样应串行运行，避免并行构建、其他设备用例或采样分析器争用宿主资源。
 
 采集 `atrace --async_start -b 16384 -a org.peyilo.iread.demo gfx view`，测试结束后用 `--async_stop -b 16384 -a org.peyilo.iread.demo -o /data/local/tmp/curl.trace gfx view` 保存并拉取。分析命令：
 
@@ -61,6 +61,21 @@ python tools/analyze-curl-trace.py curl.trace --output curl-stages.json
 ```
 
 `iRead.curl.mesh/upload/raster/drawBatches/present` 位于 GPU 工作线程；位图后端另有 `readPixels/copyPixels/eglRestore`。同时检查 Window 的 animation、draw、sync、commands、swap，不能只看其中一种颜色柱段，也不能以转移到其他线程作为流畅性的唯一依据。原始 trace 和设备报告放在未跟踪的构建目录。
+
+上传进一步拆为 `iRead.curl.uploadPage`（每张图的 `texImage2D` 调用）和 `iRead.curl.uploadCheck`（驱动错误查询）。后者可能包含前序 GPU 命令等待，不能当成纯 CPU 校验成本，也不能删除校验后把转移到 present 的等待算作优化。
+
+同条件的一次复测记录如下；各阶段分位数不能相加，也不能替代前述整帧和窗口指标：
+
+| 模拟器 / 阶段 | 样本 | 中位数 | P95 |
+| --- | ---: | ---: | ---: |
+| API 28 / 单页上传 | 98 | 4.02ms | 6.91ms |
+| API 28 / 上传后查询 | 49 | 5.32ms | 7.63ms |
+| API 36 / 单页上传 | 98 | 4.55ms | 6.99ms |
+| API 36 / 上传后查询 | 49 | 0.02ms | 0.16ms |
+
+API 28 的查询等待是页面首帧成本的一部分；优化仍需覆盖准备、实际提交和交接，不能只消除测量点。
+
+缓存录制对象的身份不足以证明像素未变：软件 Picture 可以引用可变 Bitmap。`IosCurlGpuDeviceTest` 重用相同表面和绘制命令、逐轮修改图片，并与未缓存的像素结果对比；`EpubSnapshotRenderingTest` 检查三页预加载不会透过半透明模板显示备用文档。没有通过这些像素边界的复用方案不进入实现。
 
 GPU 柱状图验收可在测试设备上启用 `adb shell setprop debug.hwui.profile visual_bars`，向性能用例添加 `-e captureProfiles true`。用例在每种内容的自动/手势采样后保存 `files/curl-profile-<format>-<kind>.png`，便于对照完整柱状图及参考线。结束后用 `adb shell setprop debug.hwui.profile false` 关闭。截图在采样结束后保存，不把截图压缩时间计入动画指标。
 
@@ -80,7 +95,7 @@ python tools/analyze-method-trace.py curl-method.trace --method nInvokeFunctor -
 
 分页硬件层避免旧 WebView 在父窗口每次绘制时重复进入绘制器。软件快照直接绘制 WebView，防止框架的软件绘图缓存捕获空硬件层。`EpubSnapshotRenderingTest` 验证三种出版物的多列快照与原软件路径逐像素一致，并检查实际窗口画面和 CSS 动画；连续滚动保持默认图层，选区同步另由 `UnifiedSelectionIntegrationTest` 验证。
 
-1080 × 2424、density 420 的 API 28/36 模拟器，使用文本、同原文 EPUB、ARM EPUB，分别完成 8 次自动前后翻及真实提交/反向取消手势。直接 Surface 的父窗口 FrameMetrics **不包含该 Surface 的 GPU 工作**，柱状图变低不能单独作为验收依据。报告明确标记 `metricsScope`；增加 `-e output surface` 可运行该输出，省略时测默认 Texture。
+1080 × 2424、density 420 的 API 28/36 模拟器，使用文本、同原文 EPUB、ARM EPUB，分别完成 8 次自动前后翻及真实提交/反向取消手势。性能用例将位图预算固定为 64MiB，容纳两张原分辨率快照；这高于公共选项默认的 16MiB，不能将结果视为默认预算下的清晰度和性能保证。直接 Surface 的父窗口 FrameMetrics **不包含该 Surface 的 GPU 工作**，柱状图变低不能单独作为验收依据。报告明确标记 `metricsScope`；增加 `-e output surface` 可运行该输出，省略时测默认 Texture。
 
 为核对 GPU 完成成本，在独立测量构建中，于 drawBatches 后、present 前临时插入带 trace 的 `GLES20.glFinish()`，将其等待计入 `iRead.curl.frame`。该同步仅用于交叉测量，已从正常实现移除，不能把 GL 提交返回时间当作 GPU 完成时间。两次记录为：
 
@@ -91,17 +106,27 @@ python tools/analyze-method-trace.py curl-method.trace --method nInvokeFunctor -
 
 上述独立 GPU 帧样本的 P95 低于 8ms，**不表示全部帧或首帧均低于 8ms**。首帧纹理上传、正文准备/交接及系统调度仍有长尾；该次记录中 API 28 的整次纹理上传 P95 为 23.74ms，API 36 为 10.97ms。
 
-包含分页硬件层缓存及快照池优化的窗口复测，在同尺寸模拟器上启用 GPU 柱状图，串行测量每种内容的 8 次自动翻页和 4 组提交/取消手势，得到：
+原生与 EPUB 都将完整准备、代次仍有效的取消候选归还有界缓存，避免下一次导航重新创建相同正文；不完整候选仍释放，单页模式容量为零。EPUB 只在取消交接边界刷新当前页硬件层，防止保留候选后恢复空白。正文数量上限仍为三份，动画参数和像素容差不变。
 
-| API / 内容 | 窗口帧数（自动 / 手势） | 窗口 total P95（自动 / 手势） | 手势 commands P95 | 手势 input P95 |
+以下对照只切换上述取消复用实现，其余源码、用例和参数相同：三页缓存、直接 Surface、GPU 柱状图、每种内容 8 次自动翻页和 4 组提交/取消手势。原实现与当前实现的 APK 串行运行，窗口采样包含输入与交接；没有把原实现改成单页模式来比较。
+
+| API / 内容 / 操作 | 原窗口帧数 | 当前窗口帧数 | 原 total P95 | 当前 total P95 |
 | --- | ---: | ---: | ---: | ---: |
-| 28 / 文本 | 29 / 34 | 22.23 / 31.58ms | 9.64ms | 14.93ms |
-| 28 / 同原文 EPUB | 40 / 53 | 109.64 / 99.41ms | 43.23ms | 9.63ms |
-| 28 / ARM EPUB | 46 / 57 | 43.50 / 112.49ms | 45.36ms | 13.93ms |
-| 36 / 文本 | 26 / 33 | 12.06 / 28.84ms | 4.06ms | 15.66ms |
-| 36 / 同原文 EPUB | 41 / 50 | 25.24 / 31.76ms | 7.93ms | 16.55ms |
-| 36 / ARM EPUB | 41 / 49 | 28.04 / 40.02ms | 4.39ms | 14.94ms |
+| 28 / 文本 / 自动 | 27 | 30 | 26.15ms | 30.07ms |
+| 28 / 文本 / 手势 | 35 | 31 | 34.79ms | 35.80ms |
+| 28 / 同原文 EPUB / 自动 | 41 | 42 | 87.43ms | 69.86ms |
+| 28 / 同原文 EPUB / 手势 | 56 | 35 | 98.39ms | 52.41ms |
+| 28 / ARM EPUB / 自动 | 47 | 48 | 56.93ms | 59.96ms |
+| 28 / ARM EPUB / 手势 | 58 | 48 | 119.73ms | 63.21ms |
+| 36 / 文本 / 自动 | 26 | 28 | 12.23ms | 14.65ms |
+| 36 / 文本 / 手势 | 34 | 31 | 31.14ms | 27.95ms |
+| 36 / 同原文 EPUB / 自动 | 41 | 40 | 30.53ms | 34.02ms |
+| 36 / 同原文 EPUB / 手势 | 51 | 36 | 34.04ms | 44.29ms |
+| 36 / ARM EPUB / 自动 | 40 | 41 | 28.01ms | 45.32ms |
+| 36 / ARM EPUB / 手势 | 50 | 36 | 53.03ms | 43.11ms |
 
-这里是父窗口样本，不能与 GPU 帧表相加，也不包括每一帧直接 Surface 输出。API 28 的命令提交和 unknown delay、两个系统的首个输入帧仍有明显长尾；柱状图也保留高柱。全流程 8ms 目标尚未通过，后续应继续优化资源预备和交接，不以稳态 GPU 数据掩盖边界耗时，也不将有限模拟器结果推广为所有设备保证。
+API 28 的同原文 EPUB 手势 commands P95 从 54.36ms 降至 44.15ms，ARM EPUB 从 47.88ms 降至 43.08ms；大于 32ms 的手势窗口帧分别从 34 降至 20、31 降至 24。取消后不再销毁有效正文的收益由对象身份测试验证，窗口长尾仍受输入和调度影响。API 36 同原文 EPUB 的手势 P95 反而升高，自动翻页也没有一致收益，因此不能宣称所有内容、模式和指标均改善。
+
+这里是父窗口样本，不能与 GPU 帧表相加，也不包括每一帧直接 Surface 输出；窗口采样数量减少不等于动画帧数减少。API 28 的命令提交和 unknown delay、两个系统的首个输入帧仍有明显长尾；柱状图也保留高柱。全流程 8ms 目标尚未通过，后续应继续优化资源预备和交接，不以稳态 GPU 数据掩盖边界耗时，也不将有限模拟器结果推广为所有设备保证。
 
 直接 Surface 的完整画面对比覆盖 32 组输入，包含透明回退、装订边、轴向、RTL 和前后方向。对比失败的 Canvas/Mesh 实验路径未进入实现；像素容差没有为性能结果放宽。

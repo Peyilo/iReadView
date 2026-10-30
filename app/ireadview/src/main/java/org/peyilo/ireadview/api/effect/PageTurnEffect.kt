@@ -19,6 +19,7 @@ interface PageSurface {
 interface SnapshotPreferredSurface : PageSurface { val preferSnapshot: Boolean }
 /** Stable recorded drawing commands; draw does not depend on live hierarchy visibility.
  * The adapter keeps referenced render resources alive until candidate disposal/turn completion.
+ * Referenced Bitmap pixels may still change; this is not an immutable pixel-cache identity.
  */
 interface RecordedPageSurface : PageSurface { val isRecorded: Boolean }
 /** Optional background-only metadata, excluding text. Null requests snapshot-based estimation.

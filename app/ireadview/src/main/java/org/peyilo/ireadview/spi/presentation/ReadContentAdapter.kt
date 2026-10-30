@@ -28,6 +28,7 @@ interface PreparedRead<L : Any> {
 
     /** Called once for a returned Ready candidate, including cancellation/obsolescence.
      * Release only candidate-owned resources; resources transferred by show belong to the adapter.
+     * A still-valid prepared page may transfer back to the adapter's bounded spare-page cache.
      */
     fun dispose()
 }

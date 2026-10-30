@@ -42,6 +42,16 @@ class CurlRenderTestActivity : Activity() {
 class IosCurlGpuDeviceTest {
     private val width = 320
     private val height = 458
+    private val mutableBadge =
+        Bitmap.createBitmap(32, 32, Bitmap.Config.ARGB_8888).apply {
+            eraseColor(Color.BLUE)
+        }
+    private val badgeRecording =
+        Picture().apply {
+            beginRecording(32, 32).drawBitmap(mutableBadge, 0f, 0f, null)
+            endRecording()
+        }
+    private val pages = HashMap<Pair<Boolean, Boolean>, PageSurface>()
 
     private class Host : PageTurnEffectHost {
         val leases = AtomicInteger()
@@ -86,23 +96,31 @@ class IosCurlGpuDeviceTest {
     }
 
     private fun page(target: Boolean, opaque: Boolean = true) =
-        object : PageSurface {
-            override val isOpaque = opaque
-            override val widthPx = width
-            override val heightPx = height
+        pages.getOrPut(target to opaque) {
+            object : RecordedPageSurface {
+                override val isRecorded = true
+                override val isOpaque = opaque
+                override val widthPx = width
+                override val heightPx = height
 
-            override fun draw(canvas: Canvas) {
-                val pageColor = if (target) 0xFF183ECC.toInt() else 0xFFFFD06A.toInt()
-                canvas.drawColor(
-                    if (opaque) pageColor else (pageColor and 0x00FFFFFF) or 0x80000000.toInt()
-                )
-                val paint = Paint().apply { color = if (target) Color.GREEN else Color.RED }
-                canvas.drawRect(0f, 0f, width * .5f, height * .5f, paint)
-                paint.color = Color.BLACK
-                paint.textSize = 22f
-                canvas.drawText(if (target) "TARGET 02" else "CURRENT 01", 16f, 82f, paint)
-                paint.color = Color.WHITE
-                canvas.drawRect(24f, height - 62f, width - 24f, height - 26f, paint)
+                override fun draw(canvas: Canvas) {
+                    val pageColor = if (target) 0xFF183ECC.toInt() else 0xFFFFD06A.toInt()
+                    canvas.drawColor(
+                        if (opaque) pageColor else (pageColor and 0x00FFFFFF) or 0x80000000.toInt()
+                    )
+                    val paint = Paint().apply { color = if (target) Color.GREEN else Color.RED }
+                    canvas.drawRect(0f, 0f, width * .5f, height * .5f, paint)
+                    paint.color = Color.BLACK
+                    paint.textSize = 22f
+                    canvas.drawText(if (target) "TARGET 02" else "CURRENT 01", 16f, 82f, paint)
+                    paint.color = Color.WHITE
+                    canvas.drawRect(24f, height - 62f, width - 24f, height - 26f, paint)
+                    canvas.drawBitmap(mutableBadge, width - 80f, 120f, null)
+                    canvas.save()
+                    canvas.translate(width - 40f, 120f)
+                    canvas.drawPicture(badgeRecording)
+                    canvas.restore()
+                }
             }
         }
 
@@ -183,6 +201,11 @@ class IosCurlGpuDeviceTest {
                                 1.0,
                             )
                         scenario.onActivity {
+                            // Same surface/commands, new source pixels: cached object identity
+                            // must never stand in for a new transaction's pixel capture.
+                            mutableBadge.eraseColor(
+                                if (token % 2L == 0L) Color.MAGENTA else Color.CYAN
+                            )
                             val context =
                                 PageTurnContext(
                                     ++token,

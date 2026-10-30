@@ -13,8 +13,9 @@ internal interface EpubPageRecording {
     fun draw(canvas:Canvas):Boolean
 }
 
-/** Immutable software display list for the pre-RenderNode path. Captured during
- * idle page preparation, so a gesture's bitmap snapshots do not synchronously
+/** Software drawing commands for the pre-RenderNode path. Referenced Bitmap pixels can still
+ * change: the recording itself is not an immutable pixel identity. Effects capture owned pixels.
+ * Recorded during idle page preparation, so a gesture's bitmap snapshots do not synchronously
  * request two software draws from Chromium. Owned by the same three-page cache.
  */
 internal class SoftwareEpubPageRecording(view: View) : EpubPageRecording {

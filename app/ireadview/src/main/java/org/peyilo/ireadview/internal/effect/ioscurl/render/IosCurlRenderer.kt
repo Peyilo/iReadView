@@ -170,7 +170,7 @@ internal class IosCurlRenderer(private val retainContext: Boolean = false) : Aut
                 GLES20.GL_TEXTURE_2D,
                 textures[index],
             )
-            GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0)
+            trace("iRead.curl.uploadPage") { GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0) }
             GLES20.glTexParameteri(
                 GLES20.GL_TEXTURE_2D,
                 GLES20.GL_TEXTURE_MIN_FILTER,
@@ -193,7 +193,7 @@ internal class IosCurlRenderer(private val retainContext: Boolean = false) : Aut
             )
         }
         boundTexture = 1
-        checkGl("texture upload")
+        trace("iRead.curl.uploadCheck") { checkGl("texture upload") }
     }
 
     fun bindOutput(bitmap: Bitmap) {

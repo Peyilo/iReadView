@@ -85,6 +85,11 @@ class IosCurlPerformanceTest {
         val effects = arguments.getString("effects", "ios_curl")!!.split(',')
         val turns = arguments.getString("turns", "8")!!.toInt()
         val gesturePairs = arguments.getString("gesturePairs", "4")!!.toInt()
+        val cacheMode = when (arguments.getString("cacheMode", "three")) {
+            "three" -> ReaderPageCacheMode.THREE_PAGE
+            "single" -> ReaderPageCacheMode.SINGLE_PAGE
+            else -> error("cacheMode must be three or single")
+        }
         require(turns > 0 && gesturePairs > 0)
         val rows = JSONArray()
         ActivityScenario.launch(ReaderActivity::class.java).use { scenario ->
@@ -240,6 +245,7 @@ class IosCurlPerformanceTest {
                         for (effect in effects) {
                             scenario.onActivity { activity ->
                                 activity.findViewById<ReaderView>(R.id.reader).apply {
+                                    assertTrue(setPageCacheMode(cacheMode) is ReaderResult.Success)
                                     setInputOptions(ReaderInputOptions())
                                     setPageTurnEffect(
                                         if (
@@ -318,6 +324,7 @@ class IosCurlPerformanceTest {
                             JSONObject()
                                 .put("api", Build.VERSION.SDK_INT)
                                 .put("output", arguments.getString("output", "texture"))
+                                .put("cacheMode", cacheMode.name)
                                 .put(
                                     "metricsScope",
                                     "parent-window; direct Surface GPU work requires separate measurement",

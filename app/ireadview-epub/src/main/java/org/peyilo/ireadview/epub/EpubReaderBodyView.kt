@@ -342,6 +342,8 @@ class EpubReaderBodyView internal constructor(context: Context, cache: EpubResou
         } finally { canvas.restoreToCount(saved) }
         return true
     }
+    /** Restore the live layer after cancellation, while the effect still covers the window. */
+    internal fun restoreHardwareLayer() { if (web.isHardwareAccelerated) web.invalidate() }
     override fun dispatchDraw(canvas: Canvas) {
         drawBodyContent(canvas) { target -> super.dispatchDraw(target) }
         val save = canvas.save()

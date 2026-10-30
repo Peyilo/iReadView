@@ -273,7 +273,13 @@ internal class EpubBookPresentation(private val context: Context, private val so
     }
     private inner class Candidate(val page: Page, override val target: ReadingPosition, override val generation: Long, val heading: Int) : PreparedRead<ReadingPosition> {
         override val surface get() = page.surface
-        override fun dispose() { if (active !== page) page.close() }
+        override fun dispose() {
+            if (active !== page) {
+                page.park()
+                active?.body?.restoreHardwareLayer()
+                keepParked(page)
+            }
+        }
     }
     override fun setSnapshotPlayback(active: Boolean): Boolean {
         root.snapshotPlayback = active

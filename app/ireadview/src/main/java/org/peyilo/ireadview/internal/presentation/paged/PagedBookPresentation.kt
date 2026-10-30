@@ -792,7 +792,9 @@ internal class PagedBookPresentation(context: Context, private val bookHost: Boo
         }
 
         override fun dispose() {
-            if (active !== this && !parked.contains(this)) close()
+            if (active !== this && !parked.contains(this)) {
+                if (!closed && !detached && generation == bookHost.generation) parked.retain(this) else close()
+            }
         }
     }
 
