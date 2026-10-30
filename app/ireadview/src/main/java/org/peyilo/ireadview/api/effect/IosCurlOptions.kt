@@ -11,7 +11,8 @@ enum class IosCurlBinding {
 /**
  * Texture follows normal View composition. Surface draws directly above the reader's window and
  * requires an opaque page in a fixed rectangle without overlapping sibling UI. Translucent inputs
- * keep the bitmap fallback. Both outputs use the same full mesh.
+ * keep the bitmap fallback. API 21–28 use Texture for either option. Both outputs use the same full
+ * mesh.
  */
 enum class IosCurlOutput {
     Texture,

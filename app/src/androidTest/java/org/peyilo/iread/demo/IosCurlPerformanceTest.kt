@@ -10,6 +10,10 @@ import android.util.Log
 import android.view.FrameMetrics
 import android.view.InputDevice
 import android.view.MotionEvent
+import android.view.SurfaceView
+import android.view.TextureView
+import android.view.View
+import android.view.ViewGroup
 import android.view.Window
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -50,6 +54,7 @@ import org.peyilo.ireadview.widget.ReaderView
 class IosCurlPerformanceTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val arguments = InstrumentationRegistry.getArguments()
+    private var compositorView = "none"
     private val paragraphs =
         (0 until 200).map {
             "Paragraph $it. " +
@@ -85,11 +90,12 @@ class IosCurlPerformanceTest {
         val effects = arguments.getString("effects", "ios_curl")!!.split(',')
         val turns = arguments.getString("turns", "8")!!.toInt()
         val gesturePairs = arguments.getString("gesturePairs", "4")!!.toInt()
-        val cacheMode = when (arguments.getString("cacheMode", "three")) {
-            "three" -> ReaderPageCacheMode.THREE_PAGE
-            "single" -> ReaderPageCacheMode.SINGLE_PAGE
-            else -> error("cacheMode must be three or single")
-        }
+        val cacheMode =
+            when (arguments.getString("cacheMode", "three")) {
+                "three" -> ReaderPageCacheMode.THREE_PAGE
+                "single" -> ReaderPageCacheMode.SINGLE_PAGE
+                else -> error("cacheMode must be three or single")
+            }
         require(turns > 0 && gesturePairs > 0)
         val rows = JSONArray()
         ActivityScenario.launch(ReaderActivity::class.java).use { scenario ->
@@ -263,6 +269,7 @@ class IosCurlPerformanceTest {
                                             bitmapBudgetBytes = 64L * 1024 * 1024,
                                         )
                                     )
+                                    compositorView = findCompositor(this) ?: "none"
                                 }
                             }
                             SystemClock.sleep(500)
@@ -296,18 +303,20 @@ class IosCurlPerformanceTest {
                             }
                             report(rows, format, effect, "automatic", samples)
                             val gestures = mutableListOf<Sample>()
-                            repeat(gesturePairs) {
-                                for (commit in listOf(true, false)) {
-                                    val active = Sample()
-                                    sample = active
-                                    swipe(scenario, commit)
-                                    await(scenario) {
-                                        it.navigationState == ReadNavigationState.Idle
+                            profileMethods("$format-$effect") {
+                                repeat(gesturePairs) {
+                                    for (commit in listOf(true, false)) {
+                                        val active = Sample()
+                                        sample = active
+                                        swipe(scenario, commit)
+                                        await(scenario) {
+                                            it.navigationState == ReadNavigationState.Idle
+                                        }
+                                        active.elapsed = (System.nanoTime() - active.started) / 1e6
+                                        SystemClock.sleep(120)
+                                        sample = null
+                                        gestures += active
                                     }
-                                    active.elapsed = (System.nanoTime() - active.started) / 1e6
-                                    SystemClock.sleep(120)
-                                    sample = null
-                                    gestures += active
                                 }
                             }
                             report(rows, format, effect, "gesture", gestures)
@@ -324,10 +333,18 @@ class IosCurlPerformanceTest {
                             JSONObject()
                                 .put("api", Build.VERSION.SDK_INT)
                                 .put("output", arguments.getString("output", "texture"))
+                                .put("compositorView", compositorView)
                                 .put("cacheMode", cacheMode.name)
                                 .put(
+                                    "methodTracing",
+                                    arguments.getString("profileMethods") == "true",
+                                )
+                                .put(
                                     "metricsScope",
-                                    "parent-window; direct Surface GPU work requires separate measurement",
+                                    if (compositorView == "surface")
+                                        "parent-window; excludes direct Surface GPU work"
+                                    else
+                                        "parent-window including TextureView composition; producer GPU work requires separate measurement",
                                 )
                                 .put("rows", rows)
                                 .toString(2)
@@ -339,6 +356,29 @@ class IosCurlPerformanceTest {
                 metricsThread.quitSafely()
             }
         }
+    }
+
+    private fun profileMethods(label: String, block: () -> Unit) {
+        if (arguments.getString("profileMethods") != "true") return block()
+        val output = File(instrumentation.targetContext.filesDir, "ioscurl-method-$label.trace")
+        android.os.Debug.startMethodTracingSampling(output.absolutePath, 64 * 1024 * 1024, 1000)
+        try {
+            block()
+        } finally {
+            android.os.Debug.stopMethodTracing()
+        }
+    }
+
+    private fun findCompositor(view: View): String? {
+        if (view is SurfaceView) return "surface"
+        if (view is TextureView) return "texture"
+        if (view is ViewGroup)
+            for (i in 0 until view.childCount) {
+                findCompositor(view.getChildAt(i))?.let {
+                    return it
+                }
+            }
+        return null
     }
 
     private fun report(
@@ -360,13 +400,14 @@ class IosCurlPerformanceTest {
         }
         assertTrue(
             "$format $kind must contain actual rendered frames",
-            frames.size >= if (arguments.getString("output") == "surface") 0 else 10,
+            frames.size >= if (compositorView == "surface") 0 else 10,
         )
         val row =
             JSONObject()
                 .put("format", format)
                 .put("effect", effect)
                 .put("kind", kind)
+                .put("compositorView", compositorView)
                 .put("turns", samples.size)
                 .put("frames", frames.size)
                 .put("totalMedianMs", percentile(samples.map { it.elapsed }, .5))

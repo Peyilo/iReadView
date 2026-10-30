@@ -16,6 +16,7 @@ import androidx.core.os.trace
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.concurrent.atomic.AtomicLongArray
+import org.peyilo.ireadview.api.effect.RecordedPageSurface
 import org.peyilo.ireadview.api.effect.TurnDirection
 import org.peyilo.ireadview.internal.effect.EffectResourceUnavailable
 
@@ -175,7 +176,15 @@ internal class IosCurlCanvasCapture(
                                     }
                                 } finally {
                                     next.floor.set(index, System.nanoTime())
-                                    submit(surface, canvas)
+                                    // Finish live hierarchy submission before Window traversal can
+                                    // replace its child RenderNodes. Independent recordings may
+                                    // queue.
+                                    if ((source as? RecordedPageSurface)?.isRecorded == true)
+                                        submit(surface, canvas)
+                                    else
+                                        trace("iRead.curl.canvasSubmit") {
+                                            surface.unlockCanvasAndPost(canvas)
+                                        }
                                 }
                             }
                         }

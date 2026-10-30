@@ -3,6 +3,7 @@ package org.peyilo.ireadview.internal.effect.ioscurl
 import android.content.Context
 import android.graphics.Canvas
 import android.view.View
+import androidx.core.os.trace
 import org.peyilo.ireadview.api.effect.*
 import org.peyilo.ireadview.internal.effect.*
 import org.peyilo.ireadview.internal.effect.input.*
@@ -55,109 +56,115 @@ internal class IosCurlEffect(private val options: IosCurlOptions) :
 
     override fun supports(direction: TurnDirection, viewport: ReadViewport) = viewport.isValid
 
-    override fun start(context: PageTurnContext) {
-        clear()
-        rendering.beginPreparation()
-        this.context = context
-        val viewport = context.viewport
-        val density = viewport.density.toDouble()
-        val w = viewport.widthPx / density
-        val h = viewport.heightPx / density
-        val reverse =
-            (context.direction == TurnDirection.Backward) !=
-                (!context.vertical && viewport.rightToLeft)
-        val binding =
-            if (options.binding == IosCurlBinding.Minimum)
-                if (context.vertical) CurlBinding.Top else CurlBinding.Left
-            else if (context.vertical) CurlBinding.Bottom else CurlBinding.Right
-        automatic = context.touchOrigin == null
-        val initial =
-            context.touchOrigin?.let { CurlPoint(it.xPx / density, it.yPx / density) }
-                ?: CurlPoint(
-                    0.0,
-                    0.0,
-                )
-        val config =
-            CurlConfig(
-                w,
-                h,
-                initial,
-                binding,
-                if (reverse) CurlDirection.Reverse else CurlDirection.Forward,
-                if (automatic) CurlKind.Automatic else CurlKind.Manual,
-                false,
-            )
-        this.config = config
-        val layout = CurlLayout.build(config)
-        this.layout = layout
-        begin = CurlControl.begin(config)
-        values = requireNotNull(begin).from
-        fun sourceTexture(source: CurlPageSource) = if (source.nativeValue < 2) 0 else 1
-        texture = sourceTexture(layout.passes.single().source)
-        underlays = layout.underlays.map { sourceTexture(it.source) to it.frame }
-        val owner = host ?: throw EffectResourceUnavailable()
-        try {
-            val front = if (texture == 0) context.current else context.target
-            val background = (front as? PageBackgroundSurface)?.backgroundColor
-            if (
-                background != null &&
-                    android.graphics.Color.alpha(background) > 0 &&
-                    rendering.capture(owner, context)
-            ) {
-                material = IosCurlMaterial.fromBackground(background, options.shadowOpacity)
-                return
-            }
-            if (!snapshots.capture(owner, context)) throw EffectResourceUnavailable()
-            val first = requireNotNull(snapshots.current)
-            val second = requireNotNull(snapshots.target)
-            material =
-                IosCurlMaterial.resolve(
-                    if (texture == 0) context.current else context.target,
-                    if (texture == 0) first else second,
-                    options.shadowOpacity,
-                    background,
-                )
-            val width = first.width
-            val height = first.height
-            rendering.upload(
-                first,
-                second,
-                if (rendering.canAccelerate) snapshots.retainForUpload() else null,
-                context.current.isOpaque && context.target.isOpaque,
-            )
-            snapshots.close()
-            rendering.bindOutput(owner, width, height, viewport.widthPx, viewport.heightPx)
-        } catch (e: OutOfMemoryError) {
+    override fun start(context: PageTurnContext) =
+        trace("iRead.curl.start") {
             clear()
-            throw EffectResourceUnavailable()
-        } catch (e: Throwable) {
-            clear()
-            throw e
-        }
-    }
-
-    override fun update(frame: PageTurnFrame) {
-        val config = config ?: return
-        elapsed = frame.elapsedSeconds
-        if (!automatic) {
-            val density = requireNotNull(context).viewport.density.toDouble()
-            val point =
-                frame.touch?.let { CurlPoint(it.xPx / density, it.yPx / density) } ?: config.initial
-            val target = CurlControl.update(config, point).renderValues()
-            values =
-                if (elapsed < .25)
-                    CurlTiming.interpolate(
-                        requireNotNull(begin).from,
-                        target,
-                        CurlControl.type(config),
-                        false,
-                        elapsed / .25,
-                        .25,
+            rendering.beginPreparation()
+            this.context = context
+            val viewport = context.viewport
+            val density = viewport.density.toDouble()
+            val w = viewport.widthPx / density
+            val h = viewport.heightPx / density
+            val reverse =
+                (context.direction == TurnDirection.Backward) !=
+                    (!context.vertical && viewport.rightToLeft)
+            val binding =
+                if (options.binding == IosCurlBinding.Minimum)
+                    if (context.vertical) CurlBinding.Top else CurlBinding.Left
+                else if (context.vertical) CurlBinding.Bottom else CurlBinding.Right
+            automatic = context.touchOrigin == null
+            val initial =
+                context.touchOrigin?.let { CurlPoint(it.xPx / density, it.yPx / density) }
+                    ?: CurlPoint(
+                        0.0,
+                        0.0,
                     )
-                else target
+            val config =
+                CurlConfig(
+                    w,
+                    h,
+                    initial,
+                    binding,
+                    if (reverse) CurlDirection.Reverse else CurlDirection.Forward,
+                    if (automatic) CurlKind.Automatic else CurlKind.Manual,
+                    false,
+                )
+            this.config = config
+            val layout = CurlLayout.build(config)
+            this.layout = layout
+            begin = CurlControl.begin(config)
+            values = requireNotNull(begin).from
+            fun sourceTexture(source: CurlPageSource) = if (source.nativeValue < 2) 0 else 1
+            texture = sourceTexture(layout.passes.single().source)
+            underlays = layout.underlays.map { sourceTexture(it.source) to it.frame }
+            val owner = host ?: throw EffectResourceUnavailable()
+            try {
+                val front = if (texture == 0) context.current else context.target
+                val background = (front as? PageBackgroundSurface)?.backgroundColor
+                if (
+                    background != null &&
+                        android.graphics.Color.alpha(background) > 0 &&
+                        rendering.capture(owner, context)
+                ) {
+                    material = IosCurlMaterial.fromBackground(background, options.shadowOpacity)
+                    return@trace
+                }
+                if (!trace("iRead.curl.snapshot") { snapshots.capture(owner, context) })
+                    throw EffectResourceUnavailable()
+                val first = requireNotNull(snapshots.current)
+                val second = requireNotNull(snapshots.target)
+                material =
+                    IosCurlMaterial.resolve(
+                        if (texture == 0) context.current else context.target,
+                        if (texture == 0) first else second,
+                        options.shadowOpacity,
+                        background,
+                    )
+                val width = first.width
+                val height = first.height
+                trace("iRead.curl.acceptPages") {
+                    rendering.upload(
+                        first,
+                        second,
+                        if (rendering.canAccelerate) snapshots.retainForUpload() else null,
+                        context.current.isOpaque && context.target.isOpaque,
+                    )
+                }
+                snapshots.close()
+                rendering.bindOutput(owner, width, height, viewport.widthPx, viewport.heightPx)
+            } catch (e: OutOfMemoryError) {
+                clear()
+                throw EffectResourceUnavailable()
+            } catch (e: Throwable) {
+                clear()
+                throw e
+            }
         }
-        render()
-    }
+
+    override fun update(frame: PageTurnFrame) =
+        trace("iRead.curl.update") {
+            val config = config ?: return@trace
+            elapsed = frame.elapsedSeconds
+            if (!automatic) {
+                val density = requireNotNull(context).viewport.density.toDouble()
+                val point =
+                    frame.touch?.let { CurlPoint(it.xPx / density, it.yPx / density) }
+                        ?: config.initial
+                val target = CurlControl.update(config, point).renderValues()
+                values =
+                    if (elapsed < .25)
+                        CurlTiming.interpolate(
+                            requireNotNull(begin).from,
+                            target,
+                            CurlControl.type(config),
+                            false,
+                            elapsed / .25,
+                            .25,
+                        )
+                    else target
+            }
+            render()
+        }
 
     override fun beginSettling(commit: Boolean, velocity: TurnPoint?): Long {
         val config = config ?: return 0

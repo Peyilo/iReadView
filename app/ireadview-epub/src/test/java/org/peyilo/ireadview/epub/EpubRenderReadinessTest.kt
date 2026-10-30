@@ -46,4 +46,20 @@ class EpubRenderReadinessTest {
         assertTrue(waiting.isCancelled)
         readiness.awaitReady()
     }
+    @Test fun cancelledRevisionCannotStopDrawingForItsReplacement() = runTest {
+        val frames = listOf(CompletableDeferred<Unit>(), CompletableDeferred<Unit>())
+        val drawing = mutableListOf<Boolean>()
+        var calls = 0
+        val readiness = EpubRenderReadiness(backgroundScope, drawing::add) { frames[calls++].await() }
+        readiness.changed()
+        readiness.changed()
+        runCurrent()
+        assertEquals(listOf(false, true, false, true), drawing)
+        frames[0].complete(Unit)
+        runCurrent()
+        assertTrue(drawing.last())
+        frames[1].complete(Unit)
+        readiness.awaitReady()
+        assertEquals(listOf(false, true, false, true, false), drawing)
+    }
 }

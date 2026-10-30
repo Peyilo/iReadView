@@ -22,9 +22,9 @@ iOSCurl 可对两张完全不透明且 `isRecorded = true` 的页面使用硬件
 
 `ViewPageTurnEffect` 可提供提前挂载的合成 View，用空闲时间准备 Surface 和着色器。`SnapshotPageTurnEffect.usesPageSnapshots` 是动态就绪状态：首帧尚未被合成器接收时保持正文，接收到本次事务图像后才暂停正文绘制；后端不接管时使用 alpha 隐藏。取消、Surface 丢失及配置变化沿统一事务边界恢复正文。
 
-`ReadVisualHandoff.setSnapshotPlayback` 允许正文后端接管可逆的绘制抑制，避免透明视图仍注册 WebView 绘制回调。默认返回 false，使用 Widget 的 alpha 策略。Widget 在目标页交接前和取消/异常终态恢复绘制；后端不能借此改变位置或销毁正文。EPUB 在覆盖期间跳过正文子树，保留 View 和 DOM；停放页使用空裁剪准备绘制状态，不创建透明离屏图层。
+`ReadVisualHandoff.setSnapshotPlayback` 允许正文后端接管可逆的绘制抑制，避免透明视图仍注册 WebView 绘制回调。默认返回 false，使用 Widget 的 alpha 策略。Widget 在目标页交接前和取消/异常终态恢复绘制；后端不能借此改变位置或销毁正文。EPUB 在覆盖期间跳过正文子树，保留 View 和 DOM。停放页仅在 DOM 视觉栅栏等待期间参与窗口绘制，并通过透明离屏图层隔离像素；就绪后跳过绘制。空裁剪不能可靠隔离旧版 WebView 的绘制回调，曾导致备用页覆盖当前页。
 
-EPUB 分页视口使用 WebView 硬件层缓存，减少父窗口重绘时重复调用 WebView 绘制器；内容失效仍更新图层，CSS 动画继续运行。连续滚动使用默认图层。缓存增加视口大小的 GPU 纹理开销，数量受单页/三页缓存策略约束。软件快照直接绘制 WebView，避开停放硬件层可能为空的框架绘图缓存；正常硬件绘制仍走框架路径。
+EPUB 分页视口使用 WebView 硬件层缓存，减少父窗口重绘时重复调用 WebView 绘制器；内容失效仍更新图层，CSS 动画继续运行。API 29 及以上可缓存当前页与备用页，旧系统只缓存已提交的当前页，避免备用页软件录制与多个硬件层交错时出现过期画面。旧系统的备用页以及所有系统的连续滚动使用默认图层，WebView 仍通过 HWUI 绘制。缓存增加视口大小的 GPU 纹理开销，数量受单页/三页缓存策略约束。软件快照直接绘制 WebView，避开停放硬件层可能为空的框架绘图缓存；正常硬件绘制仍走框架路径。
 
 取消时刷新当前 WebView 的硬件层，使保留候选后恢复的窗口不复用过期图层；刷新位于取消交接边界，不在每次截图后重复执行。软件窗口不额外触发该失效，避免形成重复绘制循环。候选取消的资源归还规则见[分页缓存](page-cache.md)。
 
@@ -40,7 +40,7 @@ EPUB 分页视口使用 WebView 硬件层缓存，减少父窗口重绘时重复
 
 `ViewPageTurnEffect.requiresCanvasRedraw = false` 表示合成器自行触发像素更新；Widget 继续调用 update 和推进时钟，但不重复提交无变化的窗口绘制。动态就绪状态、异常及终态仍可通过 `host.requestRedraw()` 请求窗口更新，避免 TextureView 与 Widget 双重重绘造成 swap 等待。
 
-默认 `IosCurlOutput.Texture` 遵循普通 View 的裁剪、变换和兄弟视图叠放语义。Demo 的固定正文矩形选用 `IosCurlOutput.Surface`：API 26 及以上直接提交缓冲区，省去中间纹理合成；API 21–25 使用 TextureView。直接模式要求真实 Activity 窗口和不透明页面，正文区域内不能叠放需要盖住 Surface 的兄弟 UI，也不能依赖 View 旋转/透明度动画；不满足这些布局条件的宿主应选 Texture。
+默认 `IosCurlOutput.Texture` 遵循普通 View 的裁剪、变换和兄弟视图叠放语义。Demo 的固定正文矩形选用 `IosCurlOutput.Surface`：API 29 及以上直接提交缓冲区，省去中间纹理合成；API 21–28 使用 TextureView。兼容选择集中在渲染适配器，避开 API 28 复测中出现的 SurfaceControl 位置更新崩溃，不改变完整网格或动画时长。直接模式要求真实 Activity 窗口和不透明页面，正文区域内不能叠放需要盖住 Surface 的兄弟 UI，也不能依赖 View 旋转/透明度动画；不满足这些布局条件的宿主应选 Texture。
 
 直接 Surface 保持正文绘制，不将正文 alpha 清零；结束时保留最后一帧，等待恢复后的父窗口完成实际绘制和一像素 GPU 复制，再清空 Surface。该复制只用于交接 fence，不读回整页，也不逐帧执行；已进入复制阶段后忽略排队中的重复窗口回调。异步 epoch 保护取消、重入及 detach，防止上一事务的清屏擦掉下一事务。
 

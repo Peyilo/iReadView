@@ -12,15 +12,26 @@ import org.peyilo.ireadview.spi.selection.ReaderSelectionScrollPolicy
  */
 internal class EpubRenderReadiness(
     private val scope: CoroutineScope,
+    private val onPendingChanged: (Boolean) -> Unit = {},
     private val barrier: suspend () -> Unit
 ) {
     private var pending: Deferred<Unit>? = null
+    private var serial = 0L
     fun changed() {
         clear()
-        pending = scope.async(start = CoroutineStart.UNDISPATCHED) { barrier() }
+        val token = serial
+        onPendingChanged(true)
+        pending = scope.async(start = CoroutineStart.UNDISPATCHED) {
+            try { barrier() }
+            finally { if (token == serial) onPendingChanged(false) }
+        }
     }
     suspend fun awaitReady() { pending?.await() }
-    fun clear() { pending?.cancel(); pending = null }
+    fun clear() {
+        serial++
+        pending?.cancel(); pending = null
+        onPendingChanged(false)
+    }
 }
 
 /** Platform differences stay at the WebView boundary, out of page/navigation code. */

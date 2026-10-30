@@ -41,6 +41,12 @@ class ReaderGestureHandoffTest {
         ActivityScenario.launch(ReaderActivity::class.java).use { scenario ->
             await(scenario) { it.readerState.phase==ReaderPhase.Ready }
             resetTurnConfiguration(scenario)
+            scenario.onActivity {
+                val mode=if(InstrumentationRegistry.getArguments().getString("cacheMode")=="single")ReaderPageCacheMode.SINGLE_PAGE else ReaderPageCacheMode.THREE_PAGE
+                val reader=it.findViewById<ReaderView>(R.id.reader)
+                assertTrue(reader.setPageCacheMode(mode) is ReaderResult.Success)
+                assertEquals(mode,reader.pageCacheMode)
+            }
             var source:EpubReaderBookSource?=null
             request<OpenResult>(scenario) { r,c ->
                 source=EpubReaderBookSource("cancel-pages-${System.nanoTime()}",
@@ -64,6 +70,23 @@ class ReaderGestureHandoffTest {
                         var firstPixels=0
                         fun x(value:Float)=if(forward)value else 1f-value
                         val currentRed=requireNotNull(before).pageNumberHint!!%2==1
+                        val idle=Bitmap.createBitmap(240,320,Bitmap.Config.ARGB_8888)
+                        try {
+                            capture(scenario,rect,idle)
+                            var current=0;var target=0
+                            for(py in 80 until 240)for(px in 15 until 225) {
+                                val color=idle.getPixel(px,py)
+                                val red=Color.red(color)>130 && Color.blue(color)<110
+                                val blue=Color.blue(color)>130 && Color.red(color)<110
+                                if(if(currentRed)red else blue)current++
+                                if(if(currentRed)blue else red)target++
+                            }
+                            if(current<=28000 || target>=500) {
+                                File(InstrumentationRegistry.getInstrumentation().targetContext.filesDir,"idle-screen.png").outputStream().use { idle.compress(Bitmap.CompressFormat.PNG,100,it) }
+                                captureHandoffLayers(scenario,rect)
+                            }
+                            assertTrue("Read-ahead must preserve the idle page: forward=$forward position=$before $current/$target",current>28000 && target<500)
+                        } finally { idle.recycle() }
                         repeat(3) { attempt ->
                             val down=SystemClock.uptimeMillis()
                             pointer(down,MotionEvent.ACTION_DOWN,rect,x(.85f))
@@ -71,6 +94,19 @@ class ReaderGestureHandoffTest {
                             for(step in 1..6) {
                                 SystemClock.sleep(24)
                                 pointer(down,MotionEvent.ACTION_MOVE,rect,x(.85f-.35f*step/6))
+                                if(step<=3 && InstrumentationRegistry.getArguments().getString("verifyFirstFrames")=="true") {
+                                    val snapshot=Bitmap.createBitmap(240,320,Bitmap.Config.ARGB_8888)
+                                    try {
+                                        capture(scenario,rect,snapshot)
+                                        var chromatic=0
+                                        for(py in 80 until 240)for(px in 15 until 225) {
+                                            val color=snapshot.getPixel(px,py)
+                                            if(maxOf(Color.red(color),Color.green(color),Color.blue(color))-minOf(Color.red(color),Color.green(color),Color.blue(color))>24)chromatic++
+                                        }
+                                        if(chromatic<2000)File(InstrumentationRegistry.getInstrumentation().targetContext.filesDir,"first-frame-$forward-$attempt-$step.png").outputStream().use { snapshot.compress(Bitmap.CompressFormat.PNG,100,it) }
+                                        assertTrue("Blank first frame forward=$forward attempt=$attempt step=$step colored=$chromatic",chromatic>=2000)
+                                    } finally { snapshot.recycle() }
+                                }
                             }
                             repeat(2) {
                                 SystemClock.sleep(24)
@@ -111,7 +147,7 @@ class ReaderGestureHandoffTest {
                             }
                             await(scenario) { it.navigationState==ReadNavigationState.Idle }
                             scenario.onActivity { assertEquals("$effect cancellation must preserve position",before,it.findViewById<ReaderView>(R.id.reader).currentPosition) }
-                            if(InstrumentationRegistry.getArguments().getString("output")=="surface") {
+                            run {
                                 SystemClock.sleep(150)
                                 val restored=Bitmap.createBitmap(240,320,Bitmap.Config.ARGB_8888)
                                 try {
@@ -123,6 +159,10 @@ class ReaderGestureHandoffTest {
                                         val blue=Color.blue(color)>130 && Color.red(color)<110
                                         if(if(currentRed)red else blue)current++
                                         if(if(currentRed)blue else red)target++
+                                    }
+                                    if(current<=28000 || target>=500) {
+                                        File(InstrumentationRegistry.getInstrumentation().targetContext.filesDir,"handoff-screen.png").outputStream().use { restored.compress(Bitmap.CompressFormat.PNG,100,it) }
+                                        captureHandoffLayers(scenario,rect)
                                     }
                                     assertTrue("Cancelled surface must reveal restored page: $current/$target",current>28000 && target<500)
                                 } finally { restored.recycle() }
@@ -310,6 +350,31 @@ class ReaderGestureHandoffTest {
             val result=LinkedBlockingQueue<Int>()
             scenario.onActivity { PixelCopy.request(it.window,rect,bitmap,{ status -> result.add(status) },Handler(Looper.getMainLooper())) }
             assertEquals(PixelCopy.SUCCESS,result.poll(5,TimeUnit.SECONDS))
+        }
+    }
+    private fun captureHandoffLayers(scenario:ActivityScenario<ReaderActivity>,rect:Rect) {
+        fun surface(view:View):SurfaceView? {
+            if(view is SurfaceView)return view
+            if(view is ViewGroup)for(i in 0 until view.childCount)surface(view.getChildAt(i))?.let { return it }
+            return null
+        }
+        for(kind in listOf("window","surface")) {
+            val bitmap=Bitmap.createBitmap(240,320,Bitmap.Config.ARGB_8888)
+            val result=LinkedBlockingQueue<Int>()
+            try {
+                scenario.onActivity { activity ->
+                    val done:(Int)->Unit={ result.add(it) }
+                    if(kind=="window")PixelCopy.request(activity.window,rect,bitmap,done,Handler(Looper.getMainLooper()))
+                    else {
+                        val source=surface(activity.findViewById(R.id.reader))
+                        if(source==null)result.add(PixelCopy.ERROR_SOURCE_NO_DATA)
+                        else PixelCopy.request(source,bitmap,done,Handler(Looper.getMainLooper()))
+                    }
+                }
+                val status=result.poll(5,TimeUnit.SECONDS)
+                android.util.Log.i("CancelPages","handoff $kind status=$status center=${Integer.toHexString(bitmap.getPixel(120,160))}")
+                File(InstrumentationRegistry.getInstrumentation().targetContext.filesDir,"handoff-$kind.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG,100,it) }
+            } finally { bitmap.recycle() }
         }
     }
     private fun selectedEffects(defaults: List<String>): List<String> {

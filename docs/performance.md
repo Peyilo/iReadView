@@ -10,9 +10,9 @@ iOSCurl 的 EGL 工作线程只消费最新姿态，跨事务复用上下文、�
 
 普通实时 View 和 EPUB 使用事务独占的像素快照。EPUB 的硬件显示列表可能借用 WebView 子 RenderNode，隐藏或停放正文会改变这些节点，不能作为独立快照。iOSCurl 通过独立读租约上传后归还 CPU 位图；取消、异常和卸载也必须结束租约。默认位图预算为 16MiB，实际尺寸受预算阶梯影响。
 
-完全不透明的独立 `RecordedPageSurface` 可使用按需准备的硬件 Canvas 捕获：主线程回放、生产线程提交、EGL 复制到固定纹理。未就绪、缺少背景元数据、预算或平台能力时使用位图路径。实时 View 和 EPUB 不使用此捕获路径；API 28 的实时 WebView 捕获曾出现目标页缺失，因此不能以独立页面的像素检查替代真实正文交接回归。
+完全不透明的页面可使用按需准备的硬件 Canvas 捕获，EGL 将生产图像复制到事务独占的固定纹理后立即归还生产缓冲。独立 `RecordedPageSurface` 由主线程回放、生产线程提交；实时 View 和 EPUB 仅在 API 29 及以上启用，并在主线程完成提交，防止窗口遍历提前替换子 RenderNode。API 28 及以下的实时页面保留位图路径。未就绪、缺少背景元数据、预算或平台能力时也使用位图路径。
 
-文本与 EPUB 共用[分页缓存](page-cache.md)。完整且有效的取消候选归还缓存，未完成或过期候选释放。EPUB 分页视口使用硬件层，软件快照直接绘制 WebView；取消交接刷新当前层，连续滚动保留默认图层。直接 Surface 保持下方正文，并在恢复后的 Window 绘制及一像素 GPU fence 完成后清空最终图像。
+文本与 EPUB 共用[分页缓存](page-cache.md)。完整且有效的取消候选归还缓存，未完成或过期候选释放。EPUB 分页视口在旧系统只为已提交的当前页启用硬件层，API 29 及以上也缓存备用页；软件快照直接绘制 WebView，连续滚动保留默认图层。直接 Surface 保持下方正文，并在恢复后的 Window 绘制及一像素 GPU fence 完成后清空最终图像。
 
 ## 设备复测
 
@@ -26,7 +26,7 @@ adb shell am instrument -w -r \
   org.peyilo.iread.demo.test/androidx.test.runner.AndroidJUnitRunner
 ```
 
-存在多个设备时用 `adb -s` 指定目标。默认使用 Texture；`-e output surface` 切换直接 Surface。`cacheMode` 可选 `three` 或 `single`，结果记录实际策略。默认每种内容包含 8 次自动翻页、4 组提交/取消手势；必须验证实际阅读位置，未触发翻页的采样无效。不同系统、输出、缓存及内容串行测量，不同时运行构建或其他设备用例。
+存在多个设备时用 `adb -s` 指定目标。默认使用 Texture；`-e output surface` 请求直接 Surface，API 21–28 实际使用 Texture。报告的 `output` 是请求值，`compositorView` 记录实际挂载的合成 View；不能混淆两个后端的窗口测量范围。`cacheMode` 可选 `three` 或 `single`，结果记录实际策略。默认每种内容包含 8 次自动翻页、4 组提交/取消手势；必须验证实际阅读位置，未触发翻页的采样无效。不同系统、输出、缓存及内容串行测量，不同时运行构建或其他设备用例。
 
 报告在 Demo 私有目录 `files/ioscurl-performance.json`。比较时固定书籍、视口、density、动画参数和预算；降低纹理尺寸后的结果不能算原分辨率优化。性能用例使用 64MiB 快照预算容纳两张 1080 × 2424 图像，高于公共默认预算，不能推广为默认配置保证。
 
@@ -47,7 +47,8 @@ python tools/analyze-curl-trace.py curl.trace --output curl-stages.json
 | `uploadToFirstSubmit` | 同一线程从上传开始到其后首个含 present 的 curl 帧返回 |
 | `startupToFirstSubmit` | 跨线程从效果 start 内的准备起点到首个 curl 提交返回，含 UI 捕获和排队 |
 | `cancelledStartup` | 首个提交前已取消或失败的独立样本，不混入成功启动统计 |
-| `canvasCapture/canvasLock/canvasRecord/canvasSubmit/canvasCopy` | 独立录制页面的硬件捕获阶段；实时页面不会产生这些样本 |
+| `start/snapshot/acceptPages/update` | 主线程效果启动、位图捕获、传递页面及姿态更新；不包含此前的正文准备 |
+| `canvasCapture/canvasLock/canvasRecord/canvasSubmit/canvasCopy` | 硬件捕获的记录、生产提交和 EGL 复制；实时来源的提交也会阻塞主线程 |
 | `readPixels/copyPixels/eglRestore` | 位图后端的回读、复制和上下文恢复 |
 
 `startupToFirstSubmit` 不包含此前的候选正文准备，也不代表 GPU 已完成或图像已上屏。缺失终态的异步记录不计入成功样本。只观察 `upload` 或工作线程稳态会漏掉首帧前的主线程耗时。
@@ -62,7 +63,7 @@ python tools/analyze-curl-trace.py curl.trace --output curl-stages.json
 python tools/analyze-method-trace.py curl-method.trace --method nInvokeFunctor --thread main --output curl-method.json
 ```
 
-采样包含误差、等待和调度，仅用于定位调用链；区分驱动等待与计算还需结合原生 RenderThread 采样，不能把采样构建用于最终验收。
+向性能用例传入 `-e profileMethods true` 可生成 `files/ioscurl-method-<format>-<effect>.trace`，仅覆盖手势采样段，报告的 `methodTracing` 标明是否启用。采样包含误差、等待和调度，仅用于定位调用链；区分驱动等待与计算还需结合原生 RenderThread 采样，不能把采样构建用于最终验收。
 
 ## 已验证的性能边界
 
@@ -79,13 +80,36 @@ python tools/analyze-method-trace.py curl-method.trace --method nInvokeFunctor -
 
 独立 GPU 完成等待诊断中，API 28 的 764 帧中位数/P95/最大值为 5.60/7.73/34.52ms，API 36 的 831 帧为 4.12/7.65/36.10ms。这些是动画 GPU 样本，不能与窗口表相加，也不包括全部准备与输入帧。稳态 P95 低于 8ms 不代表首帧或每帧均达标。
 
+使用相同三页缓存、直接 Surface、1080 × 2424 视口、64MiB 预算和原动画参数，API 36 的实时硬件捕获对照如下。每组各内容包含 8 次自动翻页和 4 组提交/取消手势，开启 GPU 柱状图，未开启方法采样：
+
+| 内容 / 手势窗口 P95 | 位图捕获 | 硬件捕获 |
+| --- | ---: | ---: |
+| 普通文本 | 28.65ms | 18.64ms |
+| 重排 EPUB | 38.67ms | 16.06ms |
+| ARM EPUB | 41.63ms | 16.40ms |
+
+49 次启动中，硬件方案有 46 次直接捕获，3 次首次预热使用位图；启动至首次提交的中位数为 32.43 → 33.87ms、P95 为 62.64 → 60.80ms。独立复测中硬件方案的启动 P95 为 66.14ms，EPUB 手势窗口 P95 为 22.13ms，自动翻页窗口 P95 为 38.99ms；改善未覆盖全部阶段。因此窗口输入阶段改善不代表首帧延迟已解决，也未达到完整流程 8ms 的目标。
+
+API 28 在旧直接 Surface 配置下试验同方案，启动至首次提交 P95 从 44.22ms 增至 118.71ms，实时 Canvas 的提交 P95 达 53.71ms，未予启用。该旧配置也不作为当前 Texture 兼容路径的性能结果。不能以把快照工作移出效果 start 的计时范围来宣称启动更快。
+
+API 28 重启专用模拟器后，在相同视口、预算和动画参数下复测当前兼容路径，报告确认实际合成 View 为 Texture：
+
+| 内容 / 窗口 P95 | 自动翻页 | 手势翻页 |
+| --- | ---: | ---: |
+| 普通文本 | 12.74ms | 16.74ms |
+| 重排 EPUB | 81.16ms | 61.75ms |
+| ARM EPUB | 79.88ms | 63.44ms |
+
+同次采样包含 49 次启动和 1270 次 EGL 绘制提交；快照、上传、启动至首次提交的 P95 分别为 7.47、14.98、25.25ms。EGL 帧提交 P95 为 4.06ms，仍不能替代完整窗口或 GPU 完成指标。旧版原始 APK 在重启后的严格空闲页颜色检查中仍失败；修复后的同一检查和多效果取消回归通过。出现系统级 GL 错误、进程崩溃或未实际翻页的采样必须作废。
+
 ## 正确性与验收入口
 
 - `IosCurlGpuDeviceTest` 对两个输出执行装订边、方向、轴向、RTL 和透明度矩阵；复用相同录制对象并改变图片像素，防止错误缓存。另用 `capture=bitmap/live` 验证位图和实时页面边界，以及取消、卸载和线程清理。
 - `ReaderGestureHandoffTest.cancelledEpubDragKeepsBothPagesVisibleOnRetry` 用真实 EPUB 和 PixelCopy 验证前后翻、系统取消、反向复位、立即重试及取消后的正文恢复。传入 `-e output surface -e effect ios_curl` 检查直接 Surface 的完整屏幕合成。
 - `EpubSnapshotRenderingTest` 覆盖插图、固定版式、ARM EPUB 的多列软件快照、真实窗口画面及 CSS 动画；`UnifiedSelectionIntegrationTest` 检查滚动选区同步。
+- `EpubHardwareCaptureTest` 在 API 29 及以上直接调用生产捕获适配器，比较当前页与停放目标页的捕获纹理和公开导航后的实际窗口，并在不同取消时点关闭真实 WebView、检查线程释放。它不替代完整手势交接检查。
 - `IosCurlDemoTest` 检查公开入口、真实手势、多指、RTL、纵向、取消和资源失败；`BitmapRetentionDeviceTest` 检查异步读者结束前不回收图片。
 
-API 28 的直接 Surface 取消交接用例仍可复现恢复后显示目标页，修改前的位图捕获 APK 同样失败；默认 Texture 的同一用例通过。该问题属于未通过的显示边界，不能将独立页面的 GPU 像素矩阵通过写成 EPUB 交接已通过。
+API 28 备用页污染当前窗口的修复包括透明隔离层、按需绘制及当前页独占硬件层缓存，详见[正文渲染](rendering.md)。取消用例对两个输出选项均检查空闲页面及恢复后的正确颜色；`-e verifyFirstFrames true` 额外检查早期手势采样未出现空白。旧系统两个选项实际都走 Texture，不能据此声称直接 Surface 交接通过。纯色用例不能代替富文本像素检查。
 
 画面与手势检查通过后再验收性能，不能放宽像素容差、缩短动画、减少帧数或只选稳态样本。设备测试、性能测量和[编译 CI](building.md)各自报告实际覆盖范围。

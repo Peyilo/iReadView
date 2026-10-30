@@ -225,12 +225,16 @@ class IosCurlGpuDeviceTest {
         var directCaptures = 0
         ActivityScenario.launch(CurlRenderTestActivity::class.java).use { scenario ->
             for (binding in IosCurlBinding.entries) {
-                val direct = InstrumentationRegistry.getArguments().getString("output") == "surface"
+                val requestedSurface =
+                    InstrumentationRegistry.getArguments().getString("output") == "surface"
+                val direct = requestedSurface && android.os.Build.VERSION.SDK_INT >= 29
                 val factory =
                     PageTurnEffects.iosCurl(
                         IosCurlOptions(
                             binding,
-                            output = if (direct) IosCurlOutput.Surface else IosCurlOutput.Texture,
+                            output =
+                                if (requestedSurface) IosCurlOutput.Surface
+                                else IosCurlOutput.Texture,
                         )
                     )
                 val gpu = factory.create()
@@ -264,6 +268,10 @@ class IosCurlGpuDeviceTest {
                     val renderView = (gpu as ViewPageTurnEffect).createRenderView(activity)
                     texture = (renderView as? android.view.ViewGroup)?.getChildAt(0) as? TextureView
                     surface = renderView as? SurfaceView
+                    if (requestedSurface && !direct) {
+                        assertNull("Legacy output must use Window composition", surface)
+                        assertNotNull("Legacy Texture fallback missing", texture)
+                    }
                     root.addView(renderView, FrameLayout.LayoutParams(width, height))
                     activity.stage.addView(root, FrameLayout.LayoutParams(width, height))
                 }
@@ -326,11 +334,14 @@ class IosCurlGpuDeviceTest {
                             val pages = gpuHost.borrows - borrowed
                             val inputs = if (pages == 0) 0 else 2
                             if (
-                                InstrumentationRegistry.getArguments().getString("capture") in
-                                    setOf("bitmap", "live")
+                                InstrumentationRegistry.getArguments().getString("capture") ==
+                                    "bitmap" ||
+                                    (android.os.Build.VERSION.SDK_INT < 29 &&
+                                        InstrumentationRegistry.getArguments()
+                                            .getString("capture") == "live")
                             )
                                 assertEquals(
-                                    "Live and budget-disabled sources keep pixel isolation",
+                                    "Budget-disabled and legacy live sources keep pixel isolation",
                                     2,
                                     inputs,
                                 )
@@ -448,7 +459,11 @@ class IosCurlGpuDeviceTest {
                 }
             }
         }
-        if (InstrumentationRegistry.getArguments().getString("capture") !in setOf("bitmap", "live"))
+        if (
+            InstrumentationRegistry.getArguments().getString("capture") != "bitmap" &&
+                (InstrumentationRegistry.getArguments().getString("capture") != "live" ||
+                    android.os.Build.VERSION.SDK_INT >= 29)
+        )
             assertTrue("GPU capture was never exercised", directCaptures > 0)
     }
 }

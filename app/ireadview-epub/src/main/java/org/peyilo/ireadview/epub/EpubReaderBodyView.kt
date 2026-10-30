@@ -68,7 +68,8 @@ class EpubReaderBodyView internal constructor(context: Context, cache: EpubResou
         }
     }
     private val visualState = EpubVisualState(web)
-    private val renderReadiness = EpubRenderReadiness(scope, visualState::awaitReady)
+    internal var onRenderPendingChanged: ((Boolean) -> Unit)? = null
+    private val renderReadiness = EpubRenderReadiness(scope, { onRenderPendingChanged?.invoke(it) }, visualState::awaitReady)
     private val scrollReport = Runnable {
         if (!released && initialized) scope.launch {
             val epoch = binding
@@ -126,8 +127,7 @@ class EpubReaderBodyView internal constructor(context: Context, cache: EpubResou
         val epoch = binding
         appearance = style.selectionStyle
         clampHandles = mode == ReadingMode.PAGED
-        // Cache the paged viewport; scrolling keeps the direct compositor path.
-        web.setLayerType(if (clampHandles) View.LAYER_TYPE_HARDWARE else View.LAYER_TYPE_NONE, null)
+        updateViewportLayer(isCurrent = false)
         val layers = listOf(style.page.viewportPadding, style.body.contentPadding, style.body.containerPadding)
         val density = resources.displayMetrics.density
         setPaddingRelative((layers.sumOf { it.startDp.toDouble() } * density).toInt(),
@@ -344,6 +344,10 @@ class EpubReaderBodyView internal constructor(context: Context, cache: EpubResou
     }
     /** Restore the live layer after cancellation, while the effect still covers the window. */
     internal fun restoreHardwareLayer() { if (web.isHardwareAccelerated) web.invalidate() }
+    internal fun updateViewportLayer(isCurrent: Boolean) {
+        val cached = clampHandles && (android.os.Build.VERSION.SDK_INT >= 29 || isCurrent)
+        web.setLayerType(if (cached) View.LAYER_TYPE_HARDWARE else View.LAYER_TYPE_NONE, null)
+    }
     override fun dispatchDraw(canvas: Canvas) {
         drawBodyContent(canvas) { target -> super.dispatchDraw(target) }
         val save = canvas.save()

@@ -384,6 +384,7 @@ internal class EpubBookPresentation(private val context: Context, private val so
             throw failure
         }
         init {
+            body.onRenderPendingChanged = { root.setRendering(template.root, it) }
             try { body.configureComponents(host.presentationComponents) }
             catch (failure: Throwable) {
                 try { body.release() } finally { try { template.unbind() } finally { pageLease.close() } }
@@ -414,7 +415,7 @@ internal class EpubBookPresentation(private val context: Context, private val so
             override val heightPx get() = template.root.height
             override val backgroundColor get() = host.style.page.backgroundColor
             override fun draw(canvas: Canvas) {
-                if (recorded?.draw(canvas) != true) template.root.draw(canvas)
+                if (canvas.isHardwareAccelerated || recorded?.draw(canvas) != true) template.root.draw(canvas)
             }
         } }
         fun invalidateSurface() { recording = null }
@@ -455,6 +456,7 @@ internal class EpubBookPresentation(private val context: Context, private val so
                 else SoftwareEpubPageRecording(template.root)
         }
         fun reveal() {
+            body.updateViewportLayer(active === this)
             // The recording references child RenderNodes. A real hierarchy traversal after
             // revealing a parked WebView can replace their display lists; the recording
             // made while parked must not become the next turn's current-page surface.
@@ -462,6 +464,7 @@ internal class EpubBookPresentation(private val context: Context, private val so
             root.reveal(template.root)
         }
         fun park() {
+            body.updateViewportLayer(isCurrent = false)
             annotationJob?.cancel()
             // Keep recordings local to one visibility state, including reverse navigation.
             if (root.isRevealed(template.root)) invalidateSurface()

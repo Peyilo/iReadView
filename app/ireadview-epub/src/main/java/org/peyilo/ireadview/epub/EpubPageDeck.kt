@@ -6,10 +6,9 @@ import android.view.View
 import android.widget.FrameLayout
 
 /**
- * Visibility belongs to the deck, not to WebView's ancestor alpha. Parked documents still record
- * their display lists, allowing Chromium's visual fence to complete while reading. Their pixels are
- * clipped out before GPU composition. Revealing a candidate is reversible until the navigation
- * commits.
+ * Parked documents draw only while their visual fence is pending. A transparent layer isolates
+ * Chromium's drawing from the visible page; an empty clip is insufficient on older WebViews.
+ * Revealing a candidate is reversible until navigation commits.
  */
 internal open class EpubPageDeck(context: Context) : FrameLayout(context) {
     var snapshotPlayback = false
@@ -25,6 +24,12 @@ internal open class EpubPageDeck(context: Context) : FrameLayout(context) {
     }
 
     private val revealed = HashSet<View>()
+    private val rendering = HashSet<View>()
+
+    fun setRendering(page: View, required: Boolean) {
+        val changed = if (required) rendering.add(page) else rendering.remove(page)
+        if (changed) invalidate()
+    }
 
     fun isRevealed(page: View) = page in revealed
 
@@ -41,18 +46,18 @@ internal open class EpubPageDeck(context: Context) : FrameLayout(context) {
 
     override fun onViewRemoved(child: View) {
         revealed.remove(child)
+        rendering.remove(child)
         super.onViewRemoved(child)
     }
 
     override fun drawChild(canvas: Canvas, child: View, drawingTime: Long): Boolean {
         if (child in revealed) return super.drawChild(canvas, child, drawingTime)
-        val saved = canvas.save()
+        if (child !in rendering) return true
+        val saved = canvas.saveLayerAlpha(0f, 0f, width.toFloat(), height.toFloat(), 0)
         try {
-            canvas.clipRect(0, 0, 0, 0)
-            child.draw(canvas)
+            return super.drawChild(canvas, child, drawingTime)
         } finally {
             canvas.restoreToCount(saved)
         }
-        return true
     }
 }

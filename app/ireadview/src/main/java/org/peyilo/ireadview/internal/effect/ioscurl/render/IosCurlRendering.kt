@@ -52,10 +52,10 @@ internal class IosCurlRendering(private val output: IosCurlOutput) : AutoCloseab
     fun capture(host: PageTurnEffectHost, context: PageTurnContext): Boolean {
         val layer = gpuLayer ?: return false
         val budget = (host as? SnapshotBudgetHost)?.snapshotBudgetBytes ?: return false
-        // Live child RenderNodes can change during Window traversal, even before a GPU copy.
         if (
             listOf(context.current, context.target).any {
-                !it.isOpaque || (it as? RecordedPageSurface)?.isRecorded != true
+                !it.isOpaque ||
+                    (Build.VERSION.SDK_INT < 29 && (it as? RecordedPageSurface)?.isRecorded != true)
             }
         )
             return false
@@ -72,7 +72,7 @@ internal class IosCurlRendering(private val output: IosCurlOutput) : AutoCloseab
     }
 
     fun createView(context: Context, invalidate: () -> Unit): View =
-        (if (output == IosCurlOutput.Surface && Build.VERSION.SDK_INT >= 26)
+        (if (output == IosCurlOutput.Surface && Build.VERSION.SDK_INT >= 29)
                 IosCurlSurfaceLayer(context, invalidate)
             else IosCurlGpuLayer(context, invalidate))
             .also { gpuLayer = it }
