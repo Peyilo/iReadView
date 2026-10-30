@@ -37,7 +37,7 @@ ReaderView / BookReadView
 
 `EpubPublication` 对外封装现有 EPUB 容器、OPF、spine、EPUB3 nav / EPUB2 NCX 和资源读取，渲染模块不访问内部解析器。保留资源字节及相对路径。默认归档上限64 MiB、单条目32 MiB、总展开256 MiB、条目10000；不将 ZIP 路径解压到任意文件目录。
 
-`EpubReaderBookSource` 和候选/当前页通过引用租约共享出版物。来源关闭或重载不提前关闭仍在显示的包。候选取消释放 WebView、回调、页面模板和租约。
+`EpubReaderBookSource` 和候选/当前页通过引用租约共享出版物。来源关闭或重载不提前关闭仍在显示的包。取消时，完整且有效的候选归还分页缓存；无效或未完成的候选释放 WebView、回调、页面模板和租约。关闭呈现层释放全部缓存。
 
 ## 自己控制的渲染与交互
 

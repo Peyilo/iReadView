@@ -21,6 +21,46 @@ internal class IosCurlPageTextures : AutoCloseable {
     }
 
     private fun upload(index: Int, bitmap: Bitmap) {
+        bind(index)
+        val next =
+            Storage(
+                bitmap.width,
+                bitmap.height,
+                GLUtils.getInternalFormat(bitmap),
+                GLUtils.getType(bitmap),
+            )
+        trace("iRead.curl.uploadPage") {
+            if (storage[index] == next) {
+                GLUtils.texSubImage2D(GLES20.GL_TEXTURE_2D, 0, 0, 0, bitmap, next.format, next.type)
+            } else {
+                GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0)
+            }
+        }
+        storage[index] = next
+    }
+
+    fun allocate(index: Int, width: Int, height: Int): Int {
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
+        bind(index)
+        val next = Storage(width, height, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE)
+        if (storage[index] != next) {
+            GLES20.glTexImage2D(
+                GLES20.GL_TEXTURE_2D,
+                0,
+                next.format,
+                width,
+                height,
+                0,
+                next.format,
+                next.type,
+                null,
+            )
+            storage[index] = next
+        }
+        return names[index]
+    }
+
+    private fun bind(index: Int) {
         if (names[index] == 0) {
             GLES20.glGenTextures(1, names, index)
             GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, names[index])
@@ -45,21 +85,6 @@ internal class IosCurlPageTextures : AutoCloseable {
                 GLES20.GL_CLAMP_TO_EDGE,
             )
         } else GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, names[index])
-        val next =
-            Storage(
-                bitmap.width,
-                bitmap.height,
-                GLUtils.getInternalFormat(bitmap),
-                GLUtils.getType(bitmap),
-            )
-        trace("iRead.curl.uploadPage") {
-            if (storage[index] == next) {
-                GLUtils.texSubImage2D(GLES20.GL_TEXTURE_2D, 0, 0, 0, bitmap, next.format, next.type)
-            } else {
-                GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0)
-            }
-        }
-        storage[index] = next
     }
 
     override fun close() {

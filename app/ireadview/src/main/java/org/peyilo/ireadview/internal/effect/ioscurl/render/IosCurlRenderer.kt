@@ -10,7 +10,8 @@ import org.peyilo.pagecurl.model.CurlRect
 
 /**
  * EGL raster adapter for the core's 0/3/12 mesh programs. One owner/thread; output is either an
- * Android Surface or the software host's bitmap. Navigation and animation clocks stay in the Widget.
+ * Android Surface or the software host's bitmap. Navigation and animation clocks stay in the
+ * Widget.
  */
 internal class IosCurlRenderer(private val retainContext: Boolean = false) : AutoCloseable {
     private val display = sharedDisplay
@@ -168,6 +169,44 @@ internal class IosCurlRenderer(private val retainContext: Boolean = false) : Aut
         trace("iRead.curl.uploadCheck") { checkGl("texture upload") }
     }
 
+    fun createCanvasCapture(
+        handler: android.os.Handler,
+        width: Int,
+        height: Int,
+        active: () -> Boolean,
+        onReady: () -> Unit,
+        onFailure: (RuntimeException) -> Unit,
+    ): IosCurlCanvasCapture? = withCurrent {
+        if (
+            android.os.Build.VERSION.SDK_INT < 23 ||
+                !GLES20.glGetString(GLES20.GL_EXTENSIONS)
+                    .orEmpty()
+                    .split(' ')
+                    .contains("GL_OES_EGL_image_external")
+        )
+            return@withCurrent null
+        IosCurlCanvasCapture(
+                handler,
+                width,
+                height,
+                textures::allocate,
+                ::restoreAfterCapture,
+                active,
+                onReady,
+                onFailure,
+            )
+            .also { restoreAfterCapture() }
+    }
+
+    private fun restoreAfterCapture() {
+        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0)
+        GLES20.glDisable(GLES20.GL_BLEND)
+        blending = false
+        boundProgram = -1
+        boundTexture = -1
+        vertexBuffer?.restoreBindings()
+    }
+
     fun bindOutput(bitmap: Bitmap) {
         val next =
             EGL14.eglCreatePbufferSurface(
@@ -272,13 +311,33 @@ internal class IosCurlRenderer(private val retainContext: Boolean = false) : Aut
                     frame.height.toFloat(),
                 )
                 trace("iRead.curl.drawBatches") {
-                    val flats = underlays.ifEmpty { listOf(underTexture to CurlRect(0.0, 0.0, logicalWidth.toDouble(), logicalHeight.toDouble())) }
-                    val stream = requireNotNull(vertexBuffer)
-                    stream.prepare(frame.batches, flats, frame.width.toFloat(), frame.height.toFloat())
-                    for ((index, flat) in flats.withIndex()) {
-                        bind(1, flat.first, false); stream.flat(index)
+                    val flats = underlays.ifEmpty {
+                        listOf(
+                            underTexture to
+                                CurlRect(
+                                    0.0,
+                                    0.0,
+                                    logicalWidth.toDouble(),
+                                    logicalHeight.toDouble(),
+                                )
+                        )
                     }
-                    for ((index, batch) in frame.batches.withIndex()) draw(index, batch, turningTexture)
+                    val stream = requireNotNull(vertexBuffer)
+                    stream.prepare(
+                        frame.batches,
+                        flats,
+                        frame.width.toFloat(),
+                        frame.height.toFloat(),
+                    )
+                    for ((index, flat) in flats.withIndex()) {
+                        bind(1, flat.first, false)
+                        stream.flat(index)
+                    }
+                    for ((index, batch) in frame.batches.withIndex()) draw(
+                        index,
+                        batch,
+                        turningTexture,
+                    )
                 }
                 if (windowOutput) {
                     if (presentationTimeNanos != 0L)

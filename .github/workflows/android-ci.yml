@@ -34,11 +34,14 @@ jobs:
       - name: Check documentation
         run: python3 tools/check-docs.py
 
+      - name: Test trace analysis tools
+        run: python3 -m unittest discover -s tools -p 'test_*.py'
+
       - name: Build and test modules
         run: >-
-          ./gradlew --no-daemon --stacktrace --console=plain
+          ./gradlew --no-daemon --continue --stacktrace --console=plain
           verifyArchitectureBoundaries
-          :app:assembleDebug :app:assembleDebugAndroidTest :app:testDebugUnitTest
+          :app:assembleDebug :app:assembleRelease :app:assembleDebugAndroidTest :app:testDebugUnitTest
           :app:ireadview:testDebugUnitTest :app:ireadview-epub:testDebugUnitTest
           :app:ireadview:assembleDebugAndroidTest
           :app:ireadview:bundleReleaseRepository :app:ireadview-epub:bundleReleaseRepository

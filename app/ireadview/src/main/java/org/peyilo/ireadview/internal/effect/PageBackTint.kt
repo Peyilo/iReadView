@@ -6,8 +6,9 @@ import org.peyilo.ireadview.api.effect.*
 
 /** Shared automatic reverse tint. Prefer background-only metadata, never average text into it. */
 internal object PageBackTint {
-    fun resolve(surface: PageSurface, snapshot: Bitmap): Int {
-        (surface as? PageBackgroundSurface)?.backgroundColor?.takeIf { Color.alpha(it) > 0 }
+    fun resolve(surface: PageSurface, snapshot: Bitmap,
+        background: Int? = (surface as? PageBackgroundSurface)?.backgroundColor): Int {
+        background?.takeIf { Color.alpha(it) > 0 }
             ?.let { return it }
         // Custom surfaces without background metadata: dominant RGB bin avoids isolated glyphs.
         val sums = HashMap<Int, LongArray>()

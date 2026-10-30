@@ -85,4 +85,4 @@ reader.setPageFactory(ReaderPageFactories.withDecorations(header = myHeaderFacto
 - Demo不读取/迁移旧单行内容、整行alignment、customPage状态；保留底层字号、边距、高度等外观API。旧排版revision2/3兼容分支移除，当前revision4的其他外观按既有格式读取。
 - NetworkActivity/TextSourceActivity也显式使用模板；完整自定义示例留在CustomContentActivity，Java/效果专门示例继续演示基础SPI。
 
-最近模板及电量修改仅有构建证据，未完成设备显示、点击、旋转、可见性和恢复验收。
+设备回归应覆盖显示、点击、旋转、可见性和恢复；编译通过不代表这些交互已在目标设备验收。

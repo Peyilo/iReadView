@@ -1,7 +1,6 @@
 package org.peyilo.ireadview.internal.effect.ioscurl.render
 
 import android.view.View
-import org.peyilo.ireadview.internal.effect.PageTurnSnapshots
 
 internal interface IosCurlCompositor : AutoCloseable {
     val replacesLiveContent: Boolean
@@ -11,13 +10,11 @@ internal interface IosCurlCompositor : AutoCloseable {
     val ready: Boolean
     val hasFrame: Boolean
 
+    /** Warms optional command capture on demand; false keeps this turn on pixel snapshots. */
+    fun prepareCapture(): Boolean
+
     /** True transfers the read pins; false leaves ownership with the caller. */
-    fun begin(
-        capture: PageTurnSnapshots.Retained,
-        width: Int,
-        height: Int,
-        opaque: Boolean,
-    ): Boolean
+    fun begin(input: IosCurlPageInput): Boolean
 
     fun submit(scene: IosCurlScene)
 

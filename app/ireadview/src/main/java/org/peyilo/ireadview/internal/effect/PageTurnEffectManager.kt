@@ -47,7 +47,8 @@ internal class PageTurnEffectManager(
             catch (error: Exception) { turn.failure = error; turn.gesture?.wake() }
         }
     }
-    private val host = object : HardwarePageTurnEffectHost, OpaqueBitmapHost {
+    private val host = object : HardwarePageTurnEffectHost, OpaqueBitmapHost, SnapshotBudgetHost {
+        override val snapshotBudgetBytes get() = options.bitmapBudgetBytes
         override val hardwareAccelerated get() = this@PageTurnEffectManager.hardwareAccelerated()
         override fun requestRedraw() {
             active?.takeIf { !it.terminal && it.ownsConfiguration() }?.let { turn ->

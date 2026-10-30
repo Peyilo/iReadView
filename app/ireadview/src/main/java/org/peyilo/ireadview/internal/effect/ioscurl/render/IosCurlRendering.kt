@@ -9,18 +9,28 @@ import android.os.Build
 import android.view.View
 import org.peyilo.ireadview.api.effect.BitmapLease
 import org.peyilo.ireadview.api.effect.IosCurlOutput
+import org.peyilo.ireadview.api.effect.PageTurnContext
 import org.peyilo.ireadview.api.effect.PageTurnEffectHost
+import org.peyilo.ireadview.api.effect.RecordedPageSurface
 import org.peyilo.ireadview.internal.effect.EffectResourceUnavailable
 import org.peyilo.ireadview.internal.effect.PageTurnSnapshots
+import org.peyilo.ireadview.internal.effect.SnapshotBudgetHost
 import org.peyilo.pagecurl.mesh.CurlMesh
 
-/** CPU captures/upload happen once; geometry and presentation run on the EGL owner. */
+/** Captures page pixels once; geometry and presentation run on the EGL owner. */
 internal class IosCurlRendering(private val output: IosCurlOutput) : AutoCloseable {
     private var gpuLayer: IosCurlCompositor? = null
     private var bitmapRenderer: IosCurlRenderer? = null
     private val bitmapMesh = CurlMesh()
     private var bitmap: BitmapLease? = null
     private var gpu = false
+    private var firstFrame: IosCurlFirstFrameTrace? = null
+
+    fun beginPreparation() {
+        firstFrame?.cancel()
+        firstFrame = IosCurlFirstFrameTrace()
+    }
+
     private val bounds = RectF()
     private val paint = Paint(Paint.FILTER_BITMAP_FLAG)
     val usesGpu
@@ -39,6 +49,28 @@ internal class IosCurlRendering(private val output: IosCurlOutput) : AutoCloseab
 
     private fun renderer() = bitmapRenderer ?: IosCurlRenderer().also { bitmapRenderer = it }
 
+    fun capture(host: PageTurnEffectHost, context: PageTurnContext): Boolean {
+        val layer = gpuLayer ?: return false
+        val budget = (host as? SnapshotBudgetHost)?.snapshotBudgetBytes ?: return false
+        // Live child RenderNodes can change during Window traversal, even before a GPU copy.
+        if (
+            listOf(context.current, context.target).any {
+                !it.isOpaque || (it as? RecordedPageSurface)?.isRecorded != true
+            }
+        )
+            return false
+        val viewport = context.viewport
+        for (scale in PageTurnSnapshots.SCALES) {
+            val width = maxOf(1, (viewport.widthPx * scale).toInt())
+            val height = maxOf(1, (viewport.heightPx * scale).toInt())
+            if (width.toLong() * height * 8 > budget) continue
+            if (!layer.prepareCapture()) return false
+            gpu = layer.begin(IosCurlPageInput.Canvas(context, width, height, firstFrame))
+            return gpu
+        }
+        return false
+    }
+
     fun createView(context: Context, invalidate: () -> Unit): View =
         (if (output == IosCurlOutput.Surface && Build.VERSION.SDK_INT >= 26)
                 IosCurlSurfaceLayer(context, invalidate)
@@ -54,7 +86,7 @@ internal class IosCurlRendering(private val output: IosCurlOutput) : AutoCloseab
     ) {
         if (retained != null) {
             try {
-                gpu = gpuLayer?.begin(retained, current.width, current.height, opaque) == true
+                gpu = gpuLayer?.begin(IosCurlPageInput.Pixels(retained, opaque, firstFrame)) == true
             } finally {
                 if (!gpu) retained.close()
             }
@@ -85,7 +117,11 @@ internal class IosCurlRendering(private val output: IosCurlOutput) : AutoCloseab
     }
 
     fun render(scene: IosCurlScene) {
-        if (gpu) gpuLayer?.submit(scene) else scene.draw(bitmapMesh, renderer())
+        if (gpu) gpuLayer?.submit(scene)
+        else {
+            scene.draw(bitmapMesh, renderer())
+            firstFrame?.submitted()
+        }
     }
 
     fun draw(canvas: Canvas) {
@@ -105,6 +141,8 @@ internal class IosCurlRendering(private val output: IosCurlOutput) : AutoCloseab
     }
 
     fun end() {
+        firstFrame?.cancel()
+        firstFrame = null
         gpuLayer?.end()
         try {
             bitmapRenderer?.releasePages()

@@ -9,7 +9,6 @@ import android.view.TextureView
 import android.view.View
 import android.widget.FrameLayout
 import org.peyilo.ireadview.internal.effect.EffectResourceUnavailable
-import org.peyilo.ireadview.internal.effect.PageTurnSnapshots
 
 /** Keeps the consumer draining while parked; only current-turn pixels become visible. */
 internal class IosCurlGpuLayer(
@@ -51,23 +50,20 @@ internal class IosCurlGpuLayer(
     override val hasFrame
         get() = active && presented
 
+    override fun prepareCapture() = ready && worker?.prepareCapture() == true
+
     init {
         view.addView(texture, FrameLayout.LayoutParams(-1, -1))
     }
 
-    override fun begin(
-        capture: PageTurnSnapshots.Retained,
-        width: Int,
-        height: Int,
-        opaque: Boolean,
-    ): Boolean {
-        texture.isOpaque = opaque
+    override fun begin(input: IosCurlPageInput): Boolean {
+        texture.isOpaque = input.opaque
         beganAt = System.nanoTime()
-        texture.surfaceTexture?.setDefaultBufferSize(width, height)
+        texture.surfaceTexture?.setDefaultBufferSize(input.width, input.height)
         active = true
         presented = false
         view.invalidate()
-        val accepted = worker?.begin(capture, width, height) == true
+        val accepted = worker?.begin(input) == true
         if (!accepted) active = false
         return accepted
     }

@@ -9,6 +9,10 @@ internal interface OpaqueBitmapHost {
     fun borrowOpaqueBitmap(widthPx: Int, heightPx: Int): BitmapLease?
 }
 
+internal interface SnapshotBudgetHost {
+    val snapshotBudgetBytes: Long
+}
+
 /** Transaction-scoped, display-oriented page images shared by built-in animated effects. */
 internal class PageTurnSnapshots : AutoCloseable {
     private var currentLease: BitmapLease? = null
@@ -93,7 +97,7 @@ internal class PageTurnSnapshots : AutoCloseable {
         }
     }
 
-    private companion object {
+    internal companion object {
         val SCALES = floatArrayOf(1f, .75f, .5f, .25f)
     }
 }

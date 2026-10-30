@@ -129,6 +129,14 @@ internal class IosCurlVertexBuffer : AutoCloseable {
         GLES20.glVertexAttribPointer(2, 4, halfType, false, stride, base + if (packed) 40 else 24)
     }
 
+    fun restoreBindings() {
+        GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, buffers[0])
+        GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, buffers[1])
+        repeat(3) { GLES20.glEnableVertexAttribArray(it) }
+        pointAttributes(0)
+        attributeBase = 0
+    }
+
     private fun appendFlat(rect: CurlRect, textureWidth: Float, textureHeight: Float) {
         fun point(x: Double, y: Double, u: Float, v: Float) {
             val at = vertices.position()

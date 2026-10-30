@@ -8,22 +8,17 @@ import android.view.SurfaceHolder
 import android.view.SurfaceView
 import androidx.annotation.RequiresApi
 import org.peyilo.ireadview.internal.effect.EffectResourceUnavailable
-import org.peyilo.ireadview.internal.effect.PageTurnSnapshots
 
 /**
  * Direct output for fixed reader rectangles. The live page stays beneath the opaque surface, so
  * buffer presentation/clearing cannot expose an empty parent window.
  */
 @RequiresApi(26)
-internal class IosCurlSurfaceLayer(context: Context, private val invalidate: () -> Unit) :
-    IosCurlCompositor, SurfaceHolder.Callback {
-    private data class Capture(
-        val pixels: PageTurnSnapshots.Retained,
-        val width: Int,
-        val height: Int,
-    )
-
-    private var pending: Capture? = null
+internal class IosCurlSurfaceLayer(
+    context: Context,
+    private val invalidate: () -> Unit,
+) : IosCurlCompositor, SurfaceHolder.Callback {
+    private var pending: IosCurlPageInput? = null
     private var scene: IosCurlScene? = null
     private var worker: IosCurlGpuWorker? = null
     private var active = false
@@ -51,20 +46,17 @@ internal class IosCurlSurfaceLayer(context: Context, private val invalidate: () 
     override val hasFrame
         get() = active && worker?.hasFrame == true
 
-    override fun begin(
-        capture: PageTurnSnapshots.Retained,
-        width: Int,
-        height: Int,
-        opaque: Boolean,
-    ): Boolean {
-        if (!ready || !opaque) return false
+    override fun prepareCapture() = ready && worker?.prepareCapture() == true
+
+    override fun begin(input: IosCurlPageInput): Boolean {
+        if (!ready || !input.opaque) return false
         epoch++
         fence.cancel()
-        pending?.pixels?.close()
-        pending = Capture(capture, width, height)
+        pending?.close()
+        pending = input
         active = true
         scene = null
-        view.holder.setFixedSize(width, height)
+        view.holder.setFixedSize(input.width, input.height)
         startPending()
         return true
     }
@@ -73,7 +65,7 @@ internal class IosCurlSurfaceLayer(context: Context, private val invalidate: () 
         val capture = pending ?: return
         val current = worker ?: return
         if (!current.ready || capture.width != width || capture.height != height) return
-        if (!current.begin(capture.pixels, capture.width, capture.height)) return
+        if (!current.begin(capture)) return
         pending = null
         scene?.let(current::submit)
     }
@@ -94,7 +86,7 @@ internal class IosCurlSurfaceLayer(context: Context, private val invalidate: () 
         val finalScene = scene
         active = false
         scene = null
-        pending?.pixels?.close()
+        pending?.close()
         pending = null
         val token = ++epoch
         worker?.end(finalScene)
@@ -164,7 +156,7 @@ internal class IosCurlSurfaceLayer(context: Context, private val invalidate: () 
         active = false
         epoch++
         fence.close()
-        pending?.pixels?.close()
+        pending?.close()
         pending = null
         scene = null
         view.holder.removeCallback(this)

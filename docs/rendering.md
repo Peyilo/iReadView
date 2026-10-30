@@ -16,6 +16,10 @@ GPU 工作线程保留两块纹理存储到 Surface/效果释放，避免每次�
 
 `RecordedPageSurface` 表示可独立于可见层级回放的命令，不保证它引用的 Bitmap 像素不变；软件 Picture 也可能保留可变图片引用。纹理缓存不能只比较录制对象或 View 的身份。需要固定像素的效果仍捕获事务独占的图像，GPU 像素回归覆盖同一表面对象在两轮之间更新图片的情况。
 
+iOSCurl 可对两张完全不透明且 `isRecorded = true` 的页面使用硬件 Canvas 捕获，前提是卷曲正面提供有效背景元数据、内部预算允许且 API/GLES 能力可用。首次请求按需准备捕获资源，本次仍可走位图；不为普通实时 View 或 EPUB 预建这套资源。该路径不依据文件格式选择，也不把实时子 RenderNode 当作独立录制命令。
+
+`IosCurlCanvasCapture` 在主线程回放独立页面命令，由生产线程提交，EGL 线程将两个外部图像各复制到事务拥有的二维纹理，再立即归还生产缓冲区。动画只采样固定的目标纹理；每轮重新捕获，像素变化不依赖对象身份。关闭时先结束录制和生产端，再销毁消费端及 EGL。两张目标图使用现有预算和尺寸阶梯；生产缓冲及驱动分配另占 GPU 内存，位图预算不是进程内存上限。
+
 `ViewPageTurnEffect` 可提供提前挂载的合成 View，用空闲时间准备 Surface 和着色器。`SnapshotPageTurnEffect.usesPageSnapshots` 是动态就绪状态：首帧尚未被合成器接收时保持正文，接收到本次事务图像后才暂停正文绘制；后端不接管时使用 alpha 隐藏。取消、Surface 丢失及配置变化沿统一事务边界恢复正文。
 
 `ReadVisualHandoff.setSnapshotPlayback` 允许正文后端接管可逆的绘制抑制，避免透明视图仍注册 WebView 绘制回调。默认返回 false，使用 Widget 的 alpha 策略。Widget 在目标页交接前和取消/异常终态恢复绘制；后端不能借此改变位置或销毁正文。EPUB 在覆盖期间跳过正文子树，保留 View 和 DOM；停放页使用空裁剪准备绘制状态，不创建透明离屏图层。
@@ -75,7 +79,7 @@ Android 默认使用中性黑色、0.55 不透明度的投影，并将原渐隐�
 - `IosCurlBackgroundDeviceTest` 检查元数据/快照取色、夜间材质、各方向的真实来源及每事务一次取色。
 - `IosCurlBackgroundDeviceTest` 的 GLES 像素检查覆盖白、米色、夜间及纯黑背景，确保阴影只变暗。
 - `SnapshotIsolationDeviceTest` 检查平移效果使用预算内快照、真实合成器变透明后两页仍可见，以及隔离失败时归还部分租约并请求降级。
-- `IosCurlGpuDeviceTest` 对比硬件合成与位图路径的像素，覆盖两个输出、透明/不透明输入、装订边、前后翻、轴向和 RTL；`BitmapRetentionDeviceTest` 检查取消后异步读者结束前不回收位图。
+- `IosCurlGpuDeviceTest` 对比硬件合成与位图路径的像素，覆盖两个输出、透明/不透明输入、装订边、前后翻、轴向和 RTL；`capture=bitmap` 验证关闭捕获预算，`capture=live` 验证实时表面保留位图隔离，另检查捕获中取消、卸载与线程清理。`BitmapRetentionDeviceTest` 检查取消后异步读者结束前不回收位图。
 - `IosCurlDeviceTest` 检查离屏单栏绘制与资源回收；`IosCurlDemoTest` 验证真实设置、手势和事务交接。
 - `EpubSnapshotRenderingTest` 对插图、固定版式和 ARM EPUB 的多列页面逐像素比较软件快照，并比较真实窗口画面；另验证硬件层中的 CSS 动画继续更新。
 - `ReaderTurnPerformanceTest` 和 `ReaderGestureHandoffTest` 的通用进度探针测试平移和 GoogleCurl。iOSCurl 的原版输入/缓动使用其专门测试，不通过会隐藏可选能力的宿主效果包装器。

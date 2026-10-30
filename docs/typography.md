@@ -1,19 +1,19 @@
 # 阅读面板与排版 API
 
-> 当前Demo用六位置模板配置内容，旧单行内容/整行对齐不再作为Demo调用路径；底层ReaderStyles样式API仍保留，见[模板专题](page-chrome.md)。
+Demo 用六位置模板配置页眉页脚，底层 ReaderStyles 样式 API 见[模板专题](page-chrome.md)。
 
 ## Demo 面板
 
-参考旧 ChapListFragment、TypesettingFragment 和 SettingsFragment：
+阅读面板的职责如下：
 
 - ContentsSheet：32dp 顶部圆角、目录标题、400dp RecyclerView，定位当前章节，选择后关闭并导航。TXT 与 EPUB 层级目录统一使用该面板。
 - TypographySheet：可滚动底部面板，原样式的灰色分段项、白色游标、双列数值控件和六区域四向边距；增加字体、页眉/页脚、缩进及行距倍率。
-- ReadingSettingsSheet：原样式的翻页模式与阅读主题分段项，补充 iBook/Google/卷页、减少动态及阅读工具。滚动使用 ReadingMode，与翻页效果区分。
+- ReadingSettingsSheet：翻页模式、阅读主题、iOSCurl/GoogleCurl、减少动态及阅读工具。滚动使用 ReadingMode，与翻页效果区分。
 - ReaderBottomSheets：统一窗口、压暗和底部 inset 策略；ReferenceSliderView / SegmentedChoiceView 为通用视觉控件，ChapterProgressView 添加章节语义。
 
 源码位于 Demo 的 ui/reader/{contents,typography,settings,menu,controls}。Library 不依赖这些控件或 Material。ReaderActivity 管理生命周期、书籍绑定和成功样式的保存；失败时面板重新读取实际样式。
 
-## 原参数与当前 API
+## 排版参数与 API
 
 ### 默认排版
 
@@ -43,7 +43,7 @@ Demo 的统一默认样式由 `res/values/reader_defaults.xml` 的 `ReaderDefaul
 
 Demo偏好保留当前typographyRevision=4的外观数据；旧revision2/3兼容分支已移除。模板六位置/返回按钮使用PageChromeCodec单独保存，不读取旧内容和整行对齐字段。Widget自身通用默认值不由Demo预设改变。
 
-这里对齐参数和字体；旧引擎逐字符布局，新引擎使用 StaticLayout，字体度量、自动换行及分页未声明像素一致。当前Demo页脚使用显式三位置：左章内进度、中时间、右电量；不再靠旧PAGE_PROGRESS_AND_TIME单项内容表达布局。
+原生文本使用 StaticLayout；EPUB 的字体度量、自动换行及分页由 WebView 决定，两者不保证像素一致。Demo 页脚显式配置三个位置：左章内进度、中时间、右电量。
 
 | 参数 | 当前 API | Demo 范围 |
 |---|---|---|

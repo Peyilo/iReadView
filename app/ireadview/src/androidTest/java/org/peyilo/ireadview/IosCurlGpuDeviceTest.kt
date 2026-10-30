@@ -53,14 +53,105 @@ class IosCurlGpuDeviceTest {
         }
     private val pages = HashMap<Pair<Boolean, Boolean>, PageSurface>()
 
-    private class Host : PageTurnEffectHost {
+    @Test
+    fun pendingCaptureCanBeCancelledAndDetachedWhileSwitchingCompositors() {
+        ActivityScenario.launch(CurlRenderTestActivity::class.java).use { scenario ->
+            repeat(72) { index ->
+                val host = Host()
+                val effect =
+                    PageTurnEffects.iosCurl(
+                            IosCurlOptions(
+                                output =
+                                    if (index % 2 == 0) IosCurlOutput.Surface
+                                    else IosCurlOutput.Texture
+                            )
+                        )
+                        .create()
+                lateinit var root: FrameLayout
+                scenario.onActivity { activity ->
+                    root = FrameLayout(activity)
+                    host.invalidate = { root.invalidate() }
+                    effect.attach(host)
+                    root.addView(
+                        (effect as ViewPageTurnEffect).createRenderView(activity),
+                        FrameLayout.LayoutParams(width, height),
+                    )
+                    activity.stage.addView(root, FrameLayout.LayoutParams(width, height))
+                }
+                android.os.SystemClock.sleep(if (index % 3 == 0) 40 else 4)
+                scenario.onActivity {
+                    effect.start(
+                        PageTurnContext(
+                            index.toLong(),
+                            page(false),
+                            page(true),
+                            ReadViewport(width, height, 1f, 1f),
+                            TurnDirection.Forward,
+                            TurnPoint(304f, 110f),
+                        )
+                    )
+                    effect.update(PageTurnFrame(.4f, TurnPhase.Dragging, TurnPoint(140f, 220f), .3))
+                }
+                if (index % 3 == 0) {
+                    // The first turn warms on-demand capture. Cancel a subsequent recording too.
+                    android.os.SystemClock.sleep(80)
+                    scenario.onActivity {
+                        effect.abort(TurnAbortReason.Cancelled)
+                        effect.start(
+                            PageTurnContext(
+                                index.toLong(),
+                                page(false),
+                                page(true),
+                                ReadViewport(width, height, 1f, 1f),
+                                TurnDirection.Forward,
+                                TurnPoint(304f, 110f),
+                            )
+                        )
+                        effect.update(
+                            PageTurnFrame(.4f, TurnPhase.Dragging, TurnPoint(140f, 220f), .3)
+                        )
+                    }
+                }
+                android.os.SystemClock.sleep((index % 4).toLong())
+                scenario.onActivity { activity ->
+                    effect.abort(TurnAbortReason.Cancelled)
+                    effect.detach()
+                    activity.stage.removeView(root)
+                }
+                val deadline = android.os.SystemClock.uptimeMillis() + 5000
+                while (
+                    host.leases.get() != 0 && android.os.SystemClock.uptimeMillis() < deadline
+                ) android.os.SystemClock.sleep(5)
+                assertEquals("Outstanding pins after detach $index", 0, host.leases.get())
+            }
+        }
+        val deadline = android.os.SystemClock.uptimeMillis() + 10000
+        fun workers() =
+            Thread.getAllStackTraces().keys.count {
+                it.isAlive && it.name in setOf("iRead-curl", "iRead-capture")
+            }
+        while (workers() != 0 && android.os.SystemClock.uptimeMillis() < deadline) android.os
+            .SystemClock
+            .sleep(10)
+        assertEquals("Detached EGL workers were retained", 0, workers())
+    }
+
+    private class Host :
+        PageTurnEffectHost, org.peyilo.ireadview.internal.effect.SnapshotBudgetHost {
+        override val snapshotBudgetBytes
+            get() =
+                if (InstrumentationRegistry.getArguments().getString("capture") == "bitmap") 0L
+                else 64L * 1024 * 1024
+
         val leases = AtomicInteger()
         var retains = 0
+        var borrows = 0
         var invalidate: () -> Unit = {}
 
         override fun requestRedraw() = invalidate()
 
         override fun borrowBitmap(widthPx: Int, heightPx: Int): BitmapLease {
+            borrows++
             leases.incrementAndGet()
             val bitmap = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
             val references = AtomicInteger(1)
@@ -97,8 +188,13 @@ class IosCurlGpuDeviceTest {
 
     private fun page(target: Boolean, opaque: Boolean = true) =
         pages.getOrPut(target to opaque) {
-            object : RecordedPageSurface {
-                override val isRecorded = true
+            object : RecordedPageSurface, PageBackgroundSurface {
+                override val isRecorded
+                    get() = InstrumentationRegistry.getArguments().getString("capture") != "live"
+
+                override val backgroundColor
+                    get() = if (target) 0xFF183ECC.toInt() else 0xFFFFD06A.toInt()
+
                 override val isOpaque = opaque
                 override val widthPx = width
                 override val heightPx = height
@@ -126,6 +222,7 @@ class IosCurlGpuDeviceTest {
 
     @Test
     fun hardwareOutputMatchesBitmapForEveryBindingAxisDirectionAndRtl() {
+        var directCaptures = 0
         ActivityScenario.launch(CurlRenderTestActivity::class.java).use { scenario ->
             for (binding in IosCurlBinding.entries) {
                 val direct = InstrumentationRegistry.getArguments().getString("output") == "surface"
@@ -219,16 +316,37 @@ class IosCurlGpuDeviceTest {
                                     ),
                                     vertical,
                                 )
+                            val borrowed = gpuHost.borrows
+                            val retained = gpuHost.retains
                             gpu.start(context)
                             reference.start(context)
                             gpu.update(currentFrame)
                             reference.update(currentFrame)
                             reference.draw(Canvas(expected), currentFrame)
-                            assertEquals(
-                                "GPU input is retained for asynchronous upload",
-                                token.toInt() * 2,
-                                gpuHost.retains,
+                            val pages = gpuHost.borrows - borrowed
+                            val inputs = if (pages == 0) 0 else 2
+                            if (
+                                InstrumentationRegistry.getArguments().getString("capture") in
+                                    setOf("bitmap", "live")
                             )
+                                assertEquals(
+                                    "Live and budget-disabled sources keep pixel isolation",
+                                    2,
+                                    inputs,
+                                )
+                            val output =
+                                if ((gpu as ViewPageTurnEffect).requiresCanvasRedraw) 1 else 0
+                            assertEquals(
+                                "Only CPU fallback owns an output bitmap",
+                                inputs + output,
+                                pages,
+                            )
+                            assertEquals(
+                                "Every CPU input is independently pinned",
+                                inputs,
+                                gpuHost.retains - retained,
+                            )
+                            if (inputs == 0) directCaptures++
                             frame = currentFrame
                             root.invalidate()
                         }
@@ -330,5 +448,7 @@ class IosCurlGpuDeviceTest {
                 }
             }
         }
+        if (InstrumentationRegistry.getArguments().getString("capture") !in setOf("bitmap", "live"))
+            assertTrue("GPU capture was never exercised", directCaptures > 0)
     }
 }

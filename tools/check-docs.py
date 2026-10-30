@@ -17,9 +17,13 @@ def main():
     ).decode("utf-8").split("\0")
     documents = sorted({ROOT / name for name in listing if name.endswith(".md") and (ROOT / name).is_file()})
     errors = []
+    index = (ROOT / "docs" / "README.md").read_text(encoding="utf-8-sig")
+    indexed = {match.group(1).strip("<>").split("#", 1)[0] for match in LINK.finditer(index)}
     for path in documents:
         relative = path.relative_to(ROOT).as_posix()
         if path.parent == ROOT / "docs" and path.name != "README.md":
+            if path.name not in indexed:
+                errors.append(f"{relative}: missing from docs/README.md")
             if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*\.md", path.name):
                 errors.append(f"{relative}: use an unnumbered lower-case topic filename")
         for number, line in enumerate(path.read_text(encoding="utf-8-sig").splitlines(), 1):

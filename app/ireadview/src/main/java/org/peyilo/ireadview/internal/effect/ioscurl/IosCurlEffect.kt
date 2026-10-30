@@ -34,8 +34,12 @@ internal class IosCurlEffect(private val options: IosCurlOptions) :
     private var automatic = false
     private var texture = 0
     private var underlays = emptyList<Pair<Int, CurlRect>>()
-    internal val hasRenderedFrame get() = rendering.hasFrame
-    override val requiresCanvasRedraw get() = !rendering.usesGpu
+    internal val hasRenderedFrame
+        get() = rendering.hasFrame
+
+    override val requiresCanvasRedraw
+        get() = !rendering.usesGpu
+
     override val usesPageSnapshots
         get() = rendering.ready
 
@@ -53,6 +57,7 @@ internal class IosCurlEffect(private val options: IosCurlOptions) :
 
     override fun start(context: PageTurnContext) {
         clear()
+        rendering.beginPreparation()
         this.context = context
         val viewport = context.viewport
         val density = viewport.density.toDouble()
@@ -92,6 +97,16 @@ internal class IosCurlEffect(private val options: IosCurlOptions) :
         underlays = layout.underlays.map { sourceTexture(it.source) to it.frame }
         val owner = host ?: throw EffectResourceUnavailable()
         try {
+            val front = if (texture == 0) context.current else context.target
+            val background = (front as? PageBackgroundSurface)?.backgroundColor
+            if (
+                background != null &&
+                    android.graphics.Color.alpha(background) > 0 &&
+                    rendering.capture(owner, context)
+            ) {
+                material = IosCurlMaterial.fromBackground(background, options.shadowOpacity)
+                return
+            }
             if (!snapshots.capture(owner, context)) throw EffectResourceUnavailable()
             val first = requireNotNull(snapshots.current)
             val second = requireNotNull(snapshots.target)
@@ -100,6 +115,7 @@ internal class IosCurlEffect(private val options: IosCurlOptions) :
                     if (texture == 0) context.current else context.target,
                     if (texture == 0) first else second,
                     options.shadowOpacity,
+                    background,
                 )
             val width = first.width
             val height = first.height

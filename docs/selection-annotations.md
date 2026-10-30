@@ -35,7 +35,7 @@ Demo 的 ReaderSelectionMenus 分享、查看和字数动作调用 reader.getSel
 - 边缘拖动沿统一导航延迟翻页并继续源锚点扩选；滚动复用行不重复生成分页代理手柄。
 - 软换行处平台横向命中可能停在末字前，TextBlockLayoutProvider普通/最近命中共用补充映射：末尾文字方向与段落方向一致时，以最后可命中caret与行边的中点映射到getLineVisibleEnd；RTL反向，混合方向相反尾run仍用平台映射。正文横坐标可到达右边界。
 
-验证范围：同一设备用例同时覆盖文本和 EPUB 的整段长按、代理手柄、缩短范围、边缘翻页后继续扩选且固定端点不变、过期动作拒绝、高亮持久化/恢复/跳转/取消。同一用例还验证了波浪划线、复制清除、重新打开后的注解恢复，以及滚动模式的边缘自动扩选；最新结果见状态文档。该证据不是所有 Unicode、RTL、固定版式或无障碍输入组合的完整验收。
+`UnifiedSelectionIntegrationTest` 覆盖文本和 EPUB 的整段长按、代理手柄、缩短范围、边缘翻页后继续扩选且固定端点不变、过期动作拒绝、高亮持久化/恢复/跳转/取消，以及波浪划线、复制清除、重新打开后的注解恢复和滚动模式的边缘自动扩选。设备执行结果应以对应提交的测试报告为准；这些用例不构成所有 Unicode、RTL、固定版式或无障碍输入组合的完整验收。
 
 ## 紧凑图文菜单
 
@@ -68,7 +68,7 @@ EPUB 持久高亮使用临时 span 包装原始文本切片；包装前保存规
 
 BookReadView提供addAnnotation/updateAnnotation/removeAnnotation、exportAnnotations/replaceAnnotations和类型便利方法；更新不得以同一id偷换类型。AnnotationStore统一处理书籍绑定、全书唯一ID、范围/quote/版本及状态。PendingValidation不等于有效，失效标注不应错误绘制。
 
-ReaderAnnotation目前为sealed，不宣称第三方自定义类型已开放；未来笔记可复用统一生命周期，但当前没有实现。存储/同步由宿主负责。Demo以版本2统一items和类型编码器保存，保留既有标注数据格式迁移；此迁移与已移除的旧页眉页脚偏好兼容不是同一件事。
+ReaderAnnotation 为 sealed，内置类型为书签、高亮和划线。笔记及任意业务元数据由宿主保存，接入方式见[宿主场景](host-scenarios.md)。Demo 以版本 2 的统一 items 和类型编码器保存标注，并保留旧标注数据的格式迁移。
 
 ## 高亮与划线动作
 
@@ -91,4 +91,4 @@ reader.getSelectionActions()?.underline(style)
 
 每条Underline保存完整样式。内置布局以underlineSegments返回逐行/双向离散段，由UnderlinePainter绘制并按片段裁剪，不连过行距或页边；自定义块默认空列表表示不支持，需提供同源几何。笔画粗细、振幅过大可能覆盖字形。
 
-Demo只使用菜单切换及列表查看/跳转/删除；按用户要求不提供线型、颜色、粗细编辑UI，库API保留。
+Demo 提供菜单切换及列表查看、跳转、删除；线型、颜色和粗细通过库 API 配置。

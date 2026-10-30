@@ -12,7 +12,8 @@
 
 ```sh
 python tools/check-docs.py
-./gradlew verifyArchitectureBoundaries :app:assembleDebug :app:assembleDebugAndroidTest
+python -m unittest discover -s tools -p 'test_*.py'
+./gradlew verifyArchitectureBoundaries :app:assembleDebug :app:assembleRelease :app:assembleDebugAndroidTest
 ./gradlew :app:testDebugUnitTest :app:ireadview:testDebugUnitTest :app:ireadview-epub:testDebugUnitTest
 ./gradlew :app:ireadview:assembleDebugAndroidTest :app:ireadview:assembleRelease :app:ireadview-epub:assembleRelease
 ```
@@ -51,8 +52,8 @@ python tools/check-docs.py
 
 ## GitHub Actions
 
-[Android CI](../.github/workflows/android-ci.yml)在每次 push、PR 和手动触发时运行，不过滤分支或文件路径。它安装所需 SDK，检查 Gradle Wrapper，执行文档校验、架构检查、Debug/Release 构建、JVM 测试及 AndroidTest 编译，并用本次生成的 Maven 产物构建两个独立宿主。
+[Android CI](../.github/workflows/android-ci.yml)在每次 push、PR 和手动触发时运行，不过滤分支或文件路径。它安装所需 SDK，检查 Gradle Wrapper，执行文档校验、分析工具测试、架构检查、Demo 与库的 Debug/Release 构建、JVM 测试及 AndroidTest 编译，并用本次生成的 Maven 产物构建两个独立宿主。
 
-任务失败时查看 Actions 的失败步骤和 Gradle `--stacktrace` 输出。工作流始终上传 `build/reports` 与 `build/test-results`，用于定位测试和静态报告。CI 不执行设备测试，也不上传到 Maven Central。
+任务失败时查看 Actions 的失败步骤和 Gradle `--stacktrace` 输出。主构建使用 `--continue` 收集相互独立的失败任务，最终仍以失败退出。工作流始终上传 `build/reports` 与 `build/test-results`，用于定位测试和静态报告。CI 不执行设备测试，也不上传到 Maven Central。
 
 GitHub 只能检查已推送的提交；尚未推送的本地提交需要手动执行相同命令。构建、单元测试、设备回归和性能数据属于不同验证层级。
