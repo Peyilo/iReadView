@@ -51,7 +51,7 @@ class ReaderGestureHandoffTest {
                 request<ReaderResult<ModeChange>>(scenario) { r,c -> r.setReadingMode(ReadingMode.PAGED,c) }
                 for(effect in selectedEffects(listOf("ibook_slide","slide","cover","google_curl","ios_curl"))) {
                     request<NavigationResult<ReadingPosition>>(scenario) { r,c -> r.firstPage(c) }
-                    scenario.onActivity { it.findViewById<ReaderView>(R.id.reader).setPageTurnEffect(PageTurnEffects.fromId(effect)!!) }
+                    scenario.onActivity { it.findViewById<ReaderView>(R.id.reader).setPageTurnEffect(effectFactory(effect)) }
                     for(forward in listOf(true,false)) {
                         SystemClock.sleep(750)
                         val rect=Rect()
@@ -72,9 +72,7 @@ class ReaderGestureHandoffTest {
                             SystemClock.sleep(350)
                             val bitmap=Bitmap.createBitmap(240,320,Bitmap.Config.ARGB_8888)
                             try {
-                                val result=LinkedBlockingQueue<Int>()
-                                scenario.onActivity { PixelCopy.request(it.window,rect,bitmap,{ status -> result.add(status) },Handler(Looper.getMainLooper())) }
-                                assertEquals(PixelCopy.SUCCESS,result.poll(5,TimeUnit.SECONDS))
+                                capture(scenario,rect,bitmap)
                                 var currentPixels=0
                                 var targetPixels=0
                                 for(y in 80 until 240) for(x in 15 until 225) {
@@ -105,6 +103,22 @@ class ReaderGestureHandoffTest {
                             }
                             await(scenario) { it.navigationState==ReadNavigationState.Idle }
                             scenario.onActivity { assertEquals("$effect cancellation must preserve position",before,it.findViewById<ReaderView>(R.id.reader).currentPosition) }
+                            if(InstrumentationRegistry.getArguments().getString("output")=="surface") {
+                                SystemClock.sleep(150)
+                                val restored=Bitmap.createBitmap(240,320,Bitmap.Config.ARGB_8888)
+                                try {
+                                    capture(scenario,rect,restored)
+                                    var current=0;var target=0
+                                    for(y in 80 until 240)for(px in 15 until 225) {
+                                        val color=restored.getPixel(px,y)
+                                        val red=Color.red(color)>130 && Color.blue(color)<110
+                                        val blue=Color.blue(color)>130 && Color.red(color)<110
+                                        if(if(currentRed)red else blue)current++
+                                        if(if(currentRed)blue else red)target++
+                                    }
+                                    assertTrue("Cancelled surface must reveal restored page: $current/$target",current>28000 && target<500)
+                                } finally { restored.recycle() }
+                            }
                             SystemClock.sleep(if(attempt==0) 50 else 750)
                         }
                         val down=SystemClock.uptimeMillis()
@@ -133,7 +147,7 @@ class ReaderGestureHandoffTest {
                 request<ReaderResult<ModeChange>>(scenario) { r,c -> r.setReadingMode(ReadingMode.PAGED,c) }
                 for(effect in selectedEffects(listOf("slide","cover","ibook_slide"))) {
                     request<NavigationResult<ReadingPosition>>(scenario) { r,c -> r.firstPage(c) }
-                    scenario.onActivity { it.findViewById<ReaderView>(R.id.reader).setPageTurnEffect(PageTurnEffects.fromId(effect)!!) }
+                    scenario.onActivity { it.findViewById<ReaderView>(R.id.reader).setPageTurnEffect(effectFactory(effect)) }
                     repeat(6) { turn ->
                         val forward=turn<3
                         SystemClock.sleep(750)
@@ -216,7 +230,7 @@ class ReaderGestureHandoffTest {
                         val rect=Rect()
                         scenario.onActivity { activity ->
                             val reader=activity.findViewById<ReaderView>(R.id.reader)
-                            reader.setPageTurnEffect(watch(PageTurnEffects.fromId(effect)!!,probe))
+                            reader.setPageTurnEffect(watch(effectFactory(effect),probe))
                             reader.setPageTurnOptions(PageTurnOptions(durationMs=240))
                             val body=findBody(reader)!!
                             body.getGlobalVisibleRect(rect)
@@ -273,6 +287,21 @@ class ReaderGestureHandoffTest {
             reader.setPageTurnOptions(PageTurnOptions())
             reader.setInputOptions(ReaderInputOptions())
             reader.layoutDirection=View.LAYOUT_DIRECTION_LTR
+        }
+    }
+    private fun effectFactory(id:String):PageTurnEffectFactory =
+        if(id=="ios_curl" && InstrumentationRegistry.getArguments().getString("output")=="surface")
+            PageTurnEffects.iosCurl(IosCurlOptions(output=IosCurlOutput.Surface))
+        else requireNotNull(PageTurnEffects.fromId(id))
+    private fun capture(scenario:ActivityScenario<ReaderActivity>,rect:Rect,bitmap:Bitmap) {
+        if(InstrumentationRegistry.getArguments().getString("output")=="surface") {
+            val screen=requireNotNull(InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot())
+            try { Canvas(bitmap).drawBitmap(screen,rect,Rect(0,0,bitmap.width,bitmap.height),null) }
+            finally { screen.recycle() }
+        } else {
+            val result=LinkedBlockingQueue<Int>()
+            scenario.onActivity { PixelCopy.request(it.window,rect,bitmap,{ status -> result.add(status) },Handler(Looper.getMainLooper())) }
+            assertEquals(PixelCopy.SUCCESS,result.poll(5,TimeUnit.SECONDS))
         }
     }
     private fun selectedEffects(defaults: List<String>): List<String> {

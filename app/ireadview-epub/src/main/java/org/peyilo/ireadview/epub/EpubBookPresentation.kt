@@ -275,6 +275,10 @@ internal class EpubBookPresentation(private val context: Context, private val so
         override val surface get() = page.surface
         override fun dispose() { if (active !== page) page.close() }
     }
+    override fun setSnapshotPlayback(active: Boolean): Boolean {
+        root.snapshotPlayback = active
+        return true
+    }
     override suspend fun prepareVisualHandoff(candidate: PreparedRead<ReadingPosition>) {
         val page = (candidate as Candidate).page
         page.reveal()
@@ -398,6 +402,7 @@ internal class EpubBookPresentation(private val context: Context, private val so
             // hardware Canvas is possible, but does not make them immutable snapshots:
             // a hidden/parked hierarchy may replace their display lists mid-turn.
             // Effects must capture transaction-owned pixels before hiding live content.
+            override val isOpaque get() = template.root.isOpaque
             override val preferSnapshot get() = true
             override val widthPx get() = template.root.width
             override val heightPx get() = template.root.height

@@ -24,6 +24,7 @@ import org.peyilo.ireadview.api.state.*
 import org.peyilo.ireadview.internal.container.NavigationController
 import org.peyilo.ireadview.internal.releaseReaderResources
 import org.peyilo.ireadview.internal.container.SupersededNavigation
+import org.peyilo.ireadview.internal.effect.PageTurnContentPlayback
 import org.peyilo.ireadview.internal.effect.PageTurnEffectManager
 import org.peyilo.ireadview.internal.effect.PageTurnGesture
 import org.peyilo.ireadview.internal.effect.input.EffectInputSession
@@ -93,6 +94,9 @@ abstract class BaseReadView<L : Any> @JvmOverloads constructor(
                         error
                     )
                 }
+            },
+            mountOverlay = { overlay ->
+                if (overlay.parent == null) addView(overlay, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
             })
     }
     private val effects by effectsDelegate
@@ -420,13 +424,9 @@ abstract class BaseReadView<L : Any> @JvmOverloads constructor(
             override suspend fun show(candidate: PreparedRead<L>): L {
                 currentCoroutineContext().ensureActive()
                 if (isCurrent?.invoke() == false) throw SupersededNavigation()
-                val liveView = content.contentView
-                val liveAlpha = liveView.alpha
-                var suspendedLiveView = false
+                val playback = PageTurnContentPlayback(content.contentView, content as? ReadVisualHandoff<*>)
                 val show: suspend () -> L = {
-                    if (suspendedLiveView) {
-                        liveView.alpha = liveAlpha; suspendedLiveView = false
-                    }
+                    playback.setActive(false)
                     @Suppress("UNCHECKED_CAST")
                     (content as? ReadVisualHandoff<L>)?.prepareVisualHandoff(candidate)
                     currentCoroutineContext().ensureActive()
@@ -445,13 +445,8 @@ abstract class BaseReadView<L : Any> @JvmOverloads constructor(
                                 effects.overlay,
                                 LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
                             )
-                            effects.overlay.bringToFront()
-                            if (snapshotsReady) {
-                                // Alpha keeps external renderer visibility/compositor lifetime
-                                // intact; INVISIBLE stops WebView painting and can flash on resume.
-                                liveView.alpha = 0f
-                                suspendedLiveView = true
-                            }
+                            if (indexOfChild(effects.overlay) != childCount - 1) effects.overlay.bringToFront()
+                            playback.setActive(snapshotsReady)
                         },
                         show,
                         gesture,
@@ -459,7 +454,7 @@ abstract class BaseReadView<L : Any> @JvmOverloads constructor(
                         inputOptions.pagingAxis == PagingAxis.Vertical
                     ) { navigation.reportTransitionState(it) }
                 } finally {
-                    if (suspendedLiveView) liveView.alpha = liveAlpha
+                    playback.setActive(false)
                 }
             }
         }

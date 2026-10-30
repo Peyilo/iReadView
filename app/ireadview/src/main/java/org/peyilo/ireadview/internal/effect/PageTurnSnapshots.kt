@@ -41,6 +41,7 @@ internal class PageTurnSnapshots : AutoCloseable {
                     val canvas = Canvas(bitmap)
                     canvas.scale(bitmap.width.toFloat() / width, bitmap.height.toFloat() / height)
                     surface.draw(canvas)
+                    bitmap.setHasAlpha(!surface.isOpaque)
                     android.util.Log.i(
                         "EpubStage",
                         "capture ${(System.nanoTime() - start) / 1e6}ms"
@@ -56,6 +57,18 @@ internal class PageTurnSnapshots : AutoCloseable {
             }
         }
         return false
+    }
+
+    class Retained(val current: BitmapLease, val target: BitmapLease) : AutoCloseable {
+        override fun close() { try { current.close() } finally { target.close() } }
+    }
+
+    fun retainForUpload(): Retained? {
+        val current = currentLease as? RetainableBitmapLease ?: return null
+        val target = targetLease as? RetainableBitmapLease ?: return null
+        val first = current.retain()
+        return try { Retained(first, target.retain()) }
+        catch (failure: Throwable) { first.close(); throw failure }
     }
 
     override fun close() {

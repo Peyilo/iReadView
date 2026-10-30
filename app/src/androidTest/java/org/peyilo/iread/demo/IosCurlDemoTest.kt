@@ -39,7 +39,7 @@ class IosCurlDemoTest {
             val fallback=mutableListOf<String>()
             scenario.onActivity {
                 val r=it.findViewById<ReaderView>(R.id.reader)
-                r.setPageTurnEffect(PageTurnEffects.iosCurl());r.setPageTurnOptions(PageTurnOptions(bitmapBudgetBytes=32L*1024*1024))
+                r.setPageTurnEffect(org.peyilo.iread.demo.reader.ReaderEffects.iosCurl());r.setPageTurnOptions(PageTurnOptions(bitmapBudgetBytes=32L*1024*1024))
                 r.setInputOptions(ReaderInputOptions())
                 r.addReaderListener(object:ReaderListener {
                     override fun onEffectFallback(view:BookReadView,requestedId:String,appliedId:String,reason:EffectFallbackReason){fallback+="$requestedId:$reason"}

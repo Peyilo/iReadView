@@ -859,6 +859,7 @@ abstract class BookReadView @JvmOverloads constructor(
             FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
         )
         return object : ReadContentAdapter<ReadingPosition>, ReadVisualHandoff<ReadingPosition> {
+            override fun setSnapshotPlayback(active: Boolean) = content.setSnapshotPlayback(active)
             override suspend fun prepareVisualHandoff(candidate: PreparedRead<ReadingPosition>) {
                 if (candidate is ModeCandidate) candidate.owner.prepareVisualHandoff(candidate.prepared)
                 else content.prepareVisualHandoff(candidate)

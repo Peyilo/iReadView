@@ -1,5 +1,7 @@
 package org.peyilo.iread.demo.ui.reader.settings
 
+import org.peyilo.iread.demo.reader.ReaderEffects
+
 import android.app.Activity
 import android.widget.Button
 import android.widget.LinearLayout
@@ -45,7 +47,7 @@ internal class ReadingSettingsSheet(
             PageTurnEffects.none().id -> 0; PageTurnEffects.cover().id -> 1; PageTurnEffects.slide().id -> 2
             PageTurnEffects.iBookSlide().id -> 5; else -> 3
         })
-        curl?.setSelectedIndex(when (id) { PageTurnEffects.iosCurl().id -> 0; PageTurnEffects.googleCurl().id -> 1; else -> -1 })
+        curl?.setSelectedIndex(when (id) { ReaderEffects.iosCurl().id -> 0; PageTurnEffects.googleCurl().id -> 1; else -> -1 })
         themes?.setSelectedIndex(ReaderThemes.indexOf(reader.style))
         motion?.setSelectedIndex(if (reader.pageTurnOptions.reduceMotion) 1 else 0)
         navigation?.setSelectedIndex(if (org.peyilo.iread.demo.reader.ReaderSystemBars.navigationHidden(activity)) 1 else 0)
@@ -69,14 +71,14 @@ internal class ReadingSettingsSheet(
                 0 -> selectEffect(PageTurnEffects.none())
                 1 -> selectEffect(PageTurnEffects.cover())
                 2 -> selectEffect(PageTurnEffects.slide())
-                3 -> selectEffect(PageTurnEffects.iosCurl())
+                3 -> selectEffect(ReaderEffects.iosCurl())
                 4 -> changeMode(ReadingMode.CONTINUOUS_SCROLL, null)
                 5 -> selectEffect(PageTurnEffects.iBookSlide())
             }
         }
         themes = row("阅读主题", ReaderThemes.labels.toList()) { applyStyle(ReaderThemes.apply(it, reader.style)) }
         curl = row("仿真效果", listOf("iOSCurl", "GoogleCurl")) {
-            selectEffect(if (it == 0) PageTurnEffects.iosCurl() else PageTurnEffects.googleCurl())
+            selectEffect(if (it == 0) ReaderEffects.iosCurl() else PageTurnEffects.googleCurl())
         }
         motion = row("动态效果", listOf("正常动画", "减少动态")) { selected ->
             when (val outcome = reader.setPageTurnOptions(reader.pageTurnOptions.copy(reduceMotion = selected == 1))) {

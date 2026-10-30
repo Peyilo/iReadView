@@ -10,6 +10,7 @@ version = providers.gradleProperty("ireadVersion").getOrElse("0.1.0-SNAPSHOT")
 android {
     namespace = "org.peyilo.ireadview"
     compileSdk = 36
+    testOptions { targetSdk = 36 }
 
     defaultConfig {
         minSdk = 21

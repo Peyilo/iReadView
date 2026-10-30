@@ -20,7 +20,7 @@
 | 默认模板 | ReaderPageChrome/Slot、setPageChrome/setPageChromeProvider/refreshPageChrome |
 | 内容/呈现 | BlockLayoutProvider/Layout/Fragment、BookPresentation与受控Host |
 | 可替换组件 | `setPresentationComponents`、`setBookPresentationFactory`；正文绘制、选区renderer/controller与后端工厂，见[扩展API](extensions.md) |
-| 效果 | PageTurnEffectFactory/Effect/Host、PageSurface、PageTurnEffects |
+| 效果 | PageTurnEffectFactory/Effect/Host、PageSurface、PageTurnEffects；可选 ViewPageTurnEffect、SnapshotPageTurnEffect、RetainableBitmapLease，见[扩展API](extensions.md) |
 
 公开包是widget、api、spi、source；internal、编译器桥接和模块后缀方法不因JVM可见而成为支持接口。宿主不装配库内Coordinator、Scope或控制器。
 

@@ -118,7 +118,11 @@ reader.setBookPresentationFactory(BookPresentationFactory { context, mode, sourc
 reader.setPageTurnEffect(MyPageTurnEffectFactory())
 ```
 
-Effect仅消费PageSurface、视口、方向和进度，不识别TXT、EPUB、正文View或选区。start准备视觉资源，update响应Widget提供的拖动/自动进度，draw绘制，finish/abort/detach归还资源；效果不能自行改变阅读位置或读取具体WebView。包装默认效果时如实转发SnapshotPageTurnEffect状态，避免错误隐藏live正文。位图使用Host预算租约，不绕开缓存/资源限制。
+Effect仅消费PageSurface、视口、方向和进度，不识别TXT、EPUB、正文View或选区。start准备视觉资源，update响应Widget提供的拖动/自动进度，draw绘制，finish/abort/detach归还资源；效果不能自行改变阅读位置或读取具体WebView。包装默认效果时如实转发 `SnapshotPageTurnEffect` 的动态就绪状态，避免错误隐藏正文。位图使用 Host 预算租约，不绕开缓存/资源限制。
+
+`ViewPageTurnEffect.createRenderView` 可返回未挂载的合成 View，Widget 提前挂载以准备 Surface，效果在 `detach` 结束资源。空闲时 View 应保持视觉透明。自行提交像素的后端可返回 `requiresCanvasRedraw = false`，停止 Widget 每次 update 后的冗余 Canvas 重绘；默认值 true 保留普通效果行为，异常/交接仍通过 `host.requestRedraw()` 唤醒。异步效果在首帧可见前返回 `usesPageSnapshots = false`，就绪后调用 `host.requestRedraw()` 让 Widget 重新评估；不能在工作线程直接修改正文 View。
+
+`RetainableBitmapLease.retain()` 是可选的异步读能力。只在 Widget 线程、原租约关闭前创建独立句柄；独立句柄可在任意线程幂等关闭。只有所有句柄结束才回池，不能自行回收或写入仍有读者的 Bitmap。不具备此能力的宿主仍可使用同步位图后端。
 
 ## 运行时替换与兼容
 
@@ -133,3 +137,8 @@ Effect仅消费PageSurface、视口、方向和进度，不识别TXT、EPUB、�
 ## 验证
 
 `ReaderExtensionIntegrationTest`对文本/EPUB的分页和滚动注入三个组件工厂及完整后端工厂，同时替换翻页Effect，检查绘制/长按/触摸调用、真实整段选择、运行时恢复默认、不重复loadBook，以及旧renderer/controller的创建与关闭数量相等。其他默认行为由统一选区、缓存、双页可见性、手势/交接与整章分页用例回归。
+
+
+正文呈现可通过 `ReadVisualHandoff.setSnapshotPlayback` 接管快照覆盖期间的绘制抑制。返回 true 表示后端已处理，Widget 不再额外设置 alpha；默认返回 false。调用在主线程，开始/恢复必须可逆且幂等；恢复发生在 `prepareVisualHandoff` 之前或取消/异常清理中，不能改变已提交位置、释放文档或关闭来源。
+
+`PageSurface.isOpaque` 是整页像素保证，默认 false；错误声明会使透明混合失效。iOSCurl 的输出由 `IosCurlOptions.output` 选择：Texture 适合普通 View 布局，Surface 适合 Activity 中没有正文区域重叠 UI 的固定不透明矩形。宿主应按[渲染约束](rendering.md)选择，不能依据单项耗时直接替换所有布局。

@@ -37,6 +37,11 @@ interface PreparedRead<L : Any> {
  * page intact; candidate disposal owns any provisional visibility/resources.
  */
 interface ReadVisualHandoff<L : Any> {
+    /** Optional main-thread draw suppression after snapshots fully cover this content.
+     * Return true when handled; false uses the Widget's alpha policy. Restore drawing
+     * before handoff/commit or cancellation. Do not detach views or change location.
+     */
+    fun setSnapshotPlayback(active: Boolean): Boolean = false
     suspend fun prepareVisualHandoff(candidate: PreparedRead<L>)
 }
 

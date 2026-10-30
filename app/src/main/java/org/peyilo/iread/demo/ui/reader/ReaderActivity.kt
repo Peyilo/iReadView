@@ -142,7 +142,7 @@ class ReaderActivity : Activity() {
         annotationPanel = AnnotationPanel(this, reader, hostScope, { navigationCallback.onComplete(ReaderCompletion.Completed(it)) }, ::addSampleHighlight)
         pageIndexPanel = PageIndexPanel(this, reader, hostScope, { navigationCallback.onComplete(ReaderCompletion.Completed(it)) }, { showMessage(it) })
         readerPreferences = ReaderPreferences(this)
-        savedInstanceState?.getString("demoCustomEffect")?.takeIf { ReaderEffects.isCustom(it) }
+        savedInstanceState?.getString("demoCustomEffect")?.takeIf { ReaderEffects.isHostConfigured(it) }
             ?.let { ReaderEffects.fromId(it) }?.let { reader.setPageTurnEffect(it) }
         val storedSettings = readerPreferences.load(reader.style)
         val coldSettings = if (savedInstanceState == null) storedSettings else null
@@ -274,7 +274,7 @@ class ReaderActivity : Activity() {
                 coldSettings?.let { settings ->
                     settings.input?.let { reader.setInputOptions(it) }
                     settings.turn?.let { reader.setPageTurnOptions(it) }
-                    settings.effectId?.let { ReaderEffects.fromId(it) ?: PageTurnEffects.iosCurl() }
+                    settings.effectId?.let { ReaderEffects.fromId(it) ?: ReaderEffects.iosCurl() }
                         ?.let { reader.setPageTurnEffect(it) }
                     settings.mode?.let { reader.setReadingMode(it) }
                     settings.style?.let { if (reader.applyStyle(it) is ReaderResult.Success) committedStyle = it }
@@ -744,7 +744,7 @@ class ReaderActivity : Activity() {
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
-        reader.pageTurnEffectId.takeIf { ReaderEffects.isCustom(it) }?.let { outState.putString("demoCustomEffect", it) }
+        reader.pageTurnEffectId.takeIf { ReaderEffects.isHostConfigured(it) }?.let { outState.putString("demoCustomEffect", it) }
         outState.putString("pageChrome", PageChromeCodec.encode(pageChrome))
         outState.putBoolean("customSelectionToolbar", customSelectionToolbar)
         outState.putBoolean("customPlaceholder", customPlaceholder)

@@ -1,5 +1,7 @@
 package org.peyilo.iread.demo.ui.effects
 
+import org.peyilo.iread.demo.reader.ReaderEffects
+
 import org.peyilo.iread.demo.R
 import org.peyilo.iread.demo.data.source.ProgressTextBookSource
 import org.peyilo.iread.demo.data.source.TextFiles
@@ -137,12 +139,12 @@ class CurlActivity : Activity() {
                 }
             }
         ))
-        reader.setPageTurnEffect(PageTurnEffects.iosCurl())
+        reader.setPageTurnEffect(ReaderEffects.iosCurl())
         status.text = "iOSCurl：拖动翻页、反向复位、边缘点按；背面取当前纸页镜像与背景色"
         fun button(text: String, action: () -> Unit) = Button(this).apply { this.text = text; setOnClickListener { action() } }
         fun applyCurl() {
             if (!google) {
-                reader.setPageTurnEffect(PageTurnEffects.iosCurl())
+                reader.setPageTurnEffect(ReaderEffects.iosCurl())
                 status.text = "iOSCurl · 背面纸张色采样自正面页面"
                 return
             }

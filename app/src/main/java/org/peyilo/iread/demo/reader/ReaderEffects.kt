@@ -9,9 +9,14 @@ import org.peyilo.ireadview.spi.presentation.ReadViewport
 internal object ReaderEffects {
     val labels = arrayOf("无动画", "滑动", "覆盖", "视差滑动", "iOSCurl", "GoogleCurl", "宿主擦除示例")
     fun factories() = listOf(PageTurnEffects.none(), PageTurnEffects.slide(), PageTurnEffects.cover(), PageTurnEffects.iBookSlide(),
-        PageTurnEffects.iosCurl(), PageTurnEffects.googleCurl(), WipeFactory)
-    fun fromId(id: String): PageTurnEffectFactory? = if (id == WipeFactory.id) WipeFactory else PageTurnEffects.fromId(id)
-    fun isCustom(id: String) = id == WipeFactory.id
+        iosCurl(), PageTurnEffects.googleCurl(), WipeFactory)
+    fun iosCurl(): PageTurnEffectFactory = PageTurnEffects.iosCurl(IosCurlOptions(output = IosCurlOutput.Surface))
+    fun fromId(id: String): PageTurnEffectFactory? = when (id) {
+        "ios_curl" -> iosCurl()
+        WipeFactory.id -> WipeFactory
+        else -> PageTurnEffects.fromId(id)
+    }
+    fun isHostConfigured(id: String) = id == WipeFactory.id || id == "ios_curl"
 
     private object WipeFactory : PageTurnEffectFactory {
         override val id = "demo.wipe"

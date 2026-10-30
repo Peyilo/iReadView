@@ -19,11 +19,12 @@ import org.peyilo.ireadview.spi.presentation.ReadViewport
 
 /** Owns the clock and resource leases; renderers cannot commit a reading position. */
 internal class PageTurnEffectManager(
-    context: Context,
+    private val context: Context,
     private val hardwareAccelerated: () -> Boolean,
     private val fallback: (String, EffectFallbackReason) -> Unit,
     private val captureConfigurationOwnership: () -> (() -> Boolean),
-    private val diagnostic: (ReaderError, Boolean) -> Unit
+    private val diagnostic: (ReaderError, Boolean) -> Unit,
+    private val mountOverlay: (View) -> Unit = {}
 ) {
     var options = PageTurnOptions()
         private set
@@ -39,24 +40,20 @@ internal class PageTurnEffectManager(
     private var active: Turn? = null
     private val pool = ArrayDeque<Bitmap>()
     private var allocatedBytes = 0L
-    val overlay: View = object : View(context) {
-        override fun onDraw(canvas: Canvas) {
-            val turn = active ?: return
-            if (turn.terminal || turn.failure != null) return
-            val save = canvas.save()
-            try {
-                canvas.clipRect(0, 0, width, height); turn.effect.draw(canvas, turn.frame)
-            } catch (error: Exception) {
-                turn.failure = error; turn.gesture?.wake()
-            } finally {
-                canvas.restoreToCount(save)
-            }
+    val overlay = PageTurnEffectOverlay(context) { canvas ->
+        val turn = active
+        if (turn != null && !turn.terminal && turn.failure == null) {
+            try { turn.effect.draw(canvas, turn.frame) }
+            catch (error: Exception) { turn.failure = error; turn.gesture?.wake() }
         }
-    }.apply { visibility = View.GONE; setWillNotDraw(false) }
+    }
     private val host = object : HardwarePageTurnEffectHost {
         override val hardwareAccelerated get() = this@PageTurnEffectManager.hardwareAccelerated()
         override fun requestRedraw() {
-            if (active != null) overlay.invalidate()
+            active?.takeIf { !it.terminal && it.ownsConfiguration() }?.let { turn ->
+                if (turn.visualPolicy != null) turn.synchronizeVisualPolicy()
+                overlay.invalidate()
+            }
         }
 
         override fun borrowBitmap(widthPx: Int, heightPx: Int): BitmapLease? {
@@ -81,8 +78,14 @@ internal class PageTurnEffectManager(
                 allocatedBytes += bitmap.allocationByteCount
             }
             val leased = bitmap
+            leased.setHasAlpha(true)
             leased.eraseColor(0)
-            val lease = Lease(leased, turn)
+            val allocationBytes = leased.allocationByteCount.toLong()
+            val lease = ReferenceCountedBitmapLease(leased, onClosed = { turn.leases.remove(it) }) { released ->
+                if (released.isRecycled) allocatedBytes -= allocationBytes
+                else if (!attached || allocatedBytes > options.bitmapBudgetBytes) recycle(released)
+                else pool.addLast(released)
+            }
             turn.leases.add(lease)
             return lease
         }
@@ -128,6 +131,14 @@ internal class PageTurnEffectManager(
             reason = EffectFallbackReason.AttachFailed
             proposed.attach(host)
             if (!current()) {
+                discard(); return null
+            }
+            val view = (proposed as? ViewPageTurnEffect)?.createRenderView(context)
+            if (!current()) { discard(); return null }
+            overlay.bindRenderView(view)
+            if (view != null) mountOverlay(overlay)
+            if (!current()) {
+                if (overlay.renderView === view) overlay.bindRenderView(null)
                 discard(); return null
             }
             factory = value; effectId = requestedId; effect = proposed
@@ -192,7 +203,7 @@ internal class PageTurnEffectManager(
         if (!supported) {
             degrade(requested, EffectFallbackReason.UnsupportedDirection); return withoutEffect()
         }
-        val turn = Turn(renderer, requested, ++serial, gesture)
+        val turn = Turn(renderer, requested, ++serial, gesture, owner, showOverlay)
         active = turn
         try {
             var failure: Exception? = null
@@ -218,9 +229,9 @@ internal class PageTurnEffectManager(
                 )
                 turn.effect.update(turn.frame)
                 ensureTurnActive(turn)
-                showOverlay((turn.effect as? SnapshotPageTurnEffect)?.usesPageSnapshots == true)
+                turn.synchronizeVisualPolicy()
                 ensureTurnActive(turn)
-                overlay.visibility = View.VISIBLE
+                overlay.turning = true
                 while (gesture != null && gesture.decision == null) {
                     val warming = (turn.effect as? PageTurnDynamics)?.warmingUp == true
                     if (!warming) gesture.awaitChange()
@@ -240,7 +251,7 @@ internal class PageTurnEffectManager(
                         turn.frame = frame
                         turn.effect.update(frame)
                         ensureTurnActive(turn)
-                        overlay.invalidate()
+                        turn.invalidateVisual()
                     }
                 }
                 ensureTurnActive(turn)
@@ -284,7 +295,7 @@ internal class PageTurnEffectManager(
             if (!turn.terminal) terminate(turn, TurnAbortReason.Cancelled)
             turn.leases.toList().forEach { it.close() }
             if (active === turn) {
-                active = null; overlay.visibility = View.GONE
+                active = null; overlay.turning = false
             }
         }
     }
@@ -308,7 +319,7 @@ internal class PageTurnEffectManager(
             turn.frame = PageTurnFrame(to, phase, gesture?.origin)
             turn.effect.update(turn.frame)
             ensureTurnActive(turn)
-            overlay.invalidate()
+            turn.invalidateVisual()
             return
         }
         // A release can arrive before the coalesced last MOVE is rendered.
@@ -320,7 +331,7 @@ internal class PageTurnEffectManager(
             turn.frame = initial
             turn.effect.update(initial)
             ensureTurnActive(turn)
-            overlay.invalidate()
+            turn.invalidateVisual()
         }
         val duration = (dynamics?.beginSettling(to == 1f, gesture?.releaseVelocity)
             ?: (options.durationMs * kotlin.math.abs(to - from)).toLong()).coerceAtLeast(1L)
@@ -350,7 +361,7 @@ internal class PageTurnEffectManager(
                 fraction
             ) else turn.effect.update(turn.frame)
             ensureTurnActive(turn)
-            overlay.invalidate()
+            turn.invalidateVisual()
             if (fraction >= 1f) break
         }
     }
@@ -370,7 +381,7 @@ internal class PageTurnEffectManager(
     fun abort(reason: TurnAbortReason) {
         val turn = active
         // End ownership before plugin callbacks so a nested turn is not cleared afterwards.
-        active = null; overlay.visibility = View.GONE
+        active = null; overlay.turning = false
         turn?.let {
             terminate(turn, reason)
             turn.leases.toList().forEach { it.close() }
@@ -422,6 +433,7 @@ internal class PageTurnEffectManager(
         val wasAttached = attached
         // End ownership before invoking plugin code, including when detach throws.
         attached = false
+        overlay.bindRenderView(null)
         if (replaceWithNone) {
             // Options-only reentry must not leave an already detached renderer selected.
             factory = PageTurnEffects.none(); effectId = "none"; effect = factory.create()
@@ -458,30 +470,26 @@ internal class PageTurnEffectManager(
         allocatedBytes -= bitmap.allocationByteCount; bitmap.recycle()
     }
 
-    private inner class Lease(private val owned: Bitmap, private val turn: Turn) : BitmapLease {
-        private val bytes = owned.allocationByteCount.toLong()
-        private var closed = false
-        override val bitmap
-            get(): Bitmap {
-                check(!closed) { "Bitmap lease has ended" }; return owned
-            }
-
-        override fun close() {
-            if (closed) return
-            closed = true; turn.leases.remove(this)
-            if (owned.isRecycled) allocatedBytes -= bytes
-            else if (allocatedBytes > options.bitmapBudgetBytes) recycle(owned) else pool.addLast(
-                owned
-            )
-        }
-    }
-
     private inner class Turn(
         val effect: PageTurnEffect,
         val effectId: String,
         val token: Long,
-        val gesture: PageTurnGesture?
+        val gesture: PageTurnGesture?,
+        val ownsConfiguration: () -> Boolean,
+        val showOverlay: (Boolean) -> Unit
     ) {
+        fun invalidateVisual() {
+            if ((effect as? ViewPageTurnEffect)?.requiresCanvasRedraw != false) overlay.invalidate()
+        }
+        var visualPolicy: Boolean? = null
+        fun synchronizeVisualPolicy() {
+            val snapshots = (effect as? SnapshotPageTurnEffect)?.usesPageSnapshots == true
+            if (visualPolicy != snapshots) {
+                visualPolicy = snapshots
+                showOverlay(snapshots)
+            }
+        }
+
         private var beganAt = android.os.SystemClock.uptimeMillis()
         fun resetClock() {
             beganAt = android.os.SystemClock.uptimeMillis()
@@ -494,6 +502,6 @@ internal class PageTurnEffectManager(
         var terminal = false
         var failure: Exception? = null
         var frame = PageTurnFrame(0f, TurnPhase.SettlingCommit)
-        val leases = HashSet<Lease>()
+        val leases = HashSet<BitmapLease>()
     }
 }

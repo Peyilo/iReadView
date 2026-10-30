@@ -1,10 +1,14 @@
 package org.peyilo.ireadview.api.effect
 
+import android.content.Context
+import android.view.View
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import org.peyilo.ireadview.spi.presentation.ReadViewport
 
 interface PageSurface {
+    /** True only when draw() covers every pixel with opaque color; false is conservative. */
+    val isOpaque: Boolean get() = false
     val widthPx: Int
     val heightPx: Int
     fun draw(canvas: Canvas)
@@ -23,8 +27,14 @@ interface RecordedPageSurface : PageSurface { val isRecorded: Boolean }
 interface PageBackgroundSurface : PageSurface { val backgroundColor: Int? }
 
 interface BitmapLease : AutoCloseable { val bitmap: Bitmap; override fun close() }
+/** Optional independent read lease for asynchronous consumers. Retain on the Widget
+ * thread before submitting work; the retained handle may close on any thread.
+ * Do not modify/recycle the bitmap while a retained handle is alive.
+ */
+interface RetainableBitmapLease : BitmapLease { fun retain(): BitmapLease }
+
 interface PageTurnEffectHost {
-    /** Invalidates the current visual without advancing the manager's turn frame. */
+    /** Invalidates the visual and rechecks snapshot readiness without advancing its clock. */
     fun requestRedraw()
     /** Transaction-owned lease; null when dimensions/budget cannot be satisfied. */
     fun borrowBitmap(widthPx: Int, heightPx: Int): BitmapLease?
@@ -47,11 +57,24 @@ interface PageTurnEffect {
     /** Releases creation/attachment resources, including a failed or superseded attachment. */
     fun detach()
 }
-/** True only after start has captured everything needed to draw the turn.
- * The Widget may suspend the live content hierarchy until commit/cancel completes.
+/** True only when the complete turn image is ready to replace live content.
+ * The Widget may suspend the live hierarchy until commit/cancel completes.
+ * Asynchronous effects start false and call requestRedraw() when readiness changes.
  * Effects falling back to live surfaces must report false.
  */
 interface SnapshotPageTurnEffect : PageTurnEffect { val usesPageSnapshots: Boolean }
+
+/** Optional compositor view, mounted before the first turn so its surface can warm up.
+ * Return a new, unattached view. The effect owns its resources through detach(); the
+ * Widget owns mounting and clipping. Keep the view visually empty outside a turn.
+ * draw() remains available for software canvases and hosts without this capability.
+ */
+interface ViewPageTurnEffect : PageTurnEffect {
+    /** False when the view schedules its own pixel updates; the Widget still owns time/input. */
+    val requiresCanvasRedraw: Boolean get() = true
+    fun createRenderView(context: Context): View
+}
+
 enum class TurnDirection { Forward, Backward }
 enum class TurnOutcome { Committed, Cancelled }
 enum class TurnAbortReason { Cancelled, Superseded, EffectChanged, Detached, Failed }

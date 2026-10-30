@@ -13,6 +13,7 @@ internal fun viewPageSurface(view: View): PageSurface? {
             node is ViewGroup && (0 until node.childCount).any { unsupported(node.getChildAt(it)) }
     if (unsupported(view) || view.width <= 0 || view.height <= 0) return null
     return object : PageBackgroundSurface {
+        override val isOpaque get() = view.isOpaque
         override val backgroundColor get() = pageBackgroundColor(view)
         override val widthPx get() = view.width
         override val heightPx get() = view.height
