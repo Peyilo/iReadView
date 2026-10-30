@@ -8,6 +8,8 @@
 
 保留动画时长、屏幕尺寸、位图预算、内容和阅读位置一致，分别报告准备阶段与视觉阶段。无动画导航耗时不能当成动画帧率。跨章、首次载入和预加载未完成时的内容成本应单列。
 
+窗口报告同时包含 input、unknown、animation、layout、draw、sync、commands 和 swap。`unattributed` 是同一帧 total 减去公开 CPU 阶段之和，不代表单独测得的 GPU 时间；GPU 指标不参与该减法。诊断时查看同一帧的分项，不能相加各项独立的 P95。首个输入帧按 vsync 关联时可能仍标记为 Idle，整体结果必须保留这些帧。
+
 ## 当前约束
 
 iOSCurl 硬件路径在独占 EGL 的工作线程生成网格、上传纹理并提交图像，主线程只提交最新姿态；没有逐帧 readback。默认 Texture 保留普通 View 语义，Demo 固定正文矩形使用直接 Surface；两种后端的能力边界见[渲染说明](rendering.md)。软件或旧宿主保留离屏位图路径，仍有同步 readback 成本。CPU 几何数值一致不保证 GPU 等待或帧率一致。GoogleCurl 的 Canvas 网格成本依赖网格密度、内容与设备。预算下采样会影响纹理清晰度，不能将减少纹理尺寸后的数据当成原分辨率优化。
@@ -43,11 +45,14 @@ EPUB 的硬件录制持有真实页面的子 RenderNode，能够在硬件 Canvas
 ```sh
 adb shell am instrument -w -r \
   -e class org.peyilo.iread.demo.IosCurlPerformanceTest \
-  -e formats text,epub,arm -e effects ios_curl -e turns 8 \
+  -e formats text,epub,arm -e effects ios_curl -e turns 8 -e gesturePairs 4 \
+  -e rawFrames true \
   org.peyilo.iread.demo.test/androidx.test.runner.AndroidJUnitRunner
 ```
 
 用 `adb -s` 显式指定设备，避免操作其他正在使用的模拟器。测试设备需解锁，并完成首次全屏模式提示。手势注入必须标明触屏来源，并验证完成/取消后的实际位置；没有触发翻页的采样无效。报告写入 Demo 私有目录的 `files/ioscurl-performance.json`。
+
+默认每种内容执行 8 次自动翻页和 4 组提交/取消手势，共 8 次真实拖动。`rawFrames` 可选，启用后保存带 vsync 和导航状态的逐帧数据。性能采样应串行运行，避免并行构建、其他设备用例或采样分析器争用宿主资源。
 
 采集 `atrace --async_start -b 16384 -a org.peyilo.iread.demo gfx view`，测试结束后用 `--async_stop -b 16384 -a org.peyilo.iread.demo -o /data/local/tmp/curl.trace gfx view` 保存并拉取。分析命令：
 
@@ -59,9 +64,21 @@ python tools/analyze-curl-trace.py curl.trace --output curl-stages.json
 
 GPU 柱状图验收可在测试设备上启用 `adb shell setprop debug.hwui.profile visual_bars`，向性能用例添加 `-e captureProfiles true`。用例在每种内容的自动/手势采样后保存 `files/curl-profile-<format>-<kind>.png`，便于对照完整柱状图及参考线。结束后用 `adb shell setprop debug.hwui.profile false` 关闭。截图在采样结束后保存，不把截图压缩时间计入动画指标。
 
+### 主线程等待分析
+
+ART 采样方法跟踪可用于定位主线程的 Java 调用链，使用设备的 `am profile start --sampling` 和 `am profile stop` 采集，再拉取文件分析：
+
+```sh
+python tools/analyze-method-trace.py curl-method.trace --method nInvokeFunctor --thread main --output curl-method.json
+```
+
+工具接受非流式 ART v3 dual-clock 格式，报告采样到的包含子调用的 wall/CPU 时间、祖先栈和溢出标记。采样时间有误差，wall 包含等待和调度；带采样器的数据仅用于定位，不用于最终性能验收。需要区分驱动等待与实际计算时，再结合 RenderThread 原生采样，不能仅凭 Java 方法名称判断瓶颈。
+
 ## 当前优化及验收范围
 
-保留完整网格、原分辨率、原版手势、0.25s begin 和 settle 时间。优化包括工作线程最新姿态邮箱、批次合并上传、独占 EGL 上下文、停止 Widget/合成器重复重绘，以及 EPUB 停放页的空裁剪绘制。没有通过减少帧数、缩短动画、降低网格密度或纹理尺寸取得数据。
+保留完整网格、原分辨率、原版手势、0.25s begin 和 settle 时间。优化包括工作线程最新姿态邮箱、批次合并上传、独占 EGL 上下文、停止 Widget/合成器重复重绘、EPUB 分页视口硬件层缓存及停放页的空裁剪绘制。完全不透明的内部快照跳过重复清零，透明输入和公开租约行为不变；窗口交接避免排队回调重复发起 PixelCopy。没有通过减少帧数、缩短动画、降低网格密度或纹理尺寸取得数据。
+
+分页硬件层避免旧 WebView 在父窗口每次绘制时重复进入绘制器。软件快照直接绘制 WebView，防止框架的软件绘图缓存捕获空硬件层。`EpubSnapshotRenderingTest` 验证三种出版物的多列快照与原软件路径逐像素一致，并检查实际窗口画面和 CSS 动画；连续滚动保持默认图层，选区同步另由 `UnifiedSelectionIntegrationTest` 验证。
 
 1080 × 2424、density 420 的 API 28/36 模拟器，使用文本、同原文 EPUB、ARM EPUB，分别完成 8 次自动前后翻及真实提交/反向取消手势。直接 Surface 的父窗口 FrameMetrics **不包含该 Surface 的 GPU 工作**，柱状图变低不能单独作为验收依据。报告明确标记 `metricsScope`；增加 `-e output surface` 可运行该输出，省略时测默认 Texture。
 
@@ -72,6 +89,19 @@ GPU 柱状图验收可在测试设备上启用 `adb shell setprop debug.hwui.pro
 | API 28 | 764 | 5.60ms | 7.73ms | 34.52ms |
 | API 36 | 831 | 4.12ms | 7.65ms | 36.10ms |
 
-这说明所测设备的动画帧 P95 已低于 8ms，**不表示全部帧或首帧均低于 8ms**。首帧纹理上传、正文准备/交接及系统调度仍有长尾；API 28 的整次纹理上传 P95 为 23.74ms，API 36 为 10.97ms。全流程 8ms 目标尚未全部验收，后续应继续优化资源预备和交接，不以这张表掩盖边界耗时，也不将有限模拟器结果推广为所有设备保证。
+上述独立 GPU 帧样本的 P95 低于 8ms，**不表示全部帧或首帧均低于 8ms**。首帧纹理上传、正文准备/交接及系统调度仍有长尾；该次记录中 API 28 的整次纹理上传 P95 为 23.74ms，API 36 为 10.97ms。
+
+包含分页硬件层缓存及快照池优化的窗口复测，在同尺寸模拟器上启用 GPU 柱状图，串行测量每种内容的 8 次自动翻页和 4 组提交/取消手势，得到：
+
+| API / 内容 | 窗口帧数（自动 / 手势） | 窗口 total P95（自动 / 手势） | 手势 commands P95 | 手势 input P95 |
+| --- | ---: | ---: | ---: | ---: |
+| 28 / 文本 | 29 / 34 | 22.23 / 31.58ms | 9.64ms | 14.93ms |
+| 28 / 同原文 EPUB | 40 / 53 | 109.64 / 99.41ms | 43.23ms | 9.63ms |
+| 28 / ARM EPUB | 46 / 57 | 43.50 / 112.49ms | 45.36ms | 13.93ms |
+| 36 / 文本 | 26 / 33 | 12.06 / 28.84ms | 4.06ms | 15.66ms |
+| 36 / 同原文 EPUB | 41 / 50 | 25.24 / 31.76ms | 7.93ms | 16.55ms |
+| 36 / ARM EPUB | 41 / 49 | 28.04 / 40.02ms | 4.39ms | 14.94ms |
+
+这里是父窗口样本，不能与 GPU 帧表相加，也不包括每一帧直接 Surface 输出。API 28 的命令提交和 unknown delay、两个系统的首个输入帧仍有明显长尾；柱状图也保留高柱。全流程 8ms 目标尚未通过，后续应继续优化资源预备和交接，不以稳态 GPU 数据掩盖边界耗时，也不将有限模拟器结果推广为所有设备保证。
 
 直接 Surface 的完整画面对比覆盖 32 组输入，包含透明回退、装订边、轴向、RTL 和前后方向。对比失败的 Canvas/Mesh 实验路径未进入实现；像素容差没有为性能结果放宽。

@@ -15,6 +15,7 @@ import org.peyilo.ireadview.api.state.*
 import org.peyilo.ireadview.epub.EpubReaderBookSource
 import org.peyilo.ireadview.source.MemoryBookSource
 import org.peyilo.ireadview.spi.body.ReaderBodyView
+import org.peyilo.ireadview.spi.page.*
 import org.peyilo.ireadview.widget.ReaderView
 import java.io.*
 import java.util.concurrent.LinkedBlockingQueue
@@ -23,10 +24,26 @@ import java.util.zip.*
 
 @RunWith(AndroidJUnit4::class)
 class ReaderPageCacheIntegrationTest {
+    private val bindings=java.util.WeakHashMap<View,ReadingPosition?>()
     private val text="Identical page cache ownership and navigation behavior. ".repeat(18)
     @Test fun textAndEpubUseTheSameSwitchableThreePagePolicy() {
         ActivityScenario.launch(ReaderActivity::class.java).use { scenario ->
             await(scenario) { it.readerState.phase==ReaderPhase.Ready }
+            scenario.onActivity {
+                val reader=it.findViewById<ReaderView>(R.id.reader)
+                reader.closeBook()
+                val defaults=ReaderPageFactories.default()
+                reader.setPageFactory(ReaderPageFactory { context ->
+                    val template=defaults.create(context)
+                    object:ReaderPageTemplate by template {
+                        override fun bind(context:ReaderPageContext) {
+                            template.bind(context)
+                            bindings[root]=context.position
+                        }
+                        override fun unbind() {bindings.remove(root);template.unbind()}
+                    }
+                })
+            }
             for(epub in listOf(false,true)) {
                 var owned:AutoCloseable?=null
                 val id="page-cache-$epub-${System.nanoTime()}"
@@ -105,10 +122,14 @@ class ReaderPageCacheIntegrationTest {
     }
     private fun bodies(view:View):List<ReaderBodyView> = if(view is ReaderBodyView)listOf(view)
         else if(view is ViewGroup)(0 until view.childCount).flatMap { bodies(view.getChildAt(it)) } else emptyList()
-    private fun displayed(reader:ReaderView):ReaderBodyView = bodies(reader).single { body ->
-        var view:View?=body;var visible=true
-        while(view!=null && view!==reader) { if(view.visibility!=View.VISIBLE || view.alpha==0f)visible=false;view=view.parent as? View }
-        visible
+    private fun displayed(reader:ReaderView):ReaderBodyView {
+        val current=requireNotNull(reader.currentPosition)
+        return bodies(reader).single { body ->
+            var node:View?=body
+            var bound:ReadingPosition?=null
+            while(node!=null && bound==null) {bound=bindings[node];node=node.parent as? View}
+            bound?.let { it.bookId==current.bookId && it.chapterId==current.chapterId && it.pageNumberHint==current.pageNumberHint }==true
+        }
     }
     private fun await(scenario:ActivityScenario<ReaderActivity>,predicate:(ReaderView)->Boolean) {
         val deadline=SystemClock.uptimeMillis()+20000

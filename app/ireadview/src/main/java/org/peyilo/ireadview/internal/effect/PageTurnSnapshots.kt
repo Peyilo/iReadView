@@ -4,6 +4,11 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import org.peyilo.ireadview.api.effect.*
 
+/** Internal hint for captures that overwrite every pixel; public host leases stay cleared. */
+internal interface OpaqueBitmapHost {
+    fun borrowOpaqueBitmap(widthPx: Int, heightPx: Int): BitmapLease?
+}
+
 /** Transaction-scoped, display-oriented page images shared by built-in animated effects. */
 internal class PageTurnSnapshots : AutoCloseable {
     private var currentLease: BitmapLease? = null
@@ -18,21 +23,26 @@ internal class PageTurnSnapshots : AutoCloseable {
         close()
         val width = context.viewport.widthPx
         val height = context.viewport.heightPx
+        val forward = context.direction == TurnDirection.Forward
+        val firstSurface = if (forward) context.current else context.target
+        val secondSurface = if (forward) context.target else context.current
+        fun borrow(surface: PageSurface, w: Int, h: Int): BitmapLease? =
+            if (surface.isOpaque && host is OpaqueBitmapHost) host.borrowOpaqueBitmap(w, h)
+            else host.borrowBitmap(w, h)
         for (scale in SCALES) {
             if (fullResolutionOnly && scale != 1f) break
-            val first = host.borrowBitmap(
+            val first = borrow(firstSurface,
                 maxOf(1, (width * scale).toInt()),
                 maxOf(1, (height * scale).toInt())
             ) ?: continue
             val second = try {
-                host.borrowBitmap(first.bitmap.width, first.bitmap.height)
+                borrow(secondSurface, first.bitmap.width, first.bitmap.height)
             } catch (failure: Exception) {
                 first.close(); throw failure
             }
             if (second == null) {
                 first.close(); continue
             }
-            val forward = context.direction == TurnDirection.Forward
             currentLease = if (forward) first else second
             targetLease = if (forward) second else first
             try {
@@ -48,8 +58,8 @@ internal class PageTurnSnapshots : AutoCloseable {
                     )
                 }
                 // Preserve the curl capture order: turning sheet, then exposed page.
-                capture(if (forward) context.current else context.target, first.bitmap)
-                capture(if (forward) context.target else context.current, second.bitmap)
+                capture(firstSurface, first.bitmap)
+                capture(secondSurface, second.bitmap)
                 return true
             } catch (failure: Exception) {
                 close()

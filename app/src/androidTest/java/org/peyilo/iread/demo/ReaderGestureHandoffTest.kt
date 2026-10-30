@@ -67,7 +67,15 @@ class ReaderGestureHandoffTest {
                         repeat(3) { attempt ->
                             val down=SystemClock.uptimeMillis()
                             pointer(down,MotionEvent.ACTION_DOWN,rect,x(.85f))
-                            pointer(down,MotionEvent.ACTION_MOVE,rect,.5f)
+                            // A real trajectory avoids input resampling an instantaneous half-page jump.
+                            for(step in 1..6) {
+                                SystemClock.sleep(24)
+                                pointer(down,MotionEvent.ACTION_MOVE,rect,x(.85f-.35f*step/6))
+                            }
+                            repeat(2) {
+                                SystemClock.sleep(24)
+                                pointer(down,MotionEvent.ACTION_MOVE,rect,.5f)
+                            }
                             await(scenario) { it.navigationState==ReadNavigationState.Dragging }
                             SystemClock.sleep(350)
                             val bitmap=Bitmap.createBitmap(240,320,Bitmap.Config.ARGB_8888)

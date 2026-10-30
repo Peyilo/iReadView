@@ -59,6 +59,8 @@ class IosCurlPerformanceTest {
     private val metrics =
         linkedMapOf(
                 "frame" to FrameMetrics.TOTAL_DURATION,
+                "unknown" to FrameMetrics.UNKNOWN_DELAY_DURATION,
+                "input" to FrameMetrics.INPUT_HANDLING_DURATION,
                 "draw" to FrameMetrics.DRAW_DURATION,
                 "layout" to FrameMetrics.LAYOUT_MEASURE_DURATION,
                 "animation" to FrameMetrics.ANIMATION_DURATION,
@@ -82,6 +84,8 @@ class IosCurlPerformanceTest {
         val formats = arguments.getString("formats", "text,epub,arm")!!.split(',')
         val effects = arguments.getString("effects", "ios_curl")!!.split(',')
         val turns = arguments.getString("turns", "8")!!.toInt()
+        val gesturePairs = arguments.getString("gesturePairs", "4")!!.toInt()
+        require(turns > 0 && gesturePairs > 0)
         val rows = JSONArray()
         ActivityScenario.launch(ReaderActivity::class.java).use { scenario ->
             await(scenario) { it.readerState.phase == ReaderPhase.Ready }
@@ -89,12 +93,18 @@ class IosCurlPerformanceTest {
             val listener = Window.OnFrameMetricsAvailableListener { _, frame, _ ->
                 sample?.let { active ->
                     if (frame.getMetric(FrameMetrics.INTENDED_VSYNC_TIMESTAMP) >= active.started) {
+                        val stages = metrics.mapValues { (_, id) -> frame.getMetric(id) / 1e6 }
+                        val accounted =
+                            stages.filterKeys { it != "frame" && it != "gpu" }.values.sum()
                         active.values.add(
-                            metrics.mapValues { (_, id) -> frame.getMetric(id) / 1e6 } +
-                                ("vsyncNs" to
-                                    frame
-                                        .getMetric(FrameMetrics.INTENDED_VSYNC_TIMESTAMP)
-                                        .toDouble())
+                            stages +
+                                mapOf(
+                                    "unattributed" to (stages.getValue("frame") - accounted),
+                                    "vsyncNs" to
+                                        frame
+                                            .getMetric(FrameMetrics.INTENDED_VSYNC_TIMESTAMP)
+                                            .toDouble(),
+                                )
                         )
                     }
                 }
@@ -280,15 +290,19 @@ class IosCurlPerformanceTest {
                             }
                             report(rows, format, effect, "automatic", samples)
                             val gestures = mutableListOf<Sample>()
-                            for (commit in listOf(true, false)) {
-                                val active = Sample()
-                                sample = active
-                                swipe(scenario, commit)
-                                await(scenario) { it.navigationState == ReadNavigationState.Idle }
-                                active.elapsed = (System.nanoTime() - active.started) / 1e6
-                                SystemClock.sleep(120)
-                                sample = null
-                                gestures += active
+                            repeat(gesturePairs) {
+                                for (commit in listOf(true, false)) {
+                                    val active = Sample()
+                                    sample = active
+                                    swipe(scenario, commit)
+                                    await(scenario) {
+                                        it.navigationState == ReadNavigationState.Idle
+                                    }
+                                    active.elapsed = (System.nanoTime() - active.started) / 1e6
+                                    SystemClock.sleep(120)
+                                    sample = null
+                                    gestures += active
+                                }
                             }
                             report(rows, format, effect, "gesture", gestures)
                             assertTrue("Unexpected fallback: $fallbacks", fallbacks.isEmpty())
@@ -304,7 +318,10 @@ class IosCurlPerformanceTest {
                             JSONObject()
                                 .put("api", Build.VERSION.SDK_INT)
                                 .put("output", arguments.getString("output", "texture"))
-                                .put("metricsScope", "parent-window; direct Surface GPU work requires separate measurement")
+                                .put(
+                                    "metricsScope",
+                                    "parent-window; direct Surface GPU work requires separate measurement",
+                                )
                                 .put("rows", rows)
                                 .toString(2)
                         )
@@ -347,7 +364,7 @@ class IosCurlPerformanceTest {
                 .put("frames", frames.size)
                 .put("totalMedianMs", percentile(samples.map { it.elapsed }, .5))
                 .put("coldTotalMs", samples.first().elapsed)
-        for (metric in metrics.keys) for ((label, quantile) in
+        for (metric in metrics.keys + "unattributed") for ((label, quantile) in
             listOf("Median" to .5, "P95" to .95, "P99" to .99)) {
             row.put("${metric}${label}Ms", percentile(frames.map { it.getValue(metric) }, quantile))
         }
@@ -365,7 +382,7 @@ class IosCurlPerformanceTest {
         for (phase in ReadNavigationState.entries) {
             val selected = frames.filter { it["phase"] == phase.ordinal.toDouble() }
             val values = JSONObject().put("frames", selected.size)
-            for (metric in metrics.keys) for ((label, q) in
+            for (metric in metrics.keys + "unattributed") for ((label, q) in
                 listOf("Median" to .5, "P95" to .95)) values.put(
                 "${metric}${label}Ms",
                 percentile(selected.map { it.getValue(metric) }, q),
@@ -373,6 +390,8 @@ class IosCurlPerformanceTest {
             byPhase.put(phase.name, values)
         }
         row.put("byNavigationState", byPhase)
+        if (arguments.getString("rawFrames") == "true")
+            row.put("frameSamples", JSONArray(frames.map { JSONObject(it) }))
         rows.put(row)
         Log.i("IosCurlPerf", row.toString())
         if (arguments.getString("captureProfiles") == "true") {

@@ -45,9 +45,9 @@ ReaderView / BookReadView
 - HTML/CSS、图片、SVG图片、字体通过私有合成 HTTPS 来源读取包内资源；不允许 WebView 访问文件或远程网页。正文脚本、frame、表单等不执行；没有 Android JavaScript 对象桥。宿主用 evaluateJavascript 调用自己的排版脚本。[WebView 资源拦截 API](https://developer.android.com/reference/android/webkit/WebViewClient#shouldInterceptRequest(android.webkit.WebView,%20android.webkit.WebResourceRequest)) 是底层资源边界。
 - 重排模式采用 CSS 分栏。候选正文在隐藏模板中完成测量和定位，提供 PageSurface；iReadView 决定动画、提交和取消。滚动模式回报可见文档位置；章节前后导航复用相同导航入口。
 - 正文准备、动画和显示交接遵循[翻页性能与交接](performance.md)的所有权约束。EPUB 在隐藏正文前提供事务独占的像素快照，不将仍引用 WebView 子节点的硬件显示列表作为不可变快照。准备期间复用已完成的视觉栅栏，旧系统的软件录制在空闲阶段完成；失败时通过统一资源降级处理。
-- 分页模式最多保留三份正文：当前页与两份备用页，利用阅读空闲准备后续页，导航/动画期间暂停预加载。章内复用已加载文档，仅移动分栏位置，准备候选时不滚动当前正文。取消可保留有效备用页，未完成绑定的正文须重新绑定；关闭呈现层释放全部正文。换章、内容版本、视口或样式变化后不能复用过期布局。未改变的批注不重复拆分/包裹 DOM，划线几何随页面更新。
-- 文本与EPUB现在共用[缓存策略及调度SPI](page-cache.md)，宿主可调用 `setPageCacheMode(SINGLE_PAGE/THREE_PAGE)`；EPUB不再单独硬编码备用页容量。默认三页，单页模式只保留当前页及导航过程中暂存的候选页。
-- WebView 禁用宽视口启发式，并固定 viewport 的最小/最大缩放。只设置 initial/maximum-scale 仍可能让宽内容触发自动缩小，导致 innerWidth 膨胀、滚动提前到达上限（ARM 第一章曾卡在99/102页）。分栏页码按最近列计算，容纳 CSS 小数宽度与实际滚动位置的舍入差。候选截图前等待 WebView 显示列表更新，API21/22 使用帧回调兼容路径。
+- 分页模式最多保留三份正文：当前页与两份备用页，利用阅读空闲准备后续页，导航/动画期间暂停预加载。章内复用已加载文档，仅移动分栏位置，准备候选时不滚动当前正文。取消释放事务拥有的候选页；未被取用的有效备用页仍归缓存所有。关闭呈现层释放全部正文。换章、内容版本、视口或样式变化后不能复用过期布局。未改变的批注不重复拆分/包裹 DOM，划线几何随页面更新。
+- 文本与 EPUB 共用[缓存策略及调度 SPI](page-cache.md)，宿主可调用 `setPageCacheMode(SINGLE_PAGE/THREE_PAGE)`。默认三页，单页模式只保留当前页及导航过程中暂存的候选页。
+- WebView 禁用宽视口启发式，并固定 viewport 的最小/最大缩放，防止宽内容触发自动缩小、扩大 innerWidth 并使滚动提前到达上限。分栏页码按最近列计算，容纳 CSS 小数宽度与实际滚动位置的舍入差。候选截图前等待 WebView 显示列表更新，API21/22 使用帧回调兼容路径。
 - DOM 定位使用版本化 `documentLocator`：href、正文节点路径/UTF-16偏移、progression。页码是当前排版提示；改字号后优先重定位文本。目录 fragment 和正文指向 spine 的包内链接进入同一导航队列；外链交给 ReaderLinkHandler。非 spine 附属文档尚未实现独立阅读栈。
 - 长按、活动选区背景和手柄全部由 iReadView 控制：默认选择完整段落，复用文本模式的 Canvas 选区绘制与分页拖动控制器，支持同文档跨页扩选与代理手柄；滚动使用共享边缘停留/速度策略。WebView 不接管触摸选择、ActionMode 或 CSS ::selection。选区、复制、高亮、划线与菜单走统一 Widget API，详见[选择与标注](selection-annotations.md)。
 - 正文/标题字号、颜色、行距、字距、段间距、首行缩进、正文内外边距、块 padding 与标题 padding 映射到原有 ReaderStyle。System 字体可映射；Resource/Runtime Typeface 目前尚未完整映射到 Web 字体，不能认为所有字体参数均已支持。

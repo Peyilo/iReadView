@@ -47,7 +47,7 @@ internal class PageTurnEffectManager(
             catch (error: Exception) { turn.failure = error; turn.gesture?.wake() }
         }
     }
-    private val host = object : HardwarePageTurnEffectHost {
+    private val host = object : HardwarePageTurnEffectHost, OpaqueBitmapHost {
         override val hardwareAccelerated get() = this@PageTurnEffectManager.hardwareAccelerated()
         override fun requestRedraw() {
             active?.takeIf { !it.terminal && it.ownsConfiguration() }?.let { turn ->
@@ -56,39 +56,45 @@ internal class PageTurnEffectManager(
             }
         }
 
-        override fun borrowBitmap(widthPx: Int, heightPx: Int): BitmapLease? {
-            val turn = active?.takeIf { !it.terminal } ?: return null
-            if (widthPx <= 0 || heightPx <= 0) return null
-            val rowBytes = widthPx.toLong() * 4L
-            if (heightPx.toLong() > options.bitmapBudgetBytes / rowBytes) return null
-            val bytes = rowBytes * heightPx
-            if (bytes <= 0 || bytes > options.bitmapBudgetBytes) return null
-            var bitmap = pool.firstOrNull { it.width == widthPx && it.height == heightPx }
-            if (bitmap != null) pool.remove(bitmap)
-            else {
-                while (allocatedBytes + bytes > options.bitmapBudgetBytes && pool.isNotEmpty()) recycle(
-                    pool.removeFirst()
-                )
-                if (allocatedBytes + bytes > options.bitmapBudgetBytes) return null
-                bitmap = try {
-                    Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
-                } catch (_: OutOfMemoryError) {
-                    return null
-                }
-                allocatedBytes += bitmap.allocationByteCount
+        override fun borrowBitmap(widthPx: Int, heightPx: Int): BitmapLease? =
+            this@PageTurnEffectManager.borrowBitmap(widthPx, heightPx, clear = true)
+
+        override fun borrowOpaqueBitmap(widthPx: Int, heightPx: Int): BitmapLease? =
+            this@PageTurnEffectManager.borrowBitmap(widthPx, heightPx, clear = false)
+    }
+
+    private fun borrowBitmap(widthPx: Int, heightPx: Int, clear: Boolean): BitmapLease? {
+        val turn = active?.takeIf { !it.terminal } ?: return null
+        if (widthPx <= 0 || heightPx <= 0) return null
+        val rowBytes = widthPx.toLong() * 4L
+        if (heightPx.toLong() > options.bitmapBudgetBytes / rowBytes) return null
+        val bytes = rowBytes * heightPx
+        if (bytes <= 0 || bytes > options.bitmapBudgetBytes) return null
+        var bitmap = pool.firstOrNull { it.width == widthPx && it.height == heightPx }
+        if (bitmap != null) pool.remove(bitmap)
+        else {
+            while (allocatedBytes + bytes > options.bitmapBudgetBytes && pool.isNotEmpty()) recycle(
+                pool.removeFirst()
+            )
+            if (allocatedBytes + bytes > options.bitmapBudgetBytes) return null
+            bitmap = try {
+                Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
+            } catch (_: OutOfMemoryError) {
+                return null
             }
-            val leased = bitmap
-            leased.setHasAlpha(true)
-            leased.eraseColor(0)
-            val allocationBytes = leased.allocationByteCount.toLong()
-            val lease = ReferenceCountedBitmapLease(leased, onClosed = { turn.leases.remove(it) }) { released ->
-                if (released.isRecycled) allocatedBytes -= allocationBytes
-                else if (!attached || allocatedBytes > options.bitmapBudgetBytes) recycle(released)
-                else pool.addLast(released)
-            }
-            turn.leases.add(lease)
-            return lease
+            allocatedBytes += bitmap.allocationByteCount
         }
+        val leased = bitmap
+        leased.setHasAlpha(clear)
+        if (clear) leased.eraseColor(0)
+        val allocationBytes = leased.allocationByteCount.toLong()
+        val lease = ReferenceCountedBitmapLease(leased, onClosed = { turn.leases.remove(it) }) { released ->
+            if (released.isRecycled) allocatedBytes -= allocationBytes
+            else if (!attached || allocatedBytes > options.bitmapBudgetBytes) recycle(released)
+            else pool.addLast(released)
+        }
+        turn.leases.add(lease)
+        return lease
     }
 
     fun setOptions(value: PageTurnOptions) {

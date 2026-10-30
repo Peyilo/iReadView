@@ -16,6 +16,8 @@ Demo 阅读设置的“仿真效果”和翻页示例只列出 **iOSCurl / Googl
 
 `ReadVisualHandoff.setSnapshotPlayback` 允许正文后端接管可逆的绘制抑制，避免透明视图仍注册 WebView 绘制回调。默认返回 false，使用 Widget 的 alpha 策略。Widget 在目标页交接前和取消/异常终态恢复绘制；后端不能借此改变位置或销毁正文。EPUB 在覆盖期间跳过正文子树，保留 View 和 DOM；停放页使用空裁剪准备绘制状态，不创建透明离屏图层。
 
+EPUB 分页视口使用 WebView 硬件层缓存，减少父窗口重绘时重复调用 WebView 绘制器；内容失效仍更新图层，CSS 动画继续运行。连续滚动使用默认图层。缓存增加视口大小的 GPU 纹理开销，数量受单页/三页缓存策略约束。软件快照直接绘制 WebView，避开停放硬件层可能为空的框架绘图缓存；正常硬件绘制仍走框架路径。
+
 ## iOSCurl
 
 算法使用 Maven Central 的 `org.peyilo.pagecurl:pagecurl-core:0.1.0`，手势、曲面、UV、原版阴影与缓动使用 Kotlin 执行。Android 的 `internal/effect/ioscurl` 仅负责输入转换、事务适配和 GLES 绘制。没有 JNI、自编 native 库、WebView 或 WASM 算法运行依赖。详见 [Kotlin 实现](pagecurl-core.md)。
@@ -30,9 +32,11 @@ Demo 阅读设置的“仿真效果”和翻页示例只列出 **iOSCurl / Googl
 
 默认 `IosCurlOutput.Texture` 遵循普通 View 的裁剪、变换和兄弟视图叠放语义。Demo 的固定正文矩形选用 `IosCurlOutput.Surface`：API 26 及以上直接提交缓冲区，省去中间纹理合成；API 21–25 使用 TextureView。直接模式要求真实 Activity 窗口和不透明页面，正文区域内不能叠放需要盖住 Surface 的兄弟 UI，也不能依赖 View 旋转/透明度动画；不满足这些布局条件的宿主应选 Texture。
 
-直接 Surface 保持正文绘制，不将正文 alpha 清零；结束时保留最后一帧，等待恢复后的父窗口完成实际绘制和一像素 GPU 复制，再清空 Surface。该复制只用于交接 fence，不读回整页，也不逐帧执行。异步 epoch 保护取消、重入及 detach，防止上一事务的清屏擦掉下一事务。
+直接 Surface 保持正文绘制，不将正文 alpha 清零；结束时保留最后一帧，等待恢复后的父窗口完成实际绘制和一像素 GPU 复制，再清空 Surface。该复制只用于交接 fence，不读回整页，也不逐帧执行；已进入复制阶段后忽略排队中的重复窗口回调。异步 epoch 保护取消、重入及 detach，防止上一事务的清屏擦掉下一事务。
 
 `PageSurface.isOpaque` 默认为 false，仅在整个矩形每个像素都不透明时声明 true。截图按该合约标记 alpha；透明输入在直接模式中继续使用位图输出，像素与现有透明混合一致。
+
+内置快照池仅在页面声明完全不透明时跳过复用位图的清零，随后完整覆盖所有像素。透明页面和公开 `PageTurnEffectHost.borrowBitmap` 仍返回已清零的位图，预算、租约及归还规则一致。
 
 没有合成 View、Surface 未就绪或宿主不支持 `RetainableBitmapLease` 时，保留原离屏位图路径。该路径正确性相同，但仍承担读回成本。资源不足或运行时失败走现有统一降级，手势判定和阅读位置提交不受后端控制。
 
@@ -67,6 +71,7 @@ Android 默认使用中性黑色、0.55 不透明度的投影，并将原渐隐�
 - `SnapshotIsolationDeviceTest` 检查平移效果使用预算内快照、真实合成器变透明后两页仍可见，以及隔离失败时归还部分租约并请求降级。
 - `IosCurlGpuDeviceTest` 对比硬件合成与位图路径的像素，覆盖两个输出、透明/不透明输入、装订边、前后翻、轴向和 RTL；`BitmapRetentionDeviceTest` 检查取消后异步读者结束前不回收位图。
 - `IosCurlDeviceTest` 检查离屏单栏绘制与资源回收；`IosCurlDemoTest` 验证真实设置、手势和事务交接。
+- `EpubSnapshotRenderingTest` 对插图、固定版式和 ARM EPUB 的多列页面逐像素比较软件快照，并比较真实窗口画面；另验证硬件层中的 CSS 动画继续更新。
 - `ReaderTurnPerformanceTest` 和 `ReaderGestureHandoffTest` 的通用进度探针测试平移和 GoogleCurl。iOSCurl 的原版输入/缓动使用其专门测试，不通过会隐藏可选能力的宿主效果包装器。
 
 硬件合成仍有设备相关的 GPU 和 BufferQueue 等待。有限设备执行不代表所有 GPU 稳定 60fps；测量方法和适用范围见[翻页性能](performance.md)。

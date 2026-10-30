@@ -49,11 +49,17 @@ internal class IosCurlWindowFence(private val view: View) : AutoCloseable {
             frameTime = time
             view.rootView.invalidate()
         }
+        var copying = false
         val metrics = Window.OnFrameMetricsAvailableListener { _, frame, _ ->
-            if (token == epoch && frame.getMetric(FrameMetrics.VSYNC_TIMESTAMP) >= frameTime) {
+            if (
+                !copying &&
+                    token == epoch &&
+                    frame.getMetric(FrameMetrics.VSYNC_TIMESTAMP) >= frameTime
+            ) {
                 if (frame.getMetric(FrameMetrics.SWAP_BUFFERS_DURATION) <= 0L) {
                     view.rootView.postInvalidateOnAnimation()
                 } else {
+                    copying = true
                     cleanup?.invoke()
                     cleanup = null
                     val pixel = Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)

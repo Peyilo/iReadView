@@ -126,6 +126,8 @@ class EpubReaderBodyView internal constructor(context: Context, cache: EpubResou
         val epoch = binding
         appearance = style.selectionStyle
         clampHandles = mode == ReadingMode.PAGED
+        // Cache the paged viewport; scrolling keeps the direct compositor path.
+        web.setLayerType(if (clampHandles) View.LAYER_TYPE_HARDWARE else View.LAYER_TYPE_NONE, null)
         val layers = listOf(style.page.viewportPadding, style.body.contentPadding, style.body.containerPadding)
         val density = resources.displayMetrics.density
         setPaddingRelative((layers.sumOf { it.startDp.toDouble() } * density).toInt(),
@@ -325,6 +327,20 @@ class EpubReaderBodyView internal constructor(context: Context, cache: EpubResou
             } to style
         }
         invalidate()
+    }
+    // FrameLayout's software drawing cache can be empty for a parked hardware layer.
+    // Draw the document itself when recording an immutable software page instead.
+    override fun drawChild(canvas: Canvas, child: View, drawingTime: Long): Boolean {
+        if (child !== web || canvas.isHardwareAccelerated || web.layerType != View.LAYER_TYPE_HARDWARE)
+            return super.drawChild(canvas, child, drawingTime)
+        web.computeScroll()
+        val saved = canvas.save()
+        try {
+            canvas.clipRect(web.left, web.top, web.right, web.bottom)
+            canvas.translate((web.left - web.scrollX).toFloat(), (web.top - web.scrollY).toFloat())
+            web.draw(canvas)
+        } finally { canvas.restoreToCount(saved) }
+        return true
     }
     override fun dispatchDraw(canvas: Canvas) {
         drawBodyContent(canvas) { target -> super.dispatchDraw(target) }
