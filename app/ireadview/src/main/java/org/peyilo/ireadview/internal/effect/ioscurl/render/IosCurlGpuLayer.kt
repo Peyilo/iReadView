@@ -9,11 +9,13 @@ import android.view.TextureView
 import android.view.View
 import android.widget.FrameLayout
 import org.peyilo.ireadview.internal.effect.EffectResourceUnavailable
+import org.peyilo.ireadview.internal.effect.PageTurnSnapshots
 
 /** Keeps the consumer draining while parked; only current-turn pixels become visible. */
 internal class IosCurlGpuLayer(
     context: Context,
     private val invalidate: () -> Unit,
+    private val initialCaptureSize: (Int, Int) -> PageTurnSnapshots.Size?,
 ) : TextureView.SurfaceTextureListener, IosCurlCompositor {
     private var active = false
     private var presented = false
@@ -50,7 +52,8 @@ internal class IosCurlGpuLayer(
     override val hasFrame
         get() = active && presented
 
-    override fun prepareCapture() = ready && worker?.prepareCapture() == true
+    override fun prepareCapture(width: Int, height: Int) =
+        ready && worker?.prepareCapture(width, height) == true
 
     init {
         view.addView(texture, FrameLayout.LayoutParams(-1, -1))
@@ -87,7 +90,14 @@ internal class IosCurlGpuLayer(
         val surface = Surface(texture)
         try {
             surfaceFailure = null
-            worker = IosCurlGpuWorker(surface, width, height, invalidate)
+            worker =
+                IosCurlGpuWorker(
+                    surface,
+                    width,
+                    height,
+                    invalidate,
+                    initialCaptureSize = initialCaptureSize(width, height),
+                )
         } catch (error: RuntimeException) {
             surface.release()
             Log.w("iReadView", "GPU curl compositor unavailable; using bitmap output", error)

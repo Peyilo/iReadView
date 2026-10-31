@@ -8,6 +8,7 @@ import android.view.SurfaceHolder
 import android.view.SurfaceView
 import androidx.annotation.RequiresApi
 import org.peyilo.ireadview.internal.effect.EffectResourceUnavailable
+import org.peyilo.ireadview.internal.effect.PageTurnSnapshots
 
 /**
  * Direct output for fixed reader rectangles. The live page stays beneath the opaque surface, so
@@ -17,6 +18,7 @@ import org.peyilo.ireadview.internal.effect.EffectResourceUnavailable
 internal class IosCurlSurfaceLayer(
     context: Context,
     private val invalidate: () -> Unit,
+    private val initialCaptureSize: (Int, Int) -> PageTurnSnapshots.Size?,
 ) : IosCurlCompositor, SurfaceHolder.Callback {
     private var pending: IosCurlPageInput? = null
     private var scene: IosCurlScene? = null
@@ -46,7 +48,8 @@ internal class IosCurlSurfaceLayer(
     override val hasFrame
         get() = active && worker?.hasFrame == true
 
-    override fun prepareCapture() = ready && worker?.prepareCapture() == true
+    override fun prepareCapture(width: Int, height: Int) =
+        ready && worker?.prepareCapture(width, height) == true
 
     override fun begin(input: IosCurlPageInput): Boolean {
         if (!ready || !input.opaque) return false
@@ -123,6 +126,7 @@ internal class IosCurlSurfaceLayer(
                         height,
                         ::onWorkerEvent,
                         onReady = { if (!closed) startPending() },
+                        initialCaptureSize = initialCaptureSize(width, height),
                     )
             } catch (error: RuntimeException) {
                 owned.release()

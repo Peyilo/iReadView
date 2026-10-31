@@ -99,5 +99,17 @@ internal class PageTurnSnapshots : AutoCloseable {
 
     internal companion object {
         val SCALES = floatArrayOf(1f, .75f, .5f, .25f)
+
+        fun sizeWithinBudget(width: Int, height: Int, bytes: Long): Size? {
+            if (width <= 0 || height <= 0) return null
+            for (scale in SCALES) {
+                val w = maxOf(1, (width * scale).toInt())
+                val h = maxOf(1, (height * scale).toInt())
+                if (w.toLong() * h * 8 <= bytes) return Size(w, h)
+            }
+            return null
+        }
     }
+
+    data class Size(val width: Int, val height: Int)
 }

@@ -60,23 +60,26 @@ internal class IosCurlRendering(private val output: IosCurlOutput) : AutoCloseab
         )
             return false
         val viewport = context.viewport
-        for (scale in PageTurnSnapshots.SCALES) {
-            val width = maxOf(1, (viewport.widthPx * scale).toInt())
-            val height = maxOf(1, (viewport.heightPx * scale).toInt())
-            if (width.toLong() * height * 8 > budget) continue
-            if (!layer.prepareCapture()) return false
-            gpu = layer.begin(IosCurlPageInput.Canvas(context, width, height, firstFrame))
-            return gpu
-        }
-        return false
+        val size =
+            PageTurnSnapshots.sizeWithinBudget(viewport.widthPx, viewport.heightPx, budget)
+                ?: return false
+        if (!layer.prepareCapture(size.width, size.height)) return false
+        gpu = layer.begin(IosCurlPageInput.Canvas(context, size.width, size.height, firstFrame))
+        return gpu
     }
 
-    fun createView(context: Context, invalidate: () -> Unit): View =
-        (if (output == IosCurlOutput.Surface && Build.VERSION.SDK_INT >= 29)
-                IosCurlSurfaceLayer(context, invalidate)
-            else IosCurlGpuLayer(context, invalidate))
+    fun createView(context: Context, captureBudget: () -> Long, invalidate: () -> Unit): View {
+        val initialSize = { width: Int, height: Int ->
+            if (Build.VERSION.SDK_INT >= 29)
+                PageTurnSnapshots.sizeWithinBudget(width, height, captureBudget())
+            else null
+        }
+        return (if (output == IosCurlOutput.Surface && Build.VERSION.SDK_INT >= 29)
+                IosCurlSurfaceLayer(context, invalidate, initialSize)
+            else IosCurlGpuLayer(context, invalidate, initialSize))
             .also { gpuLayer = it }
             .view
+    }
 
     fun upload(
         current: Bitmap,

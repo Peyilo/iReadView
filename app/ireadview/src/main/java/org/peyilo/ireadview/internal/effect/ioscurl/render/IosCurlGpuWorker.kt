@@ -10,6 +10,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 import org.peyilo.ireadview.internal.effect.EffectResourceUnavailable
+import org.peyilo.ireadview.internal.effect.PageTurnSnapshots
 import org.peyilo.pagecurl.mesh.CurlMesh
 
 /**
@@ -22,6 +23,7 @@ internal class IosCurlGpuWorker(
     private val height: Int,
     private val invalidate: () -> Unit,
     private val onReady: () -> Unit = {},
+    initialCaptureSize: PageTurnSnapshots.Size? = null,
 ) : AutoCloseable {
     private val thread =
         HandlerThread("iRead-curl", Process.THREAD_PRIORITY_DISPLAY).apply { start() }
@@ -64,6 +66,7 @@ internal class IosCurlGpuWorker(
                 created.bindSurface(surface, width, height)
                 created.clearSurface()
                 ready = !closed.get()
+                initialCaptureSize?.let { prepareCapture(it.width, it.height) }
                 main.post(onReady)
             } catch (error: RuntimeException) {
                 renderer?.close()
@@ -77,7 +80,7 @@ internal class IosCurlGpuWorker(
         }
     }
 
-    fun prepareCapture(): Boolean {
+    fun prepareCapture(width: Int, height: Int): Boolean {
         if (!ready || closed.get()) return false
         if (captureRequested.compareAndSet(false, true))
             handler.post {

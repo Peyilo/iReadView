@@ -12,6 +12,16 @@ spec.loader.exec_module(curl_trace)
 
 
 class CurlTraceTest(unittest.TestCase):
+    def test_epub_recording_keeps_nested_framework_time_in_outer_section(self):
+        report = self.analyze([
+            (10, 10, 1.000, "B|10|iRead.epub.record"),
+            (10, 10, 1.001, "B|10|WebView.onDraw"),
+            (10, 10, 1.004, "E"),
+            (10, 10, 1.005, "E"),
+        ])
+        self.assertEqual(["iRead.epub.record"], list(report))
+        self.assertAlmostEqual(5, report["iRead.epub.record"]["medianMs"])
+
     def analyze(self, events):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "curl.trace"

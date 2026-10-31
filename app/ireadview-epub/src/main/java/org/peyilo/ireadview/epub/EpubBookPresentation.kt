@@ -452,8 +452,7 @@ internal class EpubBookPresentation(private val context: Context, private val so
             }
             currentCoroutineContext().ensureActive()
             if (!current()) return
-            recording = if (android.os.Build.VERSION.SDK_INT >= 29) HardwareEpubPageRecording(template.root)
-                else SoftwareEpubPageRecording(template.root)
+            recording = EpubPageRecording.prepare(template.root)
         }
         fun reveal() {
             body.updateViewportLayer(active === this)

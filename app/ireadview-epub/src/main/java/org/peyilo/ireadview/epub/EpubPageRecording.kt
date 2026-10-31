@@ -5,12 +5,22 @@ import android.graphics.Canvas
 import android.graphics.Picture
 import android.graphics.RenderNode
 import android.os.Build
+import android.os.Trace
 import android.view.View
 
 internal interface EpubPageRecording {
     val canReplayHardware: Boolean get() = true
     /** False for software capture; the caller can draw the measured hierarchy directly. */
     fun draw(canvas:Canvas):Boolean
+    companion object {
+        fun prepare(view: View): EpubPageRecording {
+            Trace.beginSection("iRead.epub.record")
+            try {
+                return if (Build.VERSION.SDK_INT >= 29) HardwareEpubPageRecording(view)
+                else SoftwareEpubPageRecording(view)
+            } finally { Trace.endSection() }
+        }
+    }
 }
 
 /** Software drawing commands for the pre-RenderNode path. Referenced Bitmap pixels can still

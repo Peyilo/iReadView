@@ -40,7 +40,7 @@ def analyze(path):
                     outcomes[(pid, cookie)] = outcome
             elif stacks[thread]:
                 started, name = stacks[thread].pop()
-                if name and name.startswith("iRead.curl."):
+                if name and name.startswith(("iRead.curl.", "iRead.epub.")):
                     if name.startswith(("iRead.curl.firstSubmit:", "iRead.curl.cancelledStartup:")):
                         continue
                     samples[name].append((timestamp - started) * 1000)
@@ -72,7 +72,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     report = analyze(args.trace)
     if not report:
-        parser.error("No iRead.curl sections found; enable tracing for the Demo package.")
+        parser.error("No iRead curl/EPUB sections found; enable tracing for the Demo package.")
     output = json.dumps(report, indent=2) + "\n"
     if args.output:
         args.output.write_text(output, encoding="utf-8")

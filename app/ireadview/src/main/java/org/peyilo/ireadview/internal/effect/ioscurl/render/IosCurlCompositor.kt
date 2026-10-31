@@ -10,8 +10,8 @@ internal interface IosCurlCompositor : AutoCloseable {
     val ready: Boolean
     val hasFrame: Boolean
 
-    /** Warms optional command capture on demand; false keeps this turn on pixel snapshots. */
-    fun prepareCapture(): Boolean
+    /** Ensures capture resources for these pixel dimensions; false keeps this turn on snapshots. */
+    fun prepareCapture(width: Int, height: Int): Boolean
 
     /** True transfers the read pins; false leaves ownership with the caller. */
     fun begin(input: IosCurlPageInput): Boolean

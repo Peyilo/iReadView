@@ -45,7 +45,12 @@ internal class IosCurlEffect(private val options: IosCurlOptions) :
         get() = rendering.ready
 
     override fun createRenderView(context: Context): View =
-        rendering.createView(context) { host?.requestRedraw() }
+        rendering.createView(
+            context,
+            { (host as? SnapshotBudgetHost)?.snapshotBudgetBytes ?: 0L },
+        ) {
+            host?.requestRedraw()
+        }
 
     override val warmingUp
         get() = !automatic && context != null && elapsed < .25
