@@ -106,7 +106,17 @@ internal open class EpubPageDeck(context: Context) : FrameLayout(context) {
             return super.drawChild(canvas, child, drawingTime)
         }
         if (child !in rendering) return true
-        val saved = canvas.saveLayerAlpha(0f, 0f, width.toFloat(), height.toFloat(), 0)
+        // Software page capture needs the visual fence, not a full GPU raster of the hidden page.
+        // Modern hardware capture consumes that raster, so keep its full preparation surface.
+        val fullRaster = Build.VERSION.SDK_INT >= 29
+        val saved =
+            canvas.saveLayerAlpha(
+                0f,
+                0f,
+                if (fullRaster) width.toFloat() else 1f,
+                if (fullRaster) height.toFloat() else 1f,
+                0,
+            )
         try {
             return super.drawChild(canvas, child, drawingTime)
         } finally {

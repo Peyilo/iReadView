@@ -74,11 +74,11 @@ python tools/analyze-method-trace.py curl-method.trace --method nInvokeFunctor -
 
 以下为 API 28/36 专用模拟器的串行测量，视口为 1080 × 2424、density 420，三页缓存、64MiB 效果快照预算、完整网格及原动画参数。每种内容均包含 8 次自动翻页和 4 组提交/取消手势，开启 GPU 柱状图，未开启方法采样。每组共有 49 次效果启动；阅读位置和取消结果均通过断言。
 
-### API 28：稳定视口缓存对照
+### API 28：稳定视口缓存与准备隔离层
 
 旧版 WebView 的 VSync 失效通知会反复触发页面准备，交接时还会重新提交实时正文。当前实现把内容变化与纯重绘分开，在稳定视口复用有界像素；动态内容和不适合回放的模板使用原路径，详见[渲染说明](rendering.md)。原生文本未采用此项 EPUB 优化。
 
-两版使用相同 APK 测试入口与设备配置，先运行原实现，再运行缓存实现。下表均为 Window FrameMetrics 的 P95：
+稳定视口缓存引入时，两版仍使用整页准备隔离层。相同 APK 测试入口与设备配置下，先运行原实现，再运行缓存实现，Window FrameMetrics 的 P95 如下；当前隔离层实现的结果见后续对照。
 
 | 内容 | 原实现自动 | 缓存实现自动 | 原实现手势 | 缓存实现手势 |
 | --- | ---: | ---: | ---: | ---: |
@@ -90,7 +90,19 @@ python tools/analyze-method-trace.py curl-method.trace --method nInvokeFunctor -
 
 首次对照的 EPUB 同步录制次数为 80 → 38，中位数为 40.81 → 10.14ms、P95 为 112.10 → 74.61ms；反向复测次数为 81 → 38、P95 为 105.83 → 60.30ms。这包含尚未优化的动态视口及新页准备，不能只报告较快的缓存命中。
 
-效果 `start` 的 P95 从 13.43 降至 9.52ms，启动至首次提交的 P95 为 33.78 → 32.94ms。窗口长帧改善没有消除首帧准备和上传成本；API 28 的完整流程仍未达到 8ms。GPU 柱状图的长红柱减少，仍有明显尖峰，不能把工作线程提交 P95 约 5ms 当作 GPU 完成或上屏时间。
+准备中的旧版 WebView 随后改用非空的单像素透明隔离层，完整尺寸的软件页面捕获独立执行。原布局、页面快照尺寸、动画时长和网格均保持不变。相同稳定视口缓存下，先测整页隔离层，再测单像素隔离层：
+
+| 内容 | 整页隔离自动 | 单像素隔离自动 | 整页隔离手势 | 单像素隔离手势 |
+| --- | ---: | ---: | ---: | ---: |
+| 普通文本 | 25.59ms | 25.20ms | 24.90ms | 25.07ms |
+| 重排 EPUB | 44.89ms | 24.71ms | 26.29ms | 24.51ms |
+| ARM EPUB | 44.28ms | 25.54ms | 26.38ms | 23.69ms |
+
+反向顺序复测中，重排 EPUB 自动翻页 P95 为 57.55 → 20.32ms，ARM EPUB 为 43.19 → 26.01ms。收敛后的最终代码保留旧系统的软件准备优化，API 29 及以上仍完整准备 GPU 页面。最终代码的两次 API 28 复测中，重排 EPUB 自动翻页为 27.23/27.31ms、手势为 25.34/26.31ms；ARM EPUB 自动为 26.93/25.97ms、手势为 24.78/25.48ms。
+
+最终代码的两次同步录制准备 P95 为 39.70/78.41ms，启动至首次提交 P95 为 31.02/35.06ms；窗口 swap P95 仍可达约 12–13ms。准备层改善没有消除新页准备、输入、上传和窗口交接的长帧。柱状图仍有红黄尖峰，不能将约 6ms 的 EGL 提交 P95 当作 GPU 完成或完整流程达标。
+
+固定像素的独立硬件捕获也作过两轮对照：主线程 `start` 中位数降至约 1.1ms，但启动至首次提交中位数从约 22ms 增至约 37ms、P95 从 31.57–40.26ms 增至 48.92–55.11ms，因此未启用。仅缩短主线程柱段、把等待移到生产线程不能作为优化验收。
 
 ### API 36：当前两个输出的复测
 
@@ -98,11 +110,11 @@ python tools/analyze-method-trace.py curl-method.trace --method nInvokeFunctor -
 
 | 内容 | Texture 自动 | Texture 手势 | Surface 自动 | Surface 手势 |
 | --- | ---: | ---: | ---: | ---: |
-| 普通文本 | 8.40ms | 10.30ms | 8.26ms | 11.52ms |
-| 重排 EPUB | 9.05ms | 9.96ms | 8.59ms | 12.40ms |
-| ARM EPUB | 9.39ms | 9.84ms | 9.26ms | 13.61ms |
+| 普通文本 | 19.26ms | 10.64ms | 9.79ms | 12.03ms |
+| 重排 EPUB | 9.56ms | 10.50ms | 9.88ms | 13.25ms |
+| ARM EPUB | 8.79ms | 10.77ms | 9.45ms | 11.66ms |
 
-Texture 的启动至首次提交 P95 为 42.30ms，Surface 为 48.08ms。Surface 表中的父窗口不包含独立 Surface 的 GPU 成本；两种输出都不能宣称完整流程低于 8ms。EPUB 硬件录制准备 P95 约 1.3–1.5ms，仍保留其窗口恢复作用。
+Texture 的启动至首次提交 P95 为 45.36ms，Surface 为 41.32ms。文本 Texture 自动翻页的 swap P95 为 13.83ms，仍需继续定位。Surface 表中的父窗口不包含独立 Surface 的 GPU 成本；两种输出都不能宣称完整流程低于 8ms。EPUB 硬件录制准备 P95 约 1.4–1.7ms，仍保留其窗口恢复作用。
 
 独立 GPU 完成等待诊断曾测得 API 28/36 的动画 GPU 样本 P95 为 7.73/7.65ms，最大值为 34.52/36.10ms。它不覆盖全部准备和输入帧，也不是上述窗口数据；不能与窗口阶段相加或替代最终验收。资源预热、纹理存储复用和较短的 EGL 提交都只有局部收益。
 
@@ -111,7 +123,7 @@ Texture 的启动至首次提交 P95 为 42.30ms，Surface 为 48.08ms。Surface
 - `IosCurlGpuDeviceTest` 对两个输出执行装订边、方向、轴向、RTL 和透明度矩阵；复用相同录制对象并改变图片像素，防止错误缓存。另用 `capture=bitmap/live` 验证位图和实时页面边界，以及取消、卸载和线程清理。
 - `ReaderGestureHandoffTest.cancelledEpubDragKeepsBothPagesVisibleOnRetry` 用真实 EPUB 和 PixelCopy 验证前后翻、系统取消、反向复位、立即重试及取消后的正文恢复。传入 `-e output surface -e effect ios_curl` 检查直接 Surface 的完整屏幕合成。
 - `EpubSnapshotRenderingTest` 覆盖插图、固定版式、ARM EPUB 的多列软件快照、真实窗口画面及 CSS 动画；`UnifiedSelectionIntegrationTest` 检查滚动选区同步。
-- `EpubRecordingCacheTest` 检查当前页与备用页对原软件绘制的逐像素一致性、真实窗口误差、DOM/原生页眉失效、预算耗尽和录制中失效。窗口比较必须实际覆盖缓存回放，不能以未启用优化的结果代替。
+- `EpubRecordingCacheTest` 检查当前页与备用页对原软件绘制的逐像素一致性、真实窗口误差、DOM/原生页眉失效、预算耗尽和录制中失效。窗口比较必须实际覆盖缓存回放，并断言参考窗口已经撤下缓存、回到实时 View 绘制，不能以两次缓存回放代替。
 - `EpubHardwareCaptureTest` 在 API 29 及以上直接调用生产捕获适配器，比较当前页与停放目标页的捕获纹理和公开导航后的实际窗口，并在不同取消时点关闭真实 WebView、检查线程释放。它不替代完整手势交接检查。
 - `IosCurlDemoTest` 检查公开入口、真实手势、多指、RTL、纵向、取消和资源失败；`BitmapRetentionDeviceTest` 检查异步读者结束前不回收图片。
 

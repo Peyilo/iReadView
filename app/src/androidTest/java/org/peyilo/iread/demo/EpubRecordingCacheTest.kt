@@ -65,6 +65,14 @@ class EpubRecordingCacheTest {
                         .filterIsInstance<TextView>()
                         .first { it.text.isNotEmpty() }
                         .invalidate()
+                    val field =
+                        Class.forName("org.peyilo.ireadview.epub.EpubPageDeck")
+                            .getDeclaredField("preparedPixels")
+                            .apply { isAccessible = true }
+                    assertFalse(
+                        "The reference window must use live View rendering",
+                        (field.get(page.parent) as Map<*, *>).containsKey(page),
+                    )
                 }
                 SystemClock.sleep(150)
                 val live = window(scenario, presentation)
