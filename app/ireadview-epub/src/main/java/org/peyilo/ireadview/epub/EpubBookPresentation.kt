@@ -28,6 +28,7 @@ internal class EpubBookPresentation(private val context: Context, private val so
     private val mode: ReadingMode, private val host: BookPresentationHost) : BookPresentation() {
     private var active: Page? = null
     private val resourceCache = EpubResourceCache()
+    private val bitmapBudget = EpubBitmapBudget()
     // Current + at most two parked neighbors. Idle work never moves the committed body.
     private val parked = ReaderPageCache<Page>(if (mode == ReadingMode.PAGED) host.pageCacheMode else ReaderPageCacheMode.SINGLE_PAGE) { it.close() }
     private val preloader = ReaderPagePreloader()
@@ -385,6 +386,7 @@ internal class EpubBookPresentation(private val context: Context, private val so
         }
         init {
             body.onRenderPendingChanged = { root.setRendering(template.root, it) }
+            body.onVisualContentChanged = { invalidateSurface() }
             try { body.configureComponents(host.presentationComponents) }
             catch (failure: Throwable) {
                 try { body.release() } finally { try { template.unbind() } finally { pageLease.close() } }
@@ -395,15 +397,17 @@ internal class EpubBookPresentation(private val context: Context, private val so
         var mounted = false
             private set
         private var positionReady = false
-        private var recording: EpubPageRecording? = null
+        private val recordings = EpubRecordingCache(bitmapBudget).apply {
+            onChanged = { recording -> root.presentPrepared(template.root, recording?.takeIf { it is BitmapEpubPageRecording }) }
+        }
         private var boundPosition: ReadingPosition? = null
         private var boundChromeEpoch = -1L
-        val hasSurface get() = recording != null
+        val hasSurface get() = recordings.current != null
         var position: ReadingPosition? = null
         var number = 1
         var pageCount = 1
         val surface: PageBackgroundSurface get() {
-            val recorded = recording
+            val recorded = recordings.current
             return object : PageBackgroundSurface, SnapshotPreferredSurface {
             // WebView recordings borrow mutable child RenderNodes. Replaying on a
             // hardware Canvas is possible, but does not make them immutable snapshots:
@@ -418,7 +422,7 @@ internal class EpubBookPresentation(private val context: Context, private val so
                 if (canvas.isHardwareAccelerated || recorded?.draw(canvas) != true) template.root.draw(canvas)
             }
         } }
-        fun invalidateSurface() { recording = null }
+        fun invalidateSurface() = recordings.invalidate()
         fun matches(index: Int, page: Int) = current() && mounted && body.isBound && positionReady && this.index == index &&
             number == if (page == Int.MAX_VALUE) pageCount else page
         fun current() = !closed && !detached && generation == host.generation && snapshot.revision == host.book?.revision
@@ -440,7 +444,7 @@ internal class EpubBookPresentation(private val context: Context, private val so
         suspend fun awaitReady() = body.awaitReady()
         suspend fun prepareSurface() {
             awaitReady()
-            if (recording != null || !current()) return
+            if (!current()) return
             if (template.root.isLayoutRequested) {
                 // We own this MATCH_PARENT template. Resolve chrome's pending layout now;
                 // waiting for an invisible neighbor's traversal adds whole frames to input.
@@ -450,23 +454,24 @@ internal class EpubBookPresentation(private val context: Context, private val so
                     View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY))
                 template.root.layout(0, 0, width, height)
             }
+            if (hasSurface) return
             currentCoroutineContext().ensureActive()
             if (!current()) return
-            recording = EpubPageRecording.prepare(template.root)
+            recordings.capture(template.root, body.canRetainRecording)
         }
         fun reveal() {
             body.updateViewportLayer(active === this)
-            // The recording references child RenderNodes. A real hierarchy traversal after
+            // Hardware recording references child RenderNodes. A real hierarchy traversal after
             // revealing a parked WebView can replace their display lists; the recording
             // made while parked must not become the next turn's current-page surface.
-            if (!root.isRevealed(template.root)) invalidateSurface()
+            if (!root.isRevealed(template.root)) recordings.visibilityChanged(root.tracksInvalidation && body.canRetainRecording)
             root.reveal(template.root)
         }
         fun park() {
             body.updateViewportLayer(isCurrent = false)
             annotationJob?.cancel()
-            // Keep recordings local to one visibility state, including reverse navigation.
-            if (root.isRevealed(template.root)) invalidateSurface()
+            // Borrowed nodes follow visibility; independent commands follow content invalidation.
+            if (root.isRevealed(template.root)) recordings.visibilityChanged(root.tracksInvalidation && body.canRetainRecording)
             root.park(template.root)
         }
         suspend fun syncAnnotations() = renderAnnotations(host.documentAnnotations(snapshot.book.chapters[index].chapterId))
@@ -488,6 +493,9 @@ internal class EpubBookPresentation(private val context: Context, private val so
             root.park(template.root)
             template.root.visibility = View.VISIBLE
             if (template.root.parent == null) root.addView(template.root, FrameLayout.LayoutParams(-1, -1))
+            root.observeInvalidation(template.root) { target ->
+                if (!body.isDocumentView(target) || !body.canRetainRecording) invalidateSurface()
+            }
             val state = body.prepareBinding(snapshot.publication, snapshot.publication.readingOrder[index].path, host.style, mode, locator, requestedPage)
             android.util.Log.i("EpubStage", "bound $index requested=$requestedPage")
             accept(state)
@@ -590,7 +598,7 @@ internal class EpubBookPresentation(private val context: Context, private val so
         fun close() {
             if (closed) return
             closed = true
-            recording = null
+            recordings.invalidate()
             scope.cancel()
             try { body.release() } finally {
                 try { (template.root.parent as? android.view.ViewGroup)?.removeView(template.root); template.unbind() }

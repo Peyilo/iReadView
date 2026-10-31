@@ -54,8 +54,14 @@ class EpubReaderBodyView internal constructor(context: Context, cache: EpubResou
     var onScrollLocation: ((JSONObject) -> Unit)? = null
     val hasSelection: Boolean get() = selected != null
     internal val isBound: Boolean get() = initialized && !released
+    internal var onVisualContentChanged: (() -> Unit)? = null
+    internal fun isDocumentView(target: View) = target === web
 
     private val web: WebView = object : WebView(context) {
+        override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+            super.onSizeChanged(w, h, oldw, oldh)
+            onVisualContentChanged?.invoke()
+        }
         override fun startActionMode(callback: ActionMode.Callback): ActionMode? = null
         override fun startActionMode(callback: ActionMode.Callback, type: Int): ActionMode? = null
         override fun onScrollChanged(l: Int, t: Int, oldl: Int, oldt: Int) {
@@ -68,6 +74,8 @@ class EpubReaderBodyView internal constructor(context: Context, cache: EpubResou
         }
     }
     private val visualState = EpubVisualState(web)
+    private val visualChanges = EpubVisualChanges(web) { onVisualContentChanged?.invoke() }
+    internal val canRetainRecording get() = visualChanges.canRetainRecording && !hasSelection
     internal var onRenderPendingChanged: ((Boolean) -> Unit)? = null
     private val renderReadiness = EpubRenderReadiness(scope, { onRenderPendingChanged?.invoke(it) }, visualState::awaitReady)
     private val scrollReport = Runnable {
@@ -153,10 +161,13 @@ class EpubReaderBodyView internal constructor(context: Context, cache: EpubResou
         stage("fonts")
         check(binding == epoch && !released)
         val script = context.assets.open("iread/epub-body.js").bufferedReader().use { it.readText() }
+        val tracking = context.assets.open("iread/epub-visual-state.js").bufferedReader().use { it.readText() }
         val config = JSONObject().put("paged", mode == ReadingMode.PAGED).put("fixed", publication.fixedLayout).put("href", path)
             .put("width", web.width / density).put("height", web.height / density)
             .put("css", css(style)).put("locator", locator).put("initialPage", initialPage)
-        val state = evaluate("$script($config)") ?: throw IOException("EPUB layout returned no location")
+            .put("visualSignal", visualChanges.begin())
+        val state = evaluate("(function(){var v=$script($config);$tracking($config);return v;})()") ?: throw IOException("EPUB layout returned no location")
+        visualChanges.connect(Uri.parse(localResources.url(path)))
         stage("layout")
         initialized = true
         refreshGeometry()
@@ -370,6 +381,7 @@ class EpubReaderBodyView internal constructor(context: Context, cache: EpubResou
         selectionPainter.handleBounds(it, appearance, resources.displayMetrics.density)
     }
     override fun clearContentBinding() {
+        visualChanges.clear()
         renderReadiness.clear()
         binding++; initialized = false
         decorationKey = "[]"; decorationStatuses = emptyMap()

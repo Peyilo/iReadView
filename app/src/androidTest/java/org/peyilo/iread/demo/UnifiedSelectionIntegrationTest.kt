@@ -145,7 +145,9 @@ class UnifiedSelectionIntegrationTest {
                     assertNotNull(reader.getSelectionHandleBounds(true))
                 }
                 gesture(end, PointF(body.left + body.width() * .6f, body.top + body.height() * .5f), 350)
-                await(scenario) { val text = it.getSelectedText(); text != null && text.length < paragraph.length }
+                // ACTION_UP resolves its final DOM caret asynchronously. The next handle must be
+                // read after that operation ends, rather than from the preceding MOVE reply.
+                await(scenario) { val text = it.getSelectedText(); text != null && text.length < paragraph.length && selectionDragFinished(it) }
                 var shortLength = 0
                 scenario.onActivity { activity ->
                     val reader = activity.findViewById<ReaderView>(R.id.reader)
@@ -161,7 +163,7 @@ class UnifiedSelectionIntegrationTest {
                 pointer(down, MotionEvent.ACTION_MOVE, bottom)
                 try { await(scenario) { (it.currentPosition?.pageNumberHint ?: 1) >= 2 && it.navigationState == ReadNavigationState.Idle } }
                 finally { pointer(down, MotionEvent.ACTION_UP, bottom) }
-                await(scenario) { (it.getSelectedText()?.length ?: 0) > shortLength }
+                await(scenario) { (it.getSelectedText()?.length ?: 0) > shortLength && selectionDragFinished(it) }
                 scenario.onActivity { activity ->
                     val reader = activity.findViewById<ReaderView>(R.id.reader)
                     assertEquals(originalStart, start(reader.getSelection()!!))
@@ -246,6 +248,10 @@ class UnifiedSelectionIntegrationTest {
             }
         }
     }
+    private fun selectionDragFinished(reader: ReaderView): Boolean =
+        !org.peyilo.ireadview.widget.BookReadView::class.java.getDeclaredField("draggingSelection")
+            .apply { isAccessible = true }.getBoolean(reader)
+
     private fun start(selection: ReaderSelection): String = when (selection) {
         is TextSelection -> selection.range.start.toString()
         is DocumentTextSelection -> JSONObject(selection.documentLocator).getJSONObject("range").getJSONObject("start").toString()
