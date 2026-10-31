@@ -7,11 +7,13 @@ import android.graphics.RenderNode
 import android.os.Build
 import android.os.Trace
 import android.view.View
+import org.peyilo.ireadview.api.effect.BitmapLease
 
 internal interface EpubPageRecording : AutoCloseable {
     override fun close() = Unit
     val canReplayHardware: Boolean get() = true
     val isIndependent: Boolean get() = false
+    fun acquireSnapshot(width: Int, height: Int): BitmapLease? = null
     /** False for software capture; the caller can draw the measured hierarchy directly. */
     fun draw(canvas:Canvas):Boolean
     companion object {
@@ -60,9 +62,16 @@ internal class EpubRecordingCache(private val budget: EpubBitmapBudget) {
 }
 
 internal class BitmapEpubPageRecording(view: View, private val allocation: EpubBitmapBudget.Allocation) : EpubPageRecording {
-    private val bitmap = allocation.bitmap.also { view.draw(Canvas(it)) }
+    private val bitmap = allocation.bitmap.also { view.draw(Canvas(it)); it.setHasAlpha(!view.isOpaque) }
     override val isIndependent get() = true
     override fun close() = allocation.close()
+    override fun acquireSnapshot(width: Int, height: Int): BitmapLease? {
+        if (bitmap.width != width || bitmap.height != height) return null
+        return object : BitmapLease {
+            override val bitmap = this@BitmapEpubPageRecording.bitmap
+            override fun close() = Unit // Published pixels are immutable and live through their readers.
+        }
+    }
     override fun draw(canvas: Canvas): Boolean {
         canvas.drawBitmap(bitmap, 0f, 0f, null)
         return true

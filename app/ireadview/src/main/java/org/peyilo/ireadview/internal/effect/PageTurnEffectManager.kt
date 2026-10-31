@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.view.View
+import androidx.core.os.trace
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -62,6 +63,9 @@ internal class PageTurnEffectManager(
 
         override fun borrowOpaqueBitmap(widthPx: Int, heightPx: Int): BitmapLease? =
             this@PageTurnEffectManager.borrowBitmap(widthPx, heightPx, clear = false)
+
+        override fun borrowSnapshot(token: Long, surface: PageSurface, widthPx: Int, heightPx: Int): BitmapLease? =
+            this@PageTurnEffectManager.borrowSnapshot(token, surface, widthPx, heightPx)
     }
 
     private fun borrowBitmap(widthPx: Int, heightPx: Int, clear: Boolean): BitmapLease? {
@@ -74,10 +78,7 @@ internal class PageTurnEffectManager(
         var bitmap = pool.firstOrNull { it.width == widthPx && it.height == heightPx }
         if (bitmap != null) pool.remove(bitmap)
         else {
-            while (allocatedBytes + bytes > options.bitmapBudgetBytes && pool.isNotEmpty()) recycle(
-                pool.removeFirst()
-            )
-            if (allocatedBytes + bytes > options.bitmapBudgetBytes) return null
+            if (!reserveBitmapBytes(bytes)) return null
             bitmap = try {
                 Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
             } catch (_: OutOfMemoryError) {
@@ -96,6 +97,34 @@ internal class PageTurnEffectManager(
         }
         turn.leases.add(lease)
         return lease
+    }
+
+    private fun reserveBitmapBytes(bytes: Long): Boolean {
+        if (bytes <= 0 || bytes > options.bitmapBudgetBytes) return false
+        while (allocatedBytes + bytes > options.bitmapBudgetBytes && pool.isNotEmpty()) recycle(pool.removeFirst())
+        return allocatedBytes + bytes <= options.bitmapBudgetBytes
+    }
+
+    private fun borrowSnapshot(token: Long, surface: PageSurface, width: Int, height: Int): BitmapLease? {
+        val turn = active?.takeIf { it.token == token && !it.terminal }
+            ?: return null
+        val snapshot = PreparedPageSnapshot.acquire(surface, width, height)
+        if (active !== turn || turn.terminal) {
+            snapshot?.close()
+            throw CancellationException("Snapshot transaction ended")
+        }
+        if (snapshot == null) return null
+        val bytes = snapshot.bitmap.allocationByteCount.toLong()
+        if (!reserveBitmapBytes(bytes)) {
+            snapshot.close()
+            return null
+        }
+        allocatedBytes += bytes
+        return trace("iRead.snapshot.sharedPixels") {
+            ReferenceCountedBitmapLease(snapshot.bitmap, { turn.leases.remove(it) }) {
+                try { snapshot.close() } finally { allocatedBytes -= bytes }
+            }.also { turn.leases.add(it) }
+        }
     }
 
     fun setOptions(value: PageTurnOptions) {

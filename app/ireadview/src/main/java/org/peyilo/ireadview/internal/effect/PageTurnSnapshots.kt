@@ -11,6 +11,7 @@ internal interface OpaqueBitmapHost {
 
 internal interface SnapshotBudgetHost {
     val snapshotBudgetBytes: Long
+    fun borrowSnapshot(token: Long, surface: PageSurface, widthPx: Int, heightPx: Int): BitmapLease? = null
 }
 
 /** Transaction-scoped, display-oriented page images shared by built-in animated effects. */
@@ -30,27 +31,34 @@ internal class PageTurnSnapshots : AutoCloseable {
         val forward = context.direction == TurnDirection.Forward
         val firstSurface = if (forward) context.current else context.target
         val secondSurface = if (forward) context.target else context.current
-        fun borrow(surface: PageSurface, w: Int, h: Int): BitmapLease? =
-            if (surface.isOpaque && host is OpaqueBitmapHost) host.borrowOpaqueBitmap(w, h)
-            else host.borrowBitmap(w, h)
+        val budget = (host as? SnapshotBudgetHost)?.snapshotBudgetBytes
+        fun borrow(surface: PageSurface, w: Int, h: Int): Image? {
+            val opaque = surface.isOpaque
+            (host as? SnapshotBudgetHost)?.borrowSnapshot(context.token, surface, w, h)?.let { return Image(it, true) }
+            val lease = if (opaque && host is OpaqueBitmapHost) host.borrowOpaqueBitmap(w, h)
+                else host.borrowBitmap(w, h)
+            return lease?.let { Image(it, false) }
+        }
         for (scale in SCALES) {
             if (fullResolutionOnly && scale != 1f) break
-            val first = borrow(firstSurface,
-                maxOf(1, (width * scale).toInt()),
-                maxOf(1, (height * scale).toInt())
-            ) ?: continue
+            val w = maxOf(1, (width * scale).toInt())
+            val h = maxOf(1, (height * scale).toInt())
+            if (budget != null && h.toLong() > budget / 8L / w) continue
+            val first = borrow(firstSurface, w, h) ?: continue
             val second = try {
                 borrow(secondSurface, first.bitmap.width, first.bitmap.height)
             } catch (failure: Exception) {
-                first.close(); throw failure
+                first.lease.close(); throw failure
             }
             if (second == null) {
-                first.close(); continue
+                first.lease.close(); continue
             }
-            currentLease = if (forward) first else second
-            targetLease = if (forward) second else first
+            currentLease = (if (forward) first else second).lease
+            targetLease = (if (forward) second else first).lease
             try {
-                fun capture(surface: PageSurface, bitmap: Bitmap) {
+                fun capture(surface: PageSurface, image: Image) {
+                    if (image.prepared) return
+                    val bitmap = image.bitmap
                     val start = System.nanoTime()
                     val canvas = Canvas(bitmap)
                     canvas.scale(bitmap.width.toFloat() / width, bitmap.height.toFloat() / height)
@@ -62,8 +70,8 @@ internal class PageTurnSnapshots : AutoCloseable {
                     )
                 }
                 // Preserve the curl capture order: turning sheet, then exposed page.
-                capture(firstSurface, first.bitmap)
-                capture(secondSurface, second.bitmap)
+                capture(firstSurface, first)
+                capture(secondSurface, second)
                 return true
             } catch (failure: Exception) {
                 close()
@@ -71,6 +79,10 @@ internal class PageTurnSnapshots : AutoCloseable {
             }
         }
         return false
+    }
+
+    private class Image(val lease: BitmapLease, val prepared: Boolean) {
+        val bitmap get() = lease.bitmap
     }
 
     class Retained(val current: BitmapLease, val target: BitmapLease) : AutoCloseable {

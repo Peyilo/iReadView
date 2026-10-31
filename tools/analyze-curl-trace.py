@@ -40,7 +40,7 @@ def analyze(path):
                     outcomes[(pid, cookie)] = outcome
             elif stacks[thread]:
                 started, name = stacks[thread].pop()
-                if name and name.startswith(("iRead.curl.", "iRead.epub.")):
+                if name and name.startswith(("iRead.curl.", "iRead.epub.", "iRead.snapshot.")):
                     if name.startswith(("iRead.curl.firstSubmit:", "iRead.curl.cancelledStartup:")):
                         continue
                     samples[name].append((timestamp - started) * 1000)

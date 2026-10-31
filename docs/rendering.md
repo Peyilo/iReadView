@@ -12,6 +12,8 @@ Demo 阅读设置的“仿真效果”和翻页示例只列出 **iOSCurl / Googl
 
 `PageTurnSnapshots` 在事务开始时捕获 current/target。支持独立读租约的宿主将两张图交给 iOSCurl 工作线程上传；事务可先关闭原租约，最后一个读者结束后才允许位图回池。硬件路径直接合成 GPU 图像，不借用逐帧输出位图；软件宿主保留离屏位图输出。完成、取消、异常及 detach 释放事务资源，工作线程异步清理自己的 EGL 资源。
 
+`BitmapPageSurface` 可借出正文已准备的不可变像素，省去重复软件复制；尺寸、格式、颜色空间及紧凑分配量由 `PreparedPageSnapshot` 校验，预算和异步生命期仍归统一宿主管理。拒绝不兼容的图片后继续原绘制路径，不因借用较大的底层分配降低清晰度。效果不识别 EPUB 类型，也不修改借用图片的像素或元数据，具体扩展合约见[组件扩展](extensions.md)。API 26–28 的稳定 EPUB 位图使用这项能力；其他录制类型保留原路径，每轮仍完整上传 GPU 纹理。
+
 GPU 工作线程保留两块纹理存储到 Surface/效果释放，避免每次翻页重复删除和分配。相同尺寸及 GL 格式使用 `texSubImage2D` 完整更新，不跳过任何页面的像素上传；尺寸或格式改变时重新定义存储。这个有界分配池不保留 CPU 位图租约，也不改变快照预算、分辨率和透明度。软件渲染器仍在事务结束释放纹理。
 
 `RecordedPageSurface` 表示可独立于可见层级回放的命令，不保证它引用的 Bitmap 像素不变；软件 Picture 也可能保留可变图片引用。纹理缓存不能只比较录制对象或 View 的身份。需要固定像素的效果仍捕获事务独占的图像，GPU 像素回归覆盖同一表面对象在两轮之间更新图片的情况。
@@ -89,6 +91,7 @@ Android 默认使用中性黑色、0.55 不透明度的投影，并将原渐隐�
 - `IosCurlBackgroundDeviceTest` 检查元数据/快照取色、夜间材质、各方向的真实来源及每事务一次取色。
 - `IosCurlBackgroundDeviceTest` 的 GLES 像素检查覆盖白、米色、夜间及纯黑背景，确保阴影只变暗。
 - `SnapshotIsolationDeviceTest` 检查平移效果使用预算内快照、真实合成器变透明后两页仍可见，以及隔离失败时归还部分租约并请求降级。
+- `PreparedSnapshotDeviceTest` 检查固定像素借用的真实预算、双向顺序、异步读者、取消及失败清理；同时对五种效果逐像素比较半透明画面，并验证不兼容或较大底层分配不会降低原截图分辨率。
 - `IosCurlGpuDeviceTest` 对比硬件合成与位图路径的像素，覆盖两个输出、透明/不透明输入、装订边、前后翻、轴向和 RTL；`capture=bitmap` 验证关闭捕获预算，`capture=live` 验证实时表面保留位图隔离，另检查捕获中取消、卸载与线程清理。`BitmapRetentionDeviceTest` 检查取消后异步读者结束前不回收位图。
 - `IosCurlDeviceTest` 检查离屏单栏绘制与资源回收；`IosCurlDemoTest` 验证真实设置、手势和事务交接。
 - `EpubSnapshotRenderingTest` 对插图、固定版式和 ARM EPUB 的多列页面逐像素比较软件快照，并比较真实窗口画面；另验证硬件层中的 CSS 动画继续更新。

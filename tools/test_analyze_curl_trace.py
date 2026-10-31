@@ -12,6 +12,14 @@ spec.loader.exec_module(curl_trace)
 
 
 class CurlTraceTest(unittest.TestCase):
+    def test_shared_pixel_reservations_are_reported_separately(self):
+        report = self.analyze([
+            (10, 10, 1.000, "B|10|iRead.snapshot.sharedPixels"),
+            (10, 10, 1.001, "E"),
+        ])
+        self.assertEqual(1, report["iRead.snapshot.sharedPixels"]["count"])
+        self.assertAlmostEqual(1, report["iRead.snapshot.sharedPixels"]["medianMs"])
+
     def test_epub_recording_keeps_nested_framework_time_in_outer_section(self):
         report = self.analyze([
             (10, 10, 1.000, "B|10|iRead.epub.record"),
